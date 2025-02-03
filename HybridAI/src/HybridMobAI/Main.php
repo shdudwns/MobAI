@@ -11,7 +11,6 @@ use pocketmine\entity\Entity;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
 use pocketmine\scheduler\ClosureTask;
-use pocketmine\entity\EntityFactory;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\DoubleTag;
@@ -25,9 +24,7 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
         // Entity 등록
-        EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
-        }, ['Zombie', 'minecraft:zombie']);
+        Entity::registerEntity(Zombie::class, true, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
         $this->reloadConfig();
@@ -96,7 +93,7 @@ class Main extends PluginBase implements Listener {
             ]));
 
         // 좀비 인스턴스 생성
-        $zombie = EntityFactory::getInstance()->create(Zombie::class, $world, $nbt);
+        $zombie = Entity::createEntity("Zombie", $world, $nbt);
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
