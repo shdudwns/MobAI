@@ -96,7 +96,7 @@ class Main extends PluginBase implements Listener {
             ]));
 
         // 좀비 인스턴스 생성
-        $zombie = EntityFactory::getInstance()->spawnFromNBT($nbt, $world);
+        $zombie = EntityFactory::getInstance()->create(Zombie::class, $world, $nbt);
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
