@@ -81,19 +81,19 @@ class Main extends PluginBase implements Listener {
     }
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
-        $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
+    $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
 
-        // 올바른 Location 객체 생성 (yaw, pitch 추가)
-        $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
+    // 올바른 Location 객체 생성 (yaw, pitch 추가)
+    $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
-        // 좀비 인스턴스 생성 (PM5에서 `createSaveable()` 사용)
-        $zombie = EntityFactory::getInstance()->createSaveable(Zombie::class, $location, new CompoundTag());
+    // 직접 엔티티 인스턴스 생성
+    $zombie = new Zombie($location, new CompoundTag());
 
-        if ($zombie !== null) {
-            $zombie->spawnToAll();
-            $this->getLogger()->info("좀비 스폰 완료");
-        } else {
-            $this->getLogger()->error("좀비 인스턴스 생성 실패");
-        }
+    // 좀비가 유효한지 확인 후 스폰
+    if ($zombie !== null) {
+        $zombie->spawnToAll();
+        $this->getLogger()->info("좀비 스폰 완료");
+    } else {
+        $this->getLogger()->error("좀비 인스턴스 생성 실패");
     }
 }
