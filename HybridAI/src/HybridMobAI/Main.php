@@ -45,7 +45,7 @@ class Main extends PluginBase implements Listener {
     private function spawnRandomZombies(): void {
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getPlayers() as $player) {
-                $this->getScheduler()->scheduleAsyncTask(new SpawnZombiesTask($world->getId(), $player->getPosition()));
+                $this->getServer()->getAsyncPool()->submitTask(new SpawnZombiesTask($world->getId(), $player->getPosition()));
             }
         }
     }
