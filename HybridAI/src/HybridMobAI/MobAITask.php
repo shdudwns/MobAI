@@ -31,7 +31,7 @@ class MobAITask extends Task {
             foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
                 foreach ($world->getEntities() as $entity) {
                     if ($entity instanceof Creature) {
-                        $this->plugin->getLogger()->info("Handling AI for entity: " . $entity->getName());
+                        $this->plugin->getLogger()->info("AI 처리 중: " . $entity->getName());
                         $this->handleMobAI($entity);
                     }
                 }
@@ -40,6 +40,7 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Creature $mob): void {
+        $this->plugin->getLogger()->info("몬스터 AI 처리 시작: " . $mob->getName());
         $start = $mob->getPosition();
         $goal = $this->findClosestPlayerPosition($mob);
         $grid = $this->createGrid($mob->getWorld());
@@ -87,7 +88,7 @@ class MobAITask extends Task {
     }
 
     private function moveRandomly(Creature $mob): void {
-        $this->plugin->getLogger()->info("Moving entity randomly: " . $mob->getName());
+        $this->plugin->getLogger()->info("랜덤 이동 중: " . $mob->getName());
         $directionVectors = [
             new Vector3(1, 0, 0),
             new Vector3(-1, 0, 0),
