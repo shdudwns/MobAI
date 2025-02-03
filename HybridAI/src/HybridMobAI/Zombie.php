@@ -19,8 +19,9 @@ class Zombie extends Monster {
     }
 
     public function onUpdate(int $currentTick): bool {
-        // 좀비의 업데이트 로직 (이동, 공격 등)
         $this->getLogger()->info("좀비 업데이트 중: " . $this->getName());
+        // AI 로직을 이곳에 넣어줍니다.
+        $this->plugin->getScheduler()->scheduleRepeatingTask(new MobAITask($this->plugin), 20);
         return parent::onUpdate($currentTick);
     }
 }
