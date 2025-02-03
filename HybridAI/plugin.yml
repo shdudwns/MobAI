@@ -1,0 +1,4 @@
+name: HybridMobAI
+main: HybridMobAI\Main
+version: 2.1.0
+api: [4.0.0]
