@@ -15,7 +15,6 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
-use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 
 class Main extends PluginBase implements Listener {
