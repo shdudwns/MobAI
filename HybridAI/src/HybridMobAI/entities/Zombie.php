@@ -15,11 +15,11 @@ class Zombie extends Monster {
 
     public function onSpawn(): void {
         parent::onSpawn();
-        $this->server->getLogger()->info("좀비 스폰 완료: " . $this->getName());
+        $this->getServer()->getLogger()->info("좀비 스폰 완료: " . $this->getName());
     }
 
     public function onUpdate(int $currentTick): bool {
-        $this->server->getLogger()->info("좀비 업데이트 중: " . $this->getName());
+        $this->getServer()->getLogger()->info("좀비 업데이트 중: " . $this->getName());
         return parent::onUpdate($currentTick);
     }
 }
