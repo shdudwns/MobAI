@@ -57,6 +57,7 @@ class Main extends PluginBase implements Listener {
     }
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
+        $this->getLogger()->info("Spawning zombie at position: " . $position->__toString());
         $nbt = Entity::createBaseNBT($position);
         $zombie = new Zombie($world, $nbt);
         $zombie->spawnToAll();
