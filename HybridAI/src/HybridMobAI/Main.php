@@ -65,6 +65,8 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
         $nbt = Entity::createBaseNBT($position);
         $zombie = new Zombie($world, $nbt);
+        $this->getLogger()->info("좀비 인스턴스 생성 완료");
         $zombie->spawnToAll();
+        $this->getLogger()->info("좀비 스폰 완료");
     }
 }
