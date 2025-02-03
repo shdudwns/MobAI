@@ -5,7 +5,7 @@ namespace HybridMobAI;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\entity\Creature;
+use pocketmine\entity\Living;
 use pocketmine\player\Player;
 use pocketmine\entity\Entity;
 use pocketmine\world\World;
@@ -43,13 +43,13 @@ class Main extends PluginBase implements Listener {
 
     public function onEntityDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
-        if ($entity instanceof Creature) {
+        if ($entity instanceof Living) {
             $this->getLogger()->info("몹이 플레이어에게 피해를 입음: " . $entity->getName());
             $this->handleDamageResponse($entity, $event->getDamager());
         }
     }
 
-    private function handleDamageResponse(Creature $mob, $damager): void {
+    private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player) {
             $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
             $mob->lookAt($damager->getPosition());
