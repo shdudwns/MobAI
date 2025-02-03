@@ -10,7 +10,7 @@ use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\math\Location;
+use pocketmine\world\Location; // 수정된 부분
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
