@@ -12,13 +12,13 @@ class MobAITask extends Task {
     private $plugin;
     private $aiModel;
     private $useAI;
-    private $updateInterval; // 업데이트 간격
-    private $tickCounter = 0; // 틱 카운터
+    private $updateInterval;
+    private $tickCounter = 0;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->useAI = $plugin->getConfig()->get("use_ai_model", true);
-        $this->updateInterval = $plugin->getConfig()->get("ai_update_interval", 20); // 기본값 20 ticks (1초)
+        $this->updateInterval = $plugin->getConfig()->get("ai_update_interval", 20);
         if ($this->useAI) {
             $this->aiModel = new AIModel();
         }
@@ -76,7 +76,7 @@ class MobAITask extends Task {
             $reward = $this->getReward($mob, $action);
             $this->aiModel->learn($state, $action, $reward, $next_state);
         } else {
-            $this->moveRandomly($mob); // 랜덤 이동
+            $this->moveRandomly($mob);
         }
     }
 
@@ -105,15 +105,15 @@ class MobAITask extends Task {
         // 플레이어에게 이동하는 로직
     }
 
-    private void attackPlayer(Creature $mob): void {
+    private function attackPlayer(Creature $mob): void {
         // 플레이어를 공격하는 로직
     }
 
-    private void retreat(Creature $mob): void {
+    private function retreat(Creature $mob): void {
         // 후퇴하는 로직
     }
 
-    private void jump(Creature $mob): void {
+    private function jump(Creature $mob): void {
         $jumpForce = 0.5;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
