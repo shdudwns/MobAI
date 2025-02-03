@@ -10,7 +10,7 @@ use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\world\Location; // 수정된 부분
+use pocketmine\entity\Location; // 올바른 네임스페이스 수정
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
@@ -21,7 +21,7 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // Entity 등록
+        // 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
             return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         }, ['Zombie', 'minecraft:zombie']);
@@ -75,8 +75,8 @@ class Main extends PluginBase implements Listener {
     public function spawnZombieAt(World $world, Vector3 $position): void {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
 
-        // Location 객체 생성
-        $location = new Location($position->x, $position->y, $position->z, $world);
+        // 올바른 Location 객체 생성 (yaw, pitch 추가)
+        $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
         // 좀비 인스턴스 생성
         $zombie = EntityFactory::getInstance()->create(Zombie::class, $location);
