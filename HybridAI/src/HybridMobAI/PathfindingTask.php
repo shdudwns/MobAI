@@ -4,6 +4,8 @@ namespace HybridMobAI;
 
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
+use pocketmine\entity\Creature;
+use pocketmine\math\Vector3;
 
 class PathfindingTask extends AsyncTask {
 
@@ -27,9 +29,10 @@ class PathfindingTask extends AsyncTask {
         $this->setResult($path);
     }
 
-    public function onCompletion(Server $server): void {
+    public function onCompletion(): void {
+        $server = Server::getInstance();
         $path = $this->getResult();
-        $mob = $server->getEntity($this->mobId);
+        $mob = $server->getWorldManager()->getWorldById($this->mobId);
         if ($path === null) {
             if ($mob instanceof Creature) {
                 $this->moveRandomly($mob); // 랜덤 이동
