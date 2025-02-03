@@ -15,6 +15,7 @@ use pocketmine\scheduler\ClosureTask;
 class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
+        $this->getLogger()->info("HybridMobAI 플러그인 활성화");
         $this->saveDefaultConfig(); // 기본 구성 파일 저장
         $this->reloadConfig(); // 구성 파일 불러오기
 
@@ -31,18 +32,21 @@ class Main extends PluginBase implements Listener {
     public function onEntityDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
         if ($entity instanceof Creature) {
+            $this->getLogger()->info("몹이 플레이어에게 피해를 입음: " . $entity->getName());
             $this->handleDamageResponse($entity, $event->getDamager());
         }
     }
 
     private function handleDamageResponse(Creature $mob, $damager): void {
         if ($damager instanceof Player) {
+            $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
             $mob->lookAt($damager->getPosition());
             $mob->move($damager->getDirectionVector()->multiply(0.25)); // 공격자에게 이동
         }
     }
 
     private function spawnRandomZombies(): void {
+        $this->getLogger()->info("랜덤 좀비 생성 시작");
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getPlayers() as $player) {
                 $playerPosition = $player->getPosition();
@@ -52,12 +56,13 @@ class Main extends PluginBase implements Listener {
                     (float)$playerPosition->y,
                     (float)$playerPosition->z
                 ));
+                $this->getLogger()->info("좀비 생성 요청됨: " . $playerPosition->__toString());
             }
         }
     }
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
-        $this->getLogger()->info("Spawning zombie at position: " . $position->__toString());
+        $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
         $nbt = Entity::createBaseNBT($position);
         $zombie = new Zombie($world, $nbt);
         $zombie->spawnToAll();
