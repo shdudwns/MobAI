@@ -97,3 +97,4 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->error("좀비 인스턴스 생성 실패");
     }
 }
+}
