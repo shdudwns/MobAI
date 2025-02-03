@@ -2,12 +2,12 @@
 
 namespace HybridMobAI;
 
-use pocketmine\entity\Creature;
+use pocketmine\entity\Living;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
 use pocketmine\entity\Location;
 
-class Zombie extends Creature {
+class Zombie extends Living {
 
     public function __construct(Location $location, CompoundTag $nbt) {
         parent::__construct($location, $nbt);
