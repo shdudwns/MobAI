@@ -10,7 +10,7 @@ use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\entity\Location; // 올바른 네임스페이스 수정
+use pocketmine\entity\Location; // ✅ 올바른 네임스페이스 사용
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
@@ -78,8 +78,9 @@ class Main extends PluginBase implements Listener {
         // 올바른 Location 객체 생성 (yaw, pitch 추가)
         $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
-        // 좀비 인스턴스 생성
-        $zombie = EntityFactory::getInstance()->create(Zombie::class, $location);
+        // 좀비 인스턴스 생성 (PM5에서 `createSaveable()` 사용)
+        $zombie = EntityFactory::getInstance()->createSaveable(Zombie::class, $location, new CompoundTag());
+
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
