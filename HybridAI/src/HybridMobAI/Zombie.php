@@ -7,6 +7,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
 use pocketmine\entity\Location;
 use pocketmine\entity\EntitySizeInfo;
+use pocketmine\math\Vector3;
 use pocketmine\Server;
 
 class Zombie extends Living {
@@ -35,5 +36,10 @@ class Zombie extends Living {
 
     public static function getNetworkTypeId(): string {
         return "minecraft:zombie";
+    }
+
+    // move 메서드를 호출하는 새로운 메서드 추가
+    public function moveTo(Vector3 $direction): void {
+        $this->move($direction);
     }
 }
