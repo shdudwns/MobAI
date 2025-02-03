@@ -17,7 +17,7 @@ use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\DoubleTag;
 use pocketmine\nbt\tag\FloatTag;
 use pocketmine\entity\EntityDataHelper;
-use HybridMobAI\entities\Zombie;
+use HybridMobAI\Zombie;
 
 class Main extends PluginBase implements Listener {
 
