@@ -46,8 +46,12 @@ class Main extends PluginBase implements Listener {
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getPlayers() as $player) {
                 $playerPosition = $player->getPosition();
-                $vector3Position = new Vector3($playerPosition->x, $playerPosition->y, $playerPosition->z);
-                $this->getServer()->getAsyncPool()->submitTask(new SpawnZombiesTask($world->getId(), $vector3Position));
+                $this->getServer()->getAsyncPool()->submitTask(new SpawnZombiesTask(
+                    $world->getId(),
+                    (float)$playerPosition->x,
+                    (float)$playerPosition->y,
+                    (float)$playerPosition->z
+                ));
             }
         }
     }
