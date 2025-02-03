@@ -31,6 +31,7 @@ class MobAITask extends Task {
             foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
                 foreach ($world->getEntities() as $entity) {
                     if ($entity instanceof Creature) {
+                        $this->plugin->getLogger()->info("Handling AI for entity: " . $entity->getName());
                         $this->handleMobAI($entity);
                     }
                 }
@@ -73,7 +74,7 @@ class MobAITask extends Task {
             $reward = $this->getReward($mob, $action);
             $this->aiModel->learn($state, $action, $reward, $next_state);
         } else {
-            $this->moveRandomly($mob);
+            $this->moveRandomly($mob); // 랜덤 이동
         }
     }
 
@@ -86,6 +87,7 @@ class MobAITask extends Task {
     }
 
     private function moveRandomly(Creature $mob): void {
+        $this->plugin->getLogger()->info("Moving entity randomly: " . $mob->getName());
         $directionVectors = [
             new Vector3(1, 0, 0),
             new Vector3(-1, 0, 0),
@@ -93,8 +95,8 @@ class MobAITask extends Task {
             new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $mob->move($randomDirection->multiply(0.25 + mt_rand(0, 10) / 100)); // 약간의 속도 변화 추가
-        $mob->setRotation(mt_rand(0, 360), mt_rand(-90, 90)); // 부드러운 회전
+        $mob->move($randomDirection->multiply(0.25 + mt_rand(0, 10) / 100));
+        $mob->setRotation(mt_rand(0, 360), mt_rand(-90, 90));
     }
 
     private function moveToPlayer(Creature $mob): void {
@@ -110,7 +112,7 @@ class MobAITask extends Task {
     }
 
     private function jump(Creature $mob): void {
-        $jumpForce = 0.5; // 점프 높이 조정
+        $jumpForce = 0.5;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 
@@ -123,7 +125,6 @@ class MobAITask extends Task {
     }
 
     private function selectAlgorithm(): string {
-        // 알고리즘 선택 로직 (예: 무작위로 선택, 몹의 상태에 따라 선택 등)
         $algorithms = ["AStar", "BFS", "DFS"];
         return $algorithms[array_rand($algorithms)];
     }
