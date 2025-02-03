@@ -56,7 +56,7 @@ class Main extends PluginBase implements Listener {
     public function spawnZombieInFrontOfPlayer(Player $player): void {
         $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
         $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
-        $spawnPosition = $player->getPosition()->add($direction);
+        $spawnPosition = $player->getPosition()->add($direction->x, $direction->y, $direction->z);
         $this->spawnZombieAt($player->getWorld(), $spawnPosition);
     }
 
