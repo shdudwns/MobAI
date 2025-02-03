@@ -12,6 +12,7 @@ use pocketmine\world\World;
 use pocketmine\math\Vector3;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\entity\EntityFactory;
+use pocketmine\entity\Location;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\DoubleTag;
@@ -24,7 +25,7 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // Entity 등록
+        // 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
             return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         }, ['Zombie', 'minecraft:zombie']);
@@ -50,14 +51,14 @@ class Main extends PluginBase implements Listener {
     }
 
     private function handleDamageResponse(Living $mob, $damager): void {
-    if ($damager instanceof Player) {
-        $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
-        if ($mob instanceof Zombie) {
-            $mob->lookAt($damager->getPosition());
-            $mob->moveTo($damager->getDirectionVector()->multiply(0.25));
+        if ($damager instanceof Player) {
+            $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
+            if ($mob instanceof Zombie) {
+                $mob->lookAt($damager->getPosition());
+                $mob->moveTo($damager->getDirectionVector()->multiply(0.25));
+            }
         }
     }
-}
 
     private function spawnRandomZombies(): void {
         $this->getLogger()->info("랜덤 좀비 생성 시작");
@@ -78,25 +79,12 @@ class Main extends PluginBase implements Listener {
     public function spawnZombieAt(World $world, Vector3 $position): void {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
 
-        // NBT 데이터 생성
-        $nbt = CompoundTag::create()
-            ->setTag("Pos", new ListTag([
-                new DoubleTag($position->x),
-                new DoubleTag($position->y),
-                new DoubleTag($position->z)
-            ]))
-            ->setTag("Motion", new ListTag([
-                new DoubleTag(0.0),
-                new DoubleTag(0.0),
-                new DoubleTag(0.0)
-            ]))
-            ->setTag("Rotation", new ListTag([
-                new FloatTag(0.0),
-                new FloatTag(0.0)
-            ]));
+        // 좀비 위치 설정
+        $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
         // 좀비 인스턴스 생성
-        $zombie = EntityFactory::getInstance()->spawnFromEntityData($world, $nbt);
+        $zombie = EntityFactory::getInstance()->create(Zombie::class, $location);
+
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
