@@ -9,18 +9,22 @@ use pocketmine\block\BlockLegacyIds;
 
 class SpawnZombiesTask extends AsyncTask {
     private $worldId;
-    private $playerPosition;
+    private $playerX;
+    private $playerY;
+    private $playerZ;
 
-    public function __construct(int $worldId, Vector3 $playerPosition) {
+    public function __construct(int $worldId, float $playerX, float $playerY, float $playerZ) {
         $this->worldId = $worldId;
-        $this->playerPosition = $playerPosition;
+        $this->playerX = $playerX;
+        $this->playerY = $playerY;
+        $this->playerZ = $playerZ;
     }
 
     public function onRun(): void {
         $positions = [];
         for ($i = 0; $i < 5; $i++) { // 5개의 좀비 생성
-            $x = mt_rand($this->playerPosition->x - 20, $this->playerPosition->x + 20);
-            $z = mt_rand($this->playerPosition->z - 20, $this->playerPosition->z + 20);
+            $x = mt_rand($this->playerX - 20, $this->playerX + 20);
+            $z = mt_rand($this->playerZ - 20, $this->playerZ + 20);
             $y = $this->findSafeY($x, $z);
 
             if ($y !== null) {
