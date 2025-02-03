@@ -11,6 +11,11 @@ use pocketmine\entity\Entity;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\entity\EntityFactory;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\nbt\tag\ListTag;
+use pocketmine\nbt\tag\DoubleTag;
+use pocketmine\nbt\tag\FloatTag;
 
 class Main extends PluginBase implements Listener {
 
@@ -62,10 +67,31 @@ class Main extends PluginBase implements Listener {
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
-        $nbt = Entity::createBaseNBT($position);
-        $zombie = new Zombie($world, $nbt);
-        $this->getLogger()->info("좀비 인스턴스 생성 완료");
-        $zombie->spawnToAll();
-        $this->getLogger()->info("좀비 스폰 완료");
+
+        // NBT 데이터 생성
+        $nbt = CompoundTag::create()
+            ->setTag("Pos", new ListTag([
+                new DoubleTag($position->x),
+                new DoubleTag($position->y),
+                new DoubleTag($position->z)
+            ]))
+            ->setTag("Motion", new ListTag([
+                new DoubleTag(0.0),
+                new DoubleTag(0.0),
+                new DoubleTag(0.0)
+            ]))
+            ->setTag("Rotation", new ListTag([
+                new FloatTag(0.0),
+                new FloatTag(0.0)
+            ]));
+
+        // 좀비 인스턴스 생성
+        $zombie = EntityFactory::create(Zombie::class, $world, $nbt);
+        if ($zombie !== null) {
+            $zombie->spawnToAll();
+            $this->getLogger()->info("좀비 스폰 완료");
+        } else {
+            $this->getLogger()->error("좀비 인스턴스 생성 실패");
+        }
     }
 }
