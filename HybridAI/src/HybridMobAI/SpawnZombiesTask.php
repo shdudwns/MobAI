@@ -55,7 +55,8 @@ class SpawnZombiesTask extends AsyncTask {
         return BlockLegacyIds::AIR; // 기본값으로 AIR를 반환 (실제 구현 필요)
     }
 
-    public function onCompletion(Server $server): void {
+    public function onCompletion(): void {
+        $server = Server::getInstance();
         $world = $server->getWorldManager()->getWorld($this->worldId);
         if ($world !== null) {
             foreach ($this->getResult() as $position) {
