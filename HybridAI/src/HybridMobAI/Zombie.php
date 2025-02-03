@@ -2,7 +2,8 @@
 
 namespace HybridMobAI;
 
-use pocketmine\entity\Entity;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
@@ -10,7 +11,7 @@ use pocketmine\world\World;
 use pocketmine\nbt\tag\CompoundTag;
 
 class Zombie extends Living {
-    public const NETWORK_ID = self::ZOMBIE;
+    public const NETWORK_ID = EntityIds::ZOMBIE;
 
     protected function initEntity(CompoundTag $nbt): void {
         parent::initEntity($nbt);
@@ -53,5 +54,13 @@ class Zombie extends Living {
 
     public function getName(): string {
         return "Zombie";
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo {
+        return new EntitySizeInfo(1.95, 0.6); // 좀비의 높이와 너비 설정
+    }
+
+    public function getNetworkTypeId(): string {
+        return EntityIds::ZOMBIE; // 좀비의 네트워크 ID 반환
     }
 }
