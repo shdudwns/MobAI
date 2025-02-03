@@ -7,6 +7,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
 use pocketmine\entity\Location;
 use pocketmine\entity\EntitySizeInfo;
+use pocketmine\Server;
 
 class Zombie extends Living {
 
@@ -16,11 +17,11 @@ class Zombie extends Living {
 
     public function onSpawn(): void {
         parent::onSpawn();
-        $this->getServer()->getLogger()->info("좀비 스폰 완료: " . $this->getName());
+        Server::getInstance()->getLogger()->info("좀비 스폰 완료: " . $this->getName());
     }
 
     public function onUpdate(int $currentTick): bool {
-        $this->getServer()->getLogger()->info("좀비 업데이트 중: " . $this->getName());
+        Server::getInstance()->getLogger()->info("좀비 업데이트 중: " . $this->getName());
         return parent::onUpdate($currentTick);
     }
 
