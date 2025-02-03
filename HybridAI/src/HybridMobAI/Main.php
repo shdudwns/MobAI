@@ -16,6 +16,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\DoubleTag;
 use pocketmine\nbt\tag\FloatTag;
+use HybridMobAI\entities\Zombie;
 
 class Main extends PluginBase implements Listener {
 
@@ -86,7 +87,7 @@ class Main extends PluginBase implements Listener {
             ]));
 
         // 좀비 인스턴스 생성
-        $zombie = EntityFactory::create(Zombie::class, $world, $nbt);
+        $zombie = EntityFactory::createEntity("Zombie", $world, $nbt);
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
