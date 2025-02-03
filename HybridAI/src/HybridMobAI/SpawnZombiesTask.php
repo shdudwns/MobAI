@@ -23,8 +23,8 @@ class SpawnZombiesTask extends AsyncTask {
     public function onRun(): void {
         $positions = [];
         for ($i = 0; $i < 5; $i++) { // 5개의 좀비 생성
-            $x = mt_rand($this->playerX - 20, $this->playerX + 20);
-            $z = mt_rand($this->playerZ - 20, $this->playerZ + 20);
+            $x = mt_rand((int)($this->playerX - 20), (int)($this->playerX + 20));
+            $z = mt_rand((int)($this->playerZ - 20), (int)($this->playerZ + 20));
             $y = $this->findSafeY($x, $z);
 
             if ($y !== null) {
