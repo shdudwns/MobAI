@@ -12,6 +12,8 @@ use pocketmine\world\World;
 use pocketmine\math\Vector3;
 use pocketmine\math\Location;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
 
 class Main extends PluginBase implements Listener {
