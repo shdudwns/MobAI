@@ -40,6 +40,6 @@ class Zombie extends Living {
 
     // move 메서드를 호출하는 새로운 메서드 추가
     public function moveTo(Vector3 $direction): void {
-        $this->move($direction);
+        $this->move($direction->x, $direction->y, $direction->z);
     }
 }
