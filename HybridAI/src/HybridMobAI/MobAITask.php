@@ -6,6 +6,7 @@ use pocketmine\scheduler\Task;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
+use pocketmine\Server;
 
 class MobAITask extends Task {
     private $plugin;
@@ -27,9 +28,11 @@ class MobAITask extends Task {
         $this->tickCounter++;
         if ($this->tickCounter >= $this->updateInterval) {
             $this->tickCounter = 0;
-            foreach (Entity::getAll() as $entity) {
-                if ($entity instanceof Creature) {
-                    $this->handleMobAI($entity);
+            foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
+                foreach ($world->getEntities() as $entity) {
+                    if ($entity instanceof Creature) {
+                        $this->handleMobAI($entity);
+                    }
                 }
             }
         }
@@ -38,7 +41,7 @@ class MobAITask extends Task {
     private function handleMobAI(Creature $mob): void {
         $start = $mob->getPosition();
         $goal = $this->findClosestPlayerPosition($mob);
-        $grid = $this->createGrid($mob->getLevel());
+        $grid = $this->createGrid($mob->getWorld());
 
         $algorithm = $this->selectAlgorithm();
         $task = new PathfindingTask($start, $goal, $grid, $mob->getId(), $algorithm);
@@ -115,8 +118,8 @@ class MobAITask extends Task {
         // 가장 가까운 플레이어의 위치 찾기
     }
 
-    private function createGrid($level) {
-        // 레벨로부터 그리드 생성
+    private function createGrid($world) {
+        // 월드로부터 그리드 생성
     }
 
     private function selectAlgorithm(): string {
