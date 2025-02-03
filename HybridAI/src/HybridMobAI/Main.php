@@ -16,14 +16,13 @@ class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
-        $this->saveDefaultConfig(); // 기본 구성 파일 저장
-        $this->reloadConfig(); // 구성 파일 불러오기
+        $this->saveDefaultConfig();
+        $this->reloadConfig();
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
-        $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20); // 20 ticks (1 second)마다 반복
+        $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
 
-        // 주기적으로 좀비 생성하는 작업 추가
-        $spawnInterval = $this->getConfig()->get("spawn_interval", 600); // 기본값 600 ticks (30 seconds)
+        $spawnInterval = $this->getConfig()->get("spawn_interval", 600);
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
             $this->spawnRandomZombies();
         }), $spawnInterval);
@@ -41,7 +40,7 @@ class Main extends PluginBase implements Listener {
         if ($damager instanceof Player) {
             $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
             $mob->lookAt($damager->getPosition());
-            $mob->move($damager->getDirectionVector()->multiply(0.25)); // 공격자에게 이동
+            $mob->move($damager->getDirectionVector()->multiply(0.25));
         }
     }
 
@@ -49,16 +48,16 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->info("랜덤 좀비 생성 시작");
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getPlayers() as $player) {
-                $playerPosition = $player->getPosition();
-                $this->getServer()->getAsyncPool()->submitTask(new SpawnZombiesTask(
-                    $world->getId(),
-                    (float)$playerPosition->x,
-                    (float)$playerPosition->y,
-                    (float)$playerPosition->z
-                ));
-                $this->getLogger()->info("좀비 생성 요청됨: " . $playerPosition->__toString());
+                $this->spawnZombieInFrontOfPlayer($player);
             }
         }
+    }
+
+    public function spawnZombieInFrontOfPlayer(Player $player): void {
+        $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
+        $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
+        $spawnPosition = $player->getPosition()->add($direction);
+        $this->spawnZombieAt($player->getWorld(), $spawnPosition);
     }
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
