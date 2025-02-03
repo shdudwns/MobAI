@@ -15,6 +15,8 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 
 class Main extends PluginBase implements Listener {
 
@@ -39,12 +41,19 @@ class Main extends PluginBase implements Listener {
     }
 
     public function onEntityDamage(EntityDamageEvent $event): void {
-        $entity = $event->getEntity();
-        if ($entity instanceof Living) {
-            $this->getLogger()->info("몹이 플레이어에게 피해를 입음: " . $entity->getName());
-            $this->handleDamageResponse($entity, $event->getDamager());
+    $entity = $event->getEntity();
+    
+    // 엔티티가 Living(생명체)인지 확인
+    if ($entity instanceof Living) {
+        $this->getLogger()->info("몹이 피해를 입음: " . $entity->getName());
+        
+        // 공격자가 있는 경우(EntityDamageByEntityEvent인지 확인)
+        if ($event instanceof EntityDamageByEntityEvent) {
+            $damager = $event->getDamager();
+            $this->handleDamageResponse($entity, $damager);
         }
     }
+}
 
     private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player) {
