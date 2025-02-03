@@ -28,6 +28,7 @@ class MobAITask extends Task {
         $this->tickCounter++;
         if ($this->tickCounter >= $this->updateInterval) {
             $this->tickCounter = 0;
+            $this->plugin->getLogger()->info("AI 작업 실행 중");
             foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
                 foreach ($world->getEntities() as $entity) {
                     if ($entity instanceof Creature) {
@@ -104,15 +105,15 @@ class MobAITask extends Task {
         // 플레이어에게 이동하는 로직
     }
 
-    private function attackPlayer(Creature $mob): void {
+    private void attackPlayer(Creature $mob): void {
         // 플레이어를 공격하는 로직
     }
 
-    private function retreat(Creature $mob): void {
+    private void retreat(Creature $mob): void {
         // 후퇴하는 로직
     }
 
-    private function jump(Creature $mob): void {
+    private void jump(Creature $mob): void {
         $jumpForce = 0.5;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
