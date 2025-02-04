@@ -24,6 +24,15 @@ class Zombie extends Living {
         // 추가 초기화 작업이 필요한 경우 여기에 작성
     }
 
+    public function onLoad(): void {
+        // 재부팅 후 로드될 때 AI 기능 활성화
+        $this->enableAI();
+    }
+
+    public function enableAI(): void {
+        $this->scheduleUpdate();
+    }
+
     public function onUpdate(int $currentTick): bool {
         if (!parent::onUpdate($currentTick)) {
             return false;
@@ -65,6 +74,23 @@ class Zombie extends Living {
         $speed = 0.15; // 이동 속도 설정
         $motion = $direction->normalize()->multiply($speed);
         $this->setMotion($motion);
+
+        // 장애물 앞에서 점프
+        if ($this->isObstacleAhead()) {
+            $this->jump();
+        }
+    }
+
+    private function isObstacleAhead(): bool {
+        // 장애물이 있는지 확인하는 로직 구현
+        // 예를 들어, 앞으로 한 칸에 블록이 있는지 확인
+        $direction = $this->getDirectionVector();
+        $blockAhead = $this->getWorld()->getBlock($this->location->add($direction));
+        return !$blockAhead->isAir();
+    }
+
+    private function jump(): void {
+        $this->setMotion($this->getMotion()->add(0, 0.42, 0)); // 점프 높이 설정
     }
 
     public function getName(): string {
