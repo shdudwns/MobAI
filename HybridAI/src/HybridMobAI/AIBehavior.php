@@ -36,7 +36,6 @@ class AIBehavior {
     }
 
     public function moveRandomly(Living $mob): void {
-        $this->plugin->getLogger()->info("랜덤 이동 중: " . $mob->getName());
         $directionVectors = [
             new Vector3(1, 0, 0),
             new Vector3(-1, 0, 0),
@@ -44,13 +43,12 @@ class AIBehavior {
             new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $motion = $randomDirection->multiply(0.1); // 움직임 속도 조정
+        $motion = $randomDirection->multiply(0.02); // 움직임 속도 조정 (더 작게 설정하여 부드러운 움직임 구현)
         $mob->setMotion($motion);
         $mob->lookAt($mob->getPosition()->add($motion));
     }
 
     public function moveToPlayer(Living $mob, Player $player): void {
-        $this->plugin->getLogger()->info("플레이어에게 이동 중: " . $mob->getName());
         $mobPosition = $mob->getPosition();
         $playerPosition = $player->getPosition();
 
@@ -60,24 +58,21 @@ class AIBehavior {
             $playerPosition->getY() - $mobPosition->getY(),
             $playerPosition->getZ() - $mobPosition->getZ()
         );
-        
-        $motion = $direction->normalize()->multiply(0.1); // 움직임 속도 조정
+
+        $motion = $direction->normalize()->multiply(0.02); // 움직임 속도 조정 (더 작게 설정하여 부드러운 움직임 구현)
         $mob->setMotion($motion);
         $mob->lookAt($player->getPosition());
     }
 
     public function attackPlayer(Living $mob, Player $player): void {
-        $this->plugin->getLogger()->info("플레이어 공격 중: " . $mob->getName());
         // 플레이어를 공격하는 로직
     }
 
     public function retreat(Living $mob): void {
-        $this->plugin->getLogger()->info("후퇴 중: " . $mob->getName());
         // 후퇴하는 로직
     }
 
     public function jump(Living $mob): void {
-        $this->plugin->getLogger()->info("점프 중: " . $mob->getName());
         $jumpForce = 0.5;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
