@@ -35,9 +35,10 @@ class Zombie extends Living {
         return "Custom Zombie"; // 원하는 이름 설정
     }
 
-    public function __construct(Location $location, ?CompoundTag $nbt = null) {
-        parent::__construct($location, $nbt);
-    }
+    public function __construct(World $world, CompoundTag $nbt) {
+    $location = EntityDataHelper::parseLocation($nbt, $world);
+    parent::__construct($location, $nbt);
+}
 
     /** ✅ 좀비의 기본 체력 및 속성 설정 **/
     protected function initEntity(CompoundTag $nbt): void {
