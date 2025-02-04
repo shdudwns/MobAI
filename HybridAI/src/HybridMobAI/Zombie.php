@@ -17,6 +17,9 @@ class Zombie extends Living {
         parent::__construct($location, $nbt);
         $this->plugin = $plugin;
         $this->aiBehavior = new AIBehavior($plugin);
+
+        // 블록 사이에서 스폰될 때 블록을 통과하지 않도록 설정
+        $this->setImmobile(false);
     }
 
     public function getName(): string {
