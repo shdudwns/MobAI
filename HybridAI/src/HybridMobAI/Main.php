@@ -80,7 +80,7 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    private void handleDamageResponse(Living $mob, $damager): void {
+    private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player) {
             $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
             if ($mob instanceof Zombie) {
