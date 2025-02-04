@@ -70,7 +70,7 @@ class AIBehavior {
     private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
-        $frontPosition = $position->add($mob->getDirectionVector()->multiply(1)); // 앞쪽 블록 위치
+        $frontPosition = $position->add($mob->getDirectionVector()->getX(), $mob->getDirectionVector()->getY(), $mob->getDirectionVector()->getZ()); // 앞쪽 블록 위치
 
         // 앞쪽 블록이 장애물이면 점프
         $block = $world->getBlock($frontPosition);
