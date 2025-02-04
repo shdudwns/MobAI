@@ -66,7 +66,7 @@ class Zombie extends Living {
         return new EntitySizeInfo(1.95, 0.6); // 좀비의 높이와 너비 설정
     }
 
-    public function getNetworkTypeId(): string {
+    public static function getNetworkTypeId(): string {
         return EntityIds::ZOMBIE; // 좀비의 네트워크 ID 반환
     }
 }
