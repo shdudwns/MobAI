@@ -5,25 +5,26 @@ namespace HybridMobAI;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\entity\Living;
 use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\entity\Location;
+use pocketmine\entity\Location; // ✅ 올바른 네임스페이스 사용
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 
 class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // ✅ 좀비 엔티티 등록
+        // 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie($world, $nbt);
+            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         }, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
@@ -40,12 +41,12 @@ class Main extends PluginBase implements Listener {
 
     public function onEntityDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
-
-        // ✅ 엔티티가 Living(생명체)인지 확인
+        
+        // 엔티티가 Living(생명체)인지 확인
         if ($entity instanceof Living) {
             $this->getLogger()->info("몹이 피해를 입음: " . $entity->getName());
-
-            // ✅ 공격자가 있는 경우(EntityDamageByEntityEvent인지 확인)
+            
+            // 공격자가 있는 경우(EntityDamageByEntityEvent인지 확인)
             if ($event instanceof EntityDamageByEntityEvent) {
                 $damager = $event->getDamager();
                 $this->handleDamageResponse($entity, $damager);
@@ -56,20 +57,16 @@ class Main extends PluginBase implements Listener {
     private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player) {
             $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
-
             if ($mob instanceof Zombie) {
                 $mob->lookAt($damager->getPosition());
-
-                // ✅ `moveTo()` 제거, 대신 `setMotion()` 사용
-                $direction = $damager->getPosition()->subtract($mob->getPosition())->normalize();
-                $mob->setMotion($direction->multiply(0.2)); // 이동 속도 조정
+                $direction = $damager->getPosition()->subtract($mob->getPosition());
+                $mob->moveTo($direction->normalize()->multiply(0.25));
             }
         }
     }
 
     private function spawnRandomZombies(): void {
         $this->getLogger()->info("랜덤 좀비 생성 시작");
-
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getPlayers() as $player) {
                 $this->spawnZombieInFrontOfPlayer($player);
@@ -79,7 +76,6 @@ class Main extends PluginBase implements Listener {
 
     public function spawnZombieInFrontOfPlayer(Player $player): void {
         $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
-
         $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
         $spawnPosition = $player->getPosition()->add($direction->x, $direction->y, $direction->z);
         $this->spawnZombieAt($player->getWorld(), $spawnPosition);
@@ -88,13 +84,13 @@ class Main extends PluginBase implements Listener {
     public function spawnZombieAt(World $world, Vector3 $position): void {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
 
-        // ✅ 올바른 Location 객체 생성 (yaw, pitch 추가)
+        // 올바른 Location 객체 생성 (yaw, pitch 추가)
         $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
-        // ✅ 직접 엔티티 인스턴스 생성
-        $zombie = new Zombie($world, new CompoundTag());
+        // 직접 엔티티 인스턴스 생성
+        $zombie = new Zombie($location, new CompoundTag());
 
-        // ✅ 좀비가 유효한지 확인 후 스폰
+        // 좀비가 유효한지 확인 후 스폰
         if ($zombie !== null) {
             $zombie->spawnToAll();
             $this->getLogger()->info("좀비 스폰 완료");
