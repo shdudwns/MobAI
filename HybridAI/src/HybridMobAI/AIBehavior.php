@@ -26,12 +26,12 @@ class AIBehavior {
         $mob->setRotation(mt_rand(0, 360), mt_rand(-90, 90));
     }
 
-    public function moveToPlayer(Creature $mob): void {
+    public function moveToPlayer(Creature $mob, $player): void {
         $this->plugin->getLogger()->info("플레이어에게 이동 중: " . $mob->getName());
         // 플레이어에게 이동하는 로직
     }
 
-    public function attackPlayer(Creature $mob): void {
+    public function attackPlayer(Creature $mob, $player): void {
         $this->plugin->getLogger()->info("플레이어 공격 중: " . $mob->getName());
         // 플레이어를 공격하는 로직
     }
