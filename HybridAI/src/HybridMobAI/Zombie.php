@@ -3,7 +3,6 @@
 namespace HybridMobAI;
 
 use pocketmine\entity\Living;
-use pocketmine\entity\Entity;
 use pocketmine\entity\Location;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\math\Vector3;
@@ -18,7 +17,12 @@ class Zombie extends Living {
     }
 
     protected function getInitialSizeInfo(): EntitySizeInfo {
-        return new EntitySizeInfo(1.95, 0.6); // 좀비의 크기
+        return new EntitySizeInfo(1.95, 0.6); // 좀비 크기 설정
+    }
+
+    /** ✅ `getName()` 메서드 추가 **/
+    public function getName(): string {
+        return "Custom Zombie"; // 원하는 이름 설정
     }
 
     public function __construct(Location $location, ?CompoundTag $nbt = null) {
