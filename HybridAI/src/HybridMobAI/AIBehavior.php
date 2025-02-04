@@ -70,11 +70,12 @@ class AIBehavior {
     private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
-        $frontPosition = $position->add($mob->getDirectionVector()->getX(), $mob->getDirectionVector()->getY(), $mob->getDirectionVector()->getZ()); // 앞쪽 블록 위치
+        $directionVector = $mob->getDirectionVector();
+        $frontPosition = $position->add($directionVector->getX(), $directionVector->getY(), $directionVector->getZ()); // 앞쪽 블록 위치
 
-        // 앞쪽 블록이 장애물이면 점프
+        // 앞쪽 블록이 장애물이면서 높이가 현재 위치보다 높은 경우 점프
         $block = $world->getBlock($frontPosition);
-        if (!$block->isTransparent() && $block->getPosition()->getY() <= $position->getY()) {
+        if (!$block->isTransparent() && $block->getPosition()->getY() > $position->getY()) {
             $mob->jump();
         }
     }
