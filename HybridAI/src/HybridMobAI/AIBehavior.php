@@ -59,9 +59,9 @@ class AIBehavior {
             $playerPosition->getX() - $mobPosition->getX(),
             $playerPosition->getY() - $mobPosition->getY(),
             $playerPosition->getZ() - $mobPosition->getZ()
-        )->normalize();
+        );
         
-        $motion = $direction->multiply(0.1); // 움직임 속도 조정
+        $motion = $direction->normalize()->multiply(0.1); // 움직임 속도 조정
         $mob->setMotion($motion);
         $mob->lookAt($player->getPosition());
     }
