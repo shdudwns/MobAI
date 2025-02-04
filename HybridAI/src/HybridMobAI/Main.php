@@ -10,7 +10,7 @@ use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\entity\Location; // ✅ 올바른 네임스페이스 사용
+use pocketmine\entity\Location;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
@@ -81,7 +81,11 @@ class Main extends PluginBase implements Listener {
     public function spawnZombieInFrontOfPlayer(Player $player): void {
         $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
         $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
-        $spawnPosition = $player->getPosition()->add($direction);
+        $spawnPosition = new Vector3(
+            $player->getPosition()->getX() + $direction->getX(),
+            $player->getPosition()->getY() + $direction->getY(),
+            $player->getPosition()->getZ() + $direction->getZ()
+        );
         $this->spawnZombieAt($player->getWorld(), $spawnPosition);
     }
 
@@ -89,7 +93,7 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
 
         // 올바른 Location 객체 생성 (yaw, pitch 추가)
-        $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
+        $location = new Location($position->getX(), $position->getY(), $position->getZ(), $world, 0.0, 0.0);
 
         // 직접 엔티티 인스턴스 생성
         $zombie = new Zombie($location, new CompoundTag());
