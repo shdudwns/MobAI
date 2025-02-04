@@ -5,8 +5,8 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
-use pocketmine\world\World;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\Location;
 use pocketmine\player\Player;
 
 class Zombie extends Living {
@@ -14,8 +14,8 @@ class Zombie extends Living {
     private $plugin;
     private int $moveCooldown = 0; // 움직임 간격을 제어하는 변수
 
-    public function __construct(World $world, CompoundTag $nbt, $plugin) {
-        parent::__construct($world, $nbt);
+    public function __construct(Location $location, CompoundTag $nbt, $plugin) {
+        parent::__construct($location, $nbt);
         $this->plugin = $plugin;
         $this->aiBehavior = new AIBehavior($plugin);
     }
