@@ -24,7 +24,7 @@ class Main extends PluginBase implements Listener {
 
         // 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+            return new Zombie(new Location($nbt->getFloat("x"), $nbt->getFloat("y"), $nbt->getFloat("z"), $world, 0.0, 0.0), $nbt);
         }, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
@@ -41,11 +41,11 @@ class Main extends PluginBase implements Listener {
 
     public function onEntityDamage(EntityDamageEvent $event): void {
         $entity = $event->getEntity();
-        
+
         // 엔티티가 Living(생명체)인지 확인
         if ($entity instanceof Living) {
             $this->getLogger()->info("몹이 피해를 입음: " . $entity->getName());
-            
+
             // 공격자가 있는 경우(EntityDamageByEntityEvent인지 확인)
             if ($event instanceof EntityDamageByEntityEvent) {
                 $damager = $event->getDamager();
@@ -59,8 +59,12 @@ class Main extends PluginBase implements Listener {
             $this->getLogger()->info("몹이 플레이어를 향해 이동: " . $mob->getName());
             if ($mob instanceof Zombie) {
                 $mob->lookAt($damager->getPosition());
-                $direction = $damager->getPosition()->subtract($mob->getPosition());
-                $mob->moveTo($direction->normalize()->multiply(0.25));
+                $direction = new Vector3(
+                    $damager->getPosition()->getX() - $mob->getPosition()->getX(),
+                    $damager->getPosition()->getY() - $mob->getPosition()->getY(),
+                    $damager->getPosition()->getZ() - $mob->getPosition()->getZ()
+                );
+                $mob->setMotion($direction->normalize()->multiply(0.25));
             }
         }
     }
