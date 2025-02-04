@@ -14,7 +14,7 @@ use pocketmine\entity\Location;
 class Zombie extends Living {
     public const NETWORK_ID = EntityIds::ZOMBIE;
 
-    public function __construct(Location $location, CompoundTag $nbt) {
+    public function __construct(Location $location, ?CompoundTag $nbt) {
         parent::__construct($location, $nbt);
         $this->setPosition($location);
     }
@@ -25,12 +25,13 @@ class Zombie extends Living {
     }
 
     public function onUpdate(int $currentTick): bool {
-        // 부모 클래스의 onUpdate를 호출하여 기본 동작을 수행
-        parent::onUpdate($currentTick);
+        if (parent::onUpdate($currentTick)) {
+            return true;
+        }
 
         // 가까운 플레이어를 찾아 따라가도록 구현
         $nearestPlayer = $this->findNearestPlayer();
-        if($nearestPlayer !== null) {
+        if ($nearestPlayer !== null) {
             $this->followPlayer($nearestPlayer);
         }
 
@@ -41,9 +42,9 @@ class Zombie extends Living {
         $nearestPlayer = null;
         $nearestDistance = PHP_INT_MAX;
 
-        foreach($this->getWorld()->getPlayers() as $player) {
+        foreach ($this->getWorld()->getPlayers() as $player) {
             $distance = $this->location->distance($player->getLocation());
-            if($distance < $nearestDistance) {
+            if ($distance < $nearestDistance) {
                 $nearestDistance = $distance;
                 $nearestPlayer = $player;
             }
