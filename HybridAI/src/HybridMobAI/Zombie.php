@@ -5,14 +5,17 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
-use pocketmine\math\Vector3;
+use pocketmine\world\World;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\player\Player;
 
 class Zombie extends Living {
-    private $aiBehavior;
+    private AIBehavior $aiBehavior;
     private $plugin;
+    private int $moveCooldown = 0; // 움직임 간격을 제어하는 변수
 
-    public function __construct($location, $nbt, $plugin) {
-        parent::__construct($location, $nbt);
+    public function __construct(World $world, CompoundTag $nbt, $plugin) {
+        parent::__construct($world, $nbt);
         $this->plugin = $plugin;
         $this->aiBehavior = new AIBehavior($plugin);
     }
@@ -29,20 +32,25 @@ class Zombie extends Living {
         return EntityIds::ZOMBIE; // 좀비의 네트워크 ID 반환
     }
 
-    public function onTick(int $currentTick): bool {
+    public function onUpdate(int $currentTick): bool {
         if ($this->isAlive()) {
-            // AI 행동 수행
-            $this->aiBehavior->moveRandomly($this);
+            if ($this->moveCooldown <= 0) {
+                // AI 행동 수행
+                $this->aiBehavior->performAI($this);
+                $this->moveCooldown = 20; // 1초 간격으로 움직임 업데이트 (20틱)
+            } else {
+                $this->moveCooldown--;
+            }
         }
-        return parent::onTick($currentTick);
+        return parent::onUpdate($currentTick);
     }
 
     // 추가적인 행동 메서드를 호출할 수 있습니다.
-    public function moveToPlayer($player): void {
+    public function moveToPlayer(Player $player): void {
         $this->aiBehavior->moveToPlayer($this, $player);
     }
 
-    public function attackPlayer($player): void {
+    public function attackPlayer(Player $player): void {
         $this->aiBehavior->attackPlayer($this, $player);
     }
 
