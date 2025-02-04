@@ -60,7 +60,7 @@ class Zombie extends Living {
             $player->getLocation()->getZ() - $this->location->getZ()
         );
         $this->lookAt($player->getLocation());
-        $this->setMotion($direction->normalize()->multiply(0.1)); // 이동 속도 조정
+        $this->setMotion($direction->normalize()->multiply(0.3)); // 이동 속도 증가
     }
 
     public function getName(): string {
