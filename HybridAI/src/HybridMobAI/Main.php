@@ -22,9 +22,9 @@ class Main extends PluginBase implements Listener {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
         // ✅ 좀비 엔티티 등록 (NBT 제거)
-        EntityFactory::getInstance()->register(Zombie::class, function(World $world, Location $location): Zombie {
-            return new Zombie($location);
-        }, ['Zombie', 'minecraft:zombie']);
+        EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
+    return new Zombie($world, $nbt);
+}, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
         $this->reloadConfig();
