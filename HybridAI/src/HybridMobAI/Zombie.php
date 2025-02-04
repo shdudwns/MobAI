@@ -12,7 +12,6 @@ use pocketmine\player\Player;
 class Zombie extends Living {
     private AIBehavior $aiBehavior;
     private $plugin;
-    private int $moveCooldown = 0; // 움직임 간격을 제어하는 변수
 
     public function __construct(Location $location, CompoundTag $nbt, $plugin) {
         parent::__construct($location, $nbt);
@@ -34,13 +33,8 @@ class Zombie extends Living {
 
     public function onUpdate(int $currentTick): bool {
         if ($this->isAlive()) {
-            if ($this->moveCooldown <= 0) {
-                // AI 행동 수행
-                $this->aiBehavior->performAI($this);
-                $this->moveCooldown = 20; // 1초 간격으로 움직임 업데이트 (20틱)
-            } else {
-                $this->moveCooldown--;
-            }
+            // AI 행동 수행
+            $this->aiBehavior->performAI($this);
         }
         return parent::onUpdate($currentTick);
     }
