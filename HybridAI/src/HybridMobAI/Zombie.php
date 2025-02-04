@@ -8,6 +8,8 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\Location;
 use pocketmine\player\Player;
+use pocketmine\world\World;
+use pocketmine\math\Vector3;
 
 class Zombie extends Living {
     private AIBehavior $aiBehavior;
@@ -18,8 +20,8 @@ class Zombie extends Living {
         $this->plugin = $plugin;
         $this->aiBehavior = new AIBehavior($plugin);
 
-        // 블록 사이에서 스폰될 때 블록을 통과하지 않도록 설정
-        $this->setImmobile(false);
+        // 블록 사이에서 스폰될 때 위치를 조정
+        $this->adjustSpawnLocation();
     }
 
     public function getName(): string {
@@ -40,6 +42,18 @@ class Zombie extends Living {
             $this->aiBehavior->performAI($this);
         }
         return parent::onUpdate($currentTick);
+    }
+
+    private function adjustSpawnLocation(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        $block = $world->getBlock($pos);
+
+        // 블록이 투명하지 않다면 위치를 조정
+        if (!$block->isTransparent()) {
+            $newPosition = $pos->add(0, 1, 0); // 한 블록 위로 이동
+            $this->teleport($newPosition);
+        }
     }
 
     // 추가적인 행동 메서드를 호출할 수 있습니다.
