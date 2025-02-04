@@ -2,13 +2,13 @@
 
 namespace HybridMobAI;
 
-use pocketmine\entity\Monster;
+use pocketmine\entity\Living;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\math\Vector3;
 
-class Zombie extends Monster {
-    private AIBehavior $aiBehavior;
+class Zombie extends Living {
+    private $aiBehavior;
     private $plugin;
 
     public function __construct($location, $nbt, $plugin) {
