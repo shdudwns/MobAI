@@ -21,7 +21,7 @@ class AIBehavior {
             $this->moveRandomly($mob);
         }
 
-        // 장애물 앞에서 점프하도록 추가
+        // 장애물 앞에서만 점프하도록 조건 추가
         $this->checkForObstaclesAndJump($mob);
     }
 
@@ -46,7 +46,7 @@ class AIBehavior {
             new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $motion = $randomDirection->multiply(0.1); // 이동 속도 증가
+        $motion = $randomDirection->multiply(0.05); // 이동 속도 감소
         $mob->setMotion($motion);
         $newPosition = $mob->getPosition()->add($motion->getX(), $motion->getY(), $motion->getZ());
         $mob->lookAt($newPosition);
@@ -62,7 +62,7 @@ class AIBehavior {
             $playerPosition->getZ() - $mobPosition->getZ()
         );
 
-        $motion = $direction->normalize()->multiply(0.15); // 이동 속도 증가
+        $motion = $direction->normalize()->multiply(0.05); // 이동 속도 감소
         $mob->setMotion($motion);
         $mob->lookAt($player->getPosition());
     }
@@ -70,7 +70,7 @@ class AIBehavior {
     private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
-        $frontPosition = $position->add($mob->getDirectionVector()->getX(), $mob->getDirectionVector()->getY(), $mob->getDirectionVector()->getZ()); // 앞쪽 블록 위치
+        $frontPosition = $position->add($mob->getDirectionVector()->multiply(1)); // 앞쪽 블록 위치
 
         // 앞쪽 블록이 장애물이면 점프
         $block = $world->getBlock($frontPosition);
