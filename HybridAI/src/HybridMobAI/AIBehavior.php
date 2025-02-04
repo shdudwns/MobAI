@@ -71,11 +71,14 @@ class AIBehavior {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
         $directionVector = $mob->getDirectionVector();
-        $frontPosition = $position->add($directionVector->getX(), $directionVector->getY(), $directionVector->getZ()); // 앞쪽 블록 위치
+        $frontPosition = $position->add($directionVector->getX(), 0, $directionVector->getZ()); // 앞쪽 블록 위치
 
-        // 앞쪽 블록이 장애물이면서 높이가 현재 위치보다 높은 경우 점프
-        $block = $world->getBlock($frontPosition);
-        if (!$block->isTransparent() && $block->getPosition()->getY() > $position->getY()) {
+        // 앞쪽 1 블록 높이의 장애물 확인
+        $blockInFront = $world->getBlock($frontPosition);
+        $blockAboveInFront = $world->getBlock($frontPosition->add(0, 1, 0)); // 앞쪽 블록의 위쪽 블록 확인
+
+        // 앞쪽 블록이 장애물이고, 그 바로 위 블록이 비어 있는 경우 점프
+        if (!$blockInFront->isTransparent() && $blockAboveInFront->isTransparent()) {
             $mob->jump();
         }
     }
