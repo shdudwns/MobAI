@@ -25,8 +25,8 @@ class Zombie extends Living {
     }
 
     public function onUpdate(int $currentTick): bool {
-        if (parent::onUpdate($currentTick)) {
-            return true;
+        if (!parent::onUpdate($currentTick)) {
+            return false;
         }
 
         // 가까운 플레이어를 찾아 따라가도록 구현
@@ -60,7 +60,11 @@ class Zombie extends Living {
             $player->getLocation()->getZ() - $this->location->getZ()
         );
         $this->lookAt($player->getLocation());
-        $this->setMotion($direction->normalize()->multiply(0.3)); // 이동 속도 증가
+
+        // 매끄러운 이동을 위해 이동 속도 조정
+        $speed = 0.15; // 이동 속도 설정
+        $motion = $direction->normalize()->multiply($speed);
+        $this->setMotion($motion);
     }
 
     public function getName(): string {
