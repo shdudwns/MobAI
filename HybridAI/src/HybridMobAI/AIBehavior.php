@@ -5,6 +5,8 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\player\Player;
 use pocketmine\math\Vector3;
+use pocketmine\block\BlockFactory;
+use pocketmine\block\VanillaBlocks;
 
 class AIBehavior {
     private $plugin;
@@ -20,6 +22,9 @@ class AIBehavior {
         } else {
             $this->moveRandomly($mob);
         }
+
+        // 장애물 앞에서 점프하도록 추가
+        $this->checkForObstaclesAndJump($mob);
     }
 
     private function findNearestPlayer(Living $mob): ?Player {
@@ -43,7 +48,7 @@ class AIBehavior {
             new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $motion = $randomDirection->multiply(0.02); // 움직임 속도 조정 (더 작게 설정하여 부드러운 움직임 구현)
+        $motion = $randomDirection->multiply(0.1); // 이동 속도 증가
         $mob->setMotion($motion);
         $mob->lookAt($mob->getPosition()->add($motion));
     }
@@ -52,16 +57,27 @@ class AIBehavior {
         $mobPosition = $mob->getPosition();
         $playerPosition = $player->getPosition();
 
-        // 벡터 좌표를 사용하여 방향 계산
         $direction = new Vector3(
             $playerPosition->getX() - $mobPosition->getX(),
             $playerPosition->getY() - $mobPosition->getY(),
             $playerPosition->getZ() - $mobPosition->getZ()
         );
 
-        $motion = $direction->normalize()->multiply(0.02); // 움직임 속도 조정 (더 작게 설정하여 부드러운 움직임 구현)
+        $motion = $direction->normalize()->multiply(0.15); // 이동 속도 증가
         $mob->setMotion($motion);
         $mob->lookAt($player->getPosition());
+    }
+
+    private function checkForObstaclesAndJump(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $frontPosition = $position->add($mob->getDirectionVector()->multiply(1)); // 앞쪽 블록 위치
+
+        // 앞쪽 블록이 장애물이면 점프
+        $block = $world->getBlock($frontPosition);
+        if (!$block->isTransparent() && $block->getPosition()->getY() <= $position->getY()) {
+            $mob->jump();
+        }
     }
 
     public function attackPlayer(Living $mob, Player $player): void {
