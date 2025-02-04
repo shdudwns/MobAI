@@ -21,10 +21,10 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // ✅ 좀비 엔티티 등록 (NBT 제거)
+        // ✅ 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-    return new Zombie($world, $nbt);
-}, ['Zombie', 'minecraft:zombie']);
+            return new Zombie($world, $nbt);
+        }, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
         $this->reloadConfig();
@@ -91,8 +91,8 @@ class Main extends PluginBase implements Listener {
         // ✅ 올바른 Location 객체 생성 (yaw, pitch 추가)
         $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
 
-        // ✅ 직접 엔티티 인스턴스 생성 (NBT 제거)
-        $zombie = new Zombie($location);
+        // ✅ 직접 엔티티 인스턴스 생성
+        $zombie = new Zombie($world, new CompoundTag());
 
         // ✅ 좀비가 유효한지 확인 후 스폰
         if ($zombie !== null) {
