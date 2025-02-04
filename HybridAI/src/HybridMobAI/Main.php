@@ -10,7 +10,7 @@ use pocketmine\player\Player;
 use pocketmine\entity\EntityFactory;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
-use pocketmine\entity\Location;
+use pocketmine\entity\Location; // ✅ 올바른 네임스페이스 사용
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntityDataHelper;
@@ -24,7 +24,7 @@ class Main extends PluginBase implements Listener {
 
         // 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie(new Location($nbt->getFloat("x"), $nbt->getFloat("y"), $nbt->getFloat("z"), $world, 0.0, 0.0), $nbt);
+            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         }, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
@@ -86,6 +86,7 @@ class Main extends PluginBase implements Listener {
             $player->getPosition()->getY() + $direction->getY(),
             $player->getPosition()->getZ() + $direction->getZ()
         );
+        $spawnPosition->y += 1; // 좀비가 블록 안에 생성되지 않도록 높이를 조정
         $this->spawnZombieAt($player->getWorld(), $spawnPosition);
     }
 
