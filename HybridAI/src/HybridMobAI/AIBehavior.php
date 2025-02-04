@@ -5,8 +5,6 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\player\Player;
 use pocketmine\math\Vector3;
-use pocketmine\block\BlockFactory;
-use pocketmine\block\VanillaBlocks;
 
 class AIBehavior {
     private $plugin;
@@ -50,7 +48,8 @@ class AIBehavior {
         $randomDirection = $directionVectors[array_rand($directionVectors)];
         $motion = $randomDirection->multiply(0.1); // 이동 속도 증가
         $mob->setMotion($motion);
-        $mob->lookAt($mob->getPosition()->add($motion));
+        $newPosition = $mob->getPosition()->add($motion->getX(), $motion->getY(), $motion->getZ());
+        $mob->lookAt($newPosition);
     }
 
     public function moveToPlayer(Living $mob, Player $player): void {
