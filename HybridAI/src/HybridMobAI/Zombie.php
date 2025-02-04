@@ -54,12 +54,8 @@ class Zombie extends Living {
     }
 
     private function followPlayer(Player $player): void {
-        $direction = new Vector3(
-            $player->getLocation()->getX() - $this->location->getX(),
-            $player->getLocation()->getY() - $this->location->getY(),
-            $player->getLocation()->getZ() - $this->location->getZ()
-        );
-        $this->setMotion($direction->normalize()->multiply(0.1)); // 이동 속도 조정
+        $direction = $player->getLocation()->subtract($this->location)->normalize();
+        $this->setMotion($direction->multiply(0.1)); // 이동 속도 조정
     }
 
     public function getName(): string {
