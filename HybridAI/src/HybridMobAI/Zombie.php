@@ -25,16 +25,15 @@ class Zombie extends Living {
     }
 
     public function onUpdate(int $currentTick): bool {
-        if(parent::onUpdate($currentTick)) {
-            return true;
-        }
+        // 부모 클래스의 onUpdate를 호출하여 기본 동작을 수행
+        parent::onUpdate($currentTick);
 
         // 가까운 플레이어를 찾아 따라가도록 구현
         $nearestPlayer = $this->findNearestPlayer();
         if($nearestPlayer !== null) {
             $this->followPlayer($nearestPlayer);
         }
-        
+
         return true;
     }
 
@@ -59,6 +58,7 @@ class Zombie extends Living {
             $player->getLocation()->getY() - $this->location->getY(),
             $player->getLocation()->getZ() - $this->location->getZ()
         );
+        $this->lookAt($player->getLocation());
         $this->setMotion($direction->normalize()->multiply(0.1)); // 이동 속도 조정
     }
 
