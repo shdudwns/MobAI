@@ -35,12 +35,14 @@ class Zombie extends Living {
     }
 
     public function onUpdate(int $currentTick): bool {
-        if (!$this->isAlive()) {
-            return false;
-        }
-
-        return parent::onUpdate($currentTick);
+    if (!$this->isAlive()) {
+        return false;
     }
+
+    $this->getLogger()->info("좀비 AI 실행 중: " . $this->getId());
+
+    return parent::onUpdate($currentTick);
+}
 
     public function getName(): string {
         return "Zombie";
