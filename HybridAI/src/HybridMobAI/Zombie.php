@@ -15,18 +15,30 @@ class Zombie extends Living {
     private Main $plugin;
     private MobAITask $aiTask;
 
-    public function __construct(World $world, CompoundTag $nbt, Main $plugin) {
-        $location = Location::fromObject($world->getSpawnLocation(), $world);
-        parent::__construct($location, $nbt);
+    public function __construct(World $world, CompoundTag $nbt, $plugin) {
+        parent::__construct(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         $this->plugin = $plugin;
         $this->scheduleAITask($plugin->getScheduler());
+        $this->adjustSpawnLocation()
     }
 
     protected function initEntity(CompoundTag $nbt): void {
         parent::initEntity($nbt);
         // 추가적인 초기화 코드가 필요하다면 여기에 작성
     }
+  /** ✅ 블록 충돌 방지: 스폰 위치 조정 */
+    private function adjustSpawnLocation(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        $block = $world->getBlockAt((int) $pos->x, (int) $pos->y, (int) $pos->z);
 
+        // ✅ `null` 체크 후 `isTransparent()` 호출
+        if ($block !== null && !$block->isTransparent()) {
+            $this->teleport($pos->add(0, 1, 0)); // 한 블록 위로 이동
+        }
+    }
+
+    /** ✅ 좀비가 플레이
     public function onUpdate(int $currentTick): bool {
         if (!$this->isAlive()) {
             return false;
