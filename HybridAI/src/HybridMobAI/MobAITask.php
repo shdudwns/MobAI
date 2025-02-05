@@ -19,7 +19,7 @@ class MobAITask extends Task {
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
-        $this->useAI = $plugin->getConfig()->get("use_ai_model", true);
+        $this->useAI = $plugin->getConfig()->get("use_ai_model", false);
         $this->updateInterval = $plugin->getConfig()->get("ai_update_interval", 20);
 
         if ($this->useAI) {
