@@ -22,8 +22,8 @@ class MobAITask extends Task {
     public function onRun(): void {
         $this->tickCounter++;
 
-        // ✅ AI를 10 ticks(0.5초)마다 한 번만 실행
-        if ($this->tickCounter % 10 !== 0) {
+        // ✅ 실행 주기를 4 ticks(0.2초)로 설정하여 더 자연스러운 움직임
+        if ($this->tickCounter % 4 !== 0) {
             return;
         }
 
@@ -79,65 +79,62 @@ class MobAITask extends Task {
         );
 
         $motion = $direction->normalize()->multiply(0.15);
-        $mob->setMotion($motion);
+        
+        // ✅ 기존 모션과 새로운 모션을 부드럽게 보간 (lerp) → 더 자연스러운 이동
+        $currentMotion = $mob->getMotion();
+        $blendedMotion = new Vector3(
+            ($currentMotion->getX() * 0.5) + ($motion->getX() * 0.5),
+            $currentMotion->getY(),
+            ($currentMotion->getZ() * 0.5) + ($motion->getZ() * 0.5)
+        );
+
+        $mob->setMotion($blendedMotion);
         $mob->lookAt($playerPos);
     }
 
-    /** ✅ 장애물 감지 후 점프 */
-    
+    /** ✅ 장애물 감지 후 점프 (높이 2 블록까지 가능) */
     private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    
-    // ✅ `VectorMath::getDirection2D()`는 `Vector2`를 반환하므로, `Vector3`로 변환 필요
-    $yaw = $mob->getLocation()->getYaw();
-    $direction2D = VectorMath::getDirection2D($yaw); // ✅ Vector2 반환
-    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY()); // ✅ Vector3 변환
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $yaw = $mob->getLocation()->getYaw();
+        $direction2D = VectorMath::getDirection2D($yaw);
+        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    $frontPosition = new Vector3(
-        $position->getX() + $directionVector->getX(),
-        $position->getY(),
-        $position->getZ() + $directionVector->getZ()
-    );
+        $frontPosition = new Vector3(
+            $position->getX() + $directionVector->getX(),
+            $position->getY(),
+            $position->getZ() + $directionVector->getZ()
+        );
 
-    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
+        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+        $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
 
-    if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
-        $this->jump($mob);
+        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
+            $this->jump($mob);
         }
     }
 
-    /** ✅ 랜덤 이동 */
+    /** ✅ 랜덤 이동 (부드러운 방향 전환) */
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
             new Vector3(0, 0, 1), new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $mob->setMotion($randomDirection->multiply(0.15));
+        
+        $currentMotion = $mob->getMotion();
+        $blendedMotion = new Vector3(
+            ($currentMotion->getX() * 0.7) + ($randomDirection->getX() * 0.3),
+            $currentMotion->getY(),
+            ($currentMotion->getZ() * 0.7) + ($randomDirection->getZ() * 0.3)
+        );
+
+        $mob->setMotion($blendedMotion);
     }
 
-    /** ✅ 점프 */
     public function jump(Living $mob): void {
         $jumpForce = 0.6;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
-    }
-
-    private function createGrid(World $world): array {
-        return []; // TODO: 실제 맵 데이터 기반 경로 탐색 구현
-    }
-
-    private function selectAlgorithm(): string {
-        $algorithms = ["AStar", "BFS", "DFS"];
-        return $algorithms[array_rand($algorithms)];
-    }
-
-    private function attackPlayer(Creature $mob): void {
-        // TODO: 몬스터 공격 로직 추가
-    }
-
-    private function retreat(Creature $mob): void {
-        // TODO: 후퇴 로직 추가
     }
 }
