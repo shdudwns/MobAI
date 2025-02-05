@@ -16,8 +16,9 @@ class Zombie extends Living {
     private Main $plugin;
     private MobAITask $aiTask;
 
-    public function __construct(Location $location, CompoundTag $nbt) {
+    public function __construct(Location $location, CompoundTag $nbt, Main $plugin) {
         parent::__construct($location, $nbt);
+        $this->plugin = $plugin; // $plugin 속성 초기화
         $this->scheduleAITask($this->plugin->getScheduler());
         $this->adjustSpawnLocation();
     }
