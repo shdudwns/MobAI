@@ -5,7 +5,7 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\entity\Location;
 use pocketmine\entity\EntitySizeInfo;
-use pocketmine\entity\EntityIds;
+use pocketmine\entity\EntityFactory;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\plugin\PluginBase;
 use pocketmine\world\World;
@@ -66,6 +66,6 @@ class Zombie extends Living {
     }
 
     public static function getNetworkTypeId(): string {
-        return EntityIds::ZOMBIE;
+        return EntityFactory::ZOMBIE;
     }
 }
