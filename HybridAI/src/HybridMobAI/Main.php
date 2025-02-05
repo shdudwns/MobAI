@@ -31,7 +31,7 @@ class Main extends PluginBase implements Listener {
 
     // ✅ MobAITask 실행 로그 추가
     $this->getLogger()->info("MobAITask 실행 중...");
-    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
+    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 1);
 
         // ✅ 일정 시간마다 랜덤 좀비 스폰
         $spawnInterval = 600; // 600 ticks (30초)
