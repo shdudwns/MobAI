@@ -3,18 +3,11 @@
 namespace HybridMobAI;
 
 use pocketmine\math\Vector3;
-use pocketmine\world\World;
 use SplPriorityQueue;
 use SplQueue;
 use SplStack;
 
 class Pathfinder {
-
-    private World $world;
-    
-    public function __construct(World $world) {
-        $this->world = $world;
-    }
 
     public function findPath(Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         switch ($algorithm) {
@@ -115,17 +108,11 @@ class Pathfinder {
 
         foreach ($directions as $dir) {
             $neighbor = $position->add($dir->x, $dir->y, $dir->z);
-            if ($this->isWalkable($neighbor)) {
-                $neighbors[] = clone $neighbor;
-            }
+            // Assume all positions are walkable for now
+            $neighbors[] = clone $neighbor;
         }
 
         return $neighbors;
-    }
-
-    private function isWalkable(Vector3 $position): bool {
-        $block = $this->world->getBlockAt((int) $position->x, (int) $position->y, (int) $position->z);
-        return !$block->isSolid();
     }
 
     private function distance(Vector3 $a, Vector3 $b): float {
