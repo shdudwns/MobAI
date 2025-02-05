@@ -39,7 +39,7 @@ class Zombie extends Living {
         return false;
     }
 
-    $this->getLogger()->info("좀비 AI 실행 중: " . $this->getId());
+    //$this->getLogger()->info("좀비 AI 실행 중: " . $this->getId());
 
     return parent::onUpdate($currentTick);
 }
