@@ -20,7 +20,7 @@ class MobAITask extends Task {
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->useAI = $plugin->getConfig()->get("use_ai_model", false);
-        $this->updateInterval = $plugin->getConfig()->get("ai_update_interval", 20);
+        $this->updateInterval = $plugin->getConfig()->get("ai_update_interval", 100); // 20에서 100으로 변경
 
         if ($this->useAI) {
             $this->aiModel = new AIModel();
@@ -32,9 +32,13 @@ class MobAITask extends Task {
         if ($this->tickCounter >= $this->updateInterval) {
             $this->tickCounter = 0;
             foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
-                foreach ($world->getEntities() as $entity) {
-                    if ($entity instanceof Creature) {
-                        $this->handleMobAI($entity);
+                $entities = $world->getEntities();
+                $chunks = array_chunk($entities, 10); // 엔티티를 10개씩 배치 처리
+                foreach ($chunks as $chunk) {
+                    foreach ($chunk as $entity) {
+                        if ($entity instanceof Creature) {
+                            $this->handleMobAI($entity);
+                        }
                     }
                 }
             }
@@ -50,10 +54,14 @@ class MobAITask extends Task {
             return;
         }
 
-        $grid = $this->createGrid($mob->getWorld());
-        $algorithm = $this->selectAlgorithm();
-        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getPosition()->getX(), $goal->getPosition()->getY(), $goal->getPosition()->getZ(), $mob->getId(), $algorithm, $mob->getWorld()->getDisplayName());
-        $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+        if (rand(0, 10) < 3) { // 비동기 작업 제출을 랜덤하게 줄임
+            $grid = $this->createGrid($mob->getWorld());
+            $algorithm = $this->selectAlgorithm();
+            $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getPosition()->getX(), $goal->getPosition()->getY(), $goal->getPosition()->getZ(), $mob->getId(), $algorithm, $mob->getWorld()->getDisplayName());
+            $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+        } else {
+            $this->moveRandomly($mob); // 대신 무작위 이동
+        }
 
         if ($this->useAI && $this->aiModel !== null) {
             $state = $this->getState($mob);
