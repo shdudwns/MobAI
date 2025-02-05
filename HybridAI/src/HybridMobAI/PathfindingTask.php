@@ -5,26 +5,34 @@ namespace HybridMobAI;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
-use pocketmine\math\Vector3;
-use pocketmine\world\World;
 
 class PathfindingTask extends AsyncTask {
-    private Vector3 $start;
-    private Vector3 $goal;
+    private float $startX;
+    private float $startY;
+    private float $startZ;
+    private float $goalX;
+    private float $goalY;
+    private float $goalZ;
     private int $mobId;
     private string $algorithm;
 
-    public function __construct(Vector3 $start, Vector3 $goal, int $mobId, string $algorithm) {
-        $this->start = $start;
-        $this->goal = $goal;
+    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm) {
+        $this->startX = $startX;
+        $this->startY = $startY;
+        $this->startZ = $startZ;
+        $this->goalX = $goalX;
+        $this->goalY = $goalY;
+        $this->goalZ = $goalZ;
         $this->mobId = $mobId;
         $this->algorithm = $algorithm;
     }
 
     public function onRun(): void {
         // 경로 탐색 알고리즘 실행
+        $start = new Vector3($this->startX, $this->startY, $this->startZ);
+        $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
         $pathfinder = new Pathfinder();
-        $path = $pathfinder->findPath($this->start, $this->goal, $this->algorithm);
+        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
         $this->setResult($path);
     }
 
