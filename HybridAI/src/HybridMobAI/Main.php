@@ -13,7 +13,6 @@ use pocketmine\math\Vector3;
 use pocketmine\entity\Location;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntitySpawnEvent;
