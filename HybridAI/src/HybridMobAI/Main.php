@@ -42,7 +42,7 @@ class Main extends PluginBase implements Listener {
         }), $spawnInterval);
     }
 
-    public function saveDefaultConfig(): void {
+    public function saveDefaultConfig(): bool {
         // 기본 설정 값
         $defaultConfig = [
             "use_ai_model" => false,
@@ -58,7 +58,9 @@ class Main extends PluginBase implements Listener {
         if (!$this->getConfig()->exists("use_ai_model")) {
             $this->getConfig()->setAll($defaultConfig);
             $this->getConfig()->save();
+            return true;
         }
+        return false;
     }
 
     public function onEntitySpawn(EntitySpawnEvent $event): void {
