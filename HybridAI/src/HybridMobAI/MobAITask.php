@@ -41,7 +41,7 @@ class MobAITask extends Task {
         }
     }
 
-    public function handleMobAI(Creature $mob): void {
+    public function handleMobAI(Living $mob): void {
         $start = $mob->getPosition();
         $goal = $this->findNearestPlayer($mob);
 
@@ -74,11 +74,11 @@ class MobAITask extends Task {
         }
     }
 
-    private function getState(Creature $mob): int {
+    private function getState(Living $mob): int {
         return 0; // TODO: AI 모델에서 상태 학습 구현 필요
     }
 
-    private function getReward(Creature $mob, int $action): float {
+    private function getReward(Living $mob, int $action): float {
         return 1.0; // TODO: AI 학습용 보상 시스템 추가
     }
 
