@@ -100,10 +100,20 @@ class Main extends PluginBase implements Listener {
     }
 
     public function spawnZombieInFrontOfPlayer(Player $player): void {
-        $direction = $player->getDirectionVector()->normalize()->multiply(2);
-        $spawnPosition = $player->getPosition()->add($direction)->add(0, 1, 0);
-        $this->spawnZombieAt($player->getWorld(), $spawnPosition);
-    }
+    $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
+    
+    $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
+    
+    // ✅ 직접 Vector3 좌표 계산
+    $spawnPosition = new Vector3(
+        $player->getPosition()->getX() + $direction->getX(),
+        $player->getPosition()->getY() + $direction->getY(),
+        $player->getPosition()->getZ() + $direction->getZ()
+    );
+    $spawnPosition = $spawnPosition->add(0, 1, 0); // 좀비가 블록 안에 생성되지 않도록 Y 좌표 조정
+    
+    $this->spawnZombieAt($player->getWorld(), $spawnPosition);
+}
 
     /** ✅ 청크가 로드된 경우에만 좀비 스폰 */
     public function spawnZombieAt(World $world, Vector3 $position): void {
