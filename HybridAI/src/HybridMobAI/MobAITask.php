@@ -91,12 +91,12 @@ class MobAITask extends Task {
     }
 
     /** ✅ 가장 가까운 플레이어 찾기 */
-    private function findNearestPlayer(Living $mob): ?Player {
+    private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
         $nearestPlayer = null;
 
         foreach ($mob->getWorld()->getPlayers() as $player) {
-            $distance = $mob->getPosition()->distanceSquared($player->getPosition());
+            $distance = $mob->getPosition()->distance($player->getPosition());
             if ($distance < $closestDistance) {
                 $closestDistance = $distance;
                 $nearestPlayer = $player;
@@ -106,15 +106,24 @@ class MobAITask extends Task {
         return $nearestPlayer;
     }
 
-    /** ✅ `PathfindingTask`를 사용하여 플레이어에게 이동 */
-    public function moveToPlayer(Living $mob, Player $player): void {
-        $start = $mob->getPosition();
-        $goal = $player->getPosition();
-        $mobId = $mob->getId();
+ 
 
-        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getX(), $goal->getY(), $goal->getZ(), $mobId, "AStar", $mob->getWorld()->getDisplayName());
-        Server::getInstance()->getAsyncPool()->submitTask($task);
+    /** ✅ `PathfindingTask`를 사용하여 플레이어에게 이동 */
+    private function moveToPlayer(Zombie $mob, Player $player): void {
+        $mobPos = $mob->getPosition();
+        $playerPos = $player->getPosition();
+
+        $direction = new Vector3(
+            $playerPos->getX() - $mobPos->getX(),
+            0,
+            $playerPos->getZ() - $mobPos->getZ()
+        );
+
+        $motion = $direction->normalize()->multiply(0.15);
+        $mob->setMotion($motion);
+        $mob->lookAt($playerPos);
     }
+}
 
     /** ✅ 장애물 감지 후 점프 */
     private function checkForObstaclesAndJump(Living $mob): void {
