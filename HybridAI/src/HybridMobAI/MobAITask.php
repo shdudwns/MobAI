@@ -52,7 +52,7 @@ class MobAITask extends Task {
 
         $grid = $this->createGrid($mob->getWorld());
         $algorithm = $this->selectAlgorithm();
-        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getPosition()->getX(), $goal->getPosition()->getY(), $goal->getPosition()->getZ(), $mob->getId(), $algorithm);
+        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getPosition()->getX(), $goal->getPosition()->getY(), $goal->getPosition()->getZ(), $mob->getId(), $algorithm, $mob->getWorld()->getDisplayName());
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
 
         if ($this->useAI && $this->aiModel !== null) {
@@ -104,7 +104,7 @@ class MobAITask extends Task {
         $goal = $player->getPosition();
         $mobId = $mob->getId();
 
-        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getX(), $goal->getY(), $goal->getZ(), $mobId, "AStar");
+        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getX(), $goal->getY(), $goal->getZ(), $mobId, "AStar", $mob->getWorld()->getDisplayName());
         Server::getInstance()->getAsyncPool()->submitTask($task);
     }
 
