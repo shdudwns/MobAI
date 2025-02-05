@@ -10,13 +10,15 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\plugin\PluginBase;
 use pocketmine\world\World;
 use pocketmine\scheduler\TaskScheduler;
+use pocketmine\entity\EntityDataHelper;
 
 class Zombie extends Living {
     private Main $plugin;
     private MobAITask $aiTask;
 
-    public function __construct(World $world, CompoundTag $nbt, $plugin) {
-        parent::__construct(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+    public function __construct(World $world, CompoundTag $nbt, Main $plugin) {
+        $location = EntityDataHelper::parseLocation($nbt, $world);
+        parent::__construct($location, $nbt);
         $this->plugin = $plugin;
         $this->scheduleAITask($plugin->getScheduler());
         $this->adjustSpawnLocation();
@@ -26,7 +28,8 @@ class Zombie extends Living {
         parent::initEntity($nbt);
         // 추가적인 초기화 코드가 필요하다면 여기에 작성
     }
-  /** ✅ 블록 충돌 방지: 스폰 위치 조정 */
+
+    /** ✅ 블록 충돌 방지: 스폰 위치 조정 */
     private function adjustSpawnLocation(): void {
         $world = $this->getWorld();
         $pos = $this->getPosition();
@@ -38,7 +41,6 @@ class Zombie extends Living {
         }
     }
 
-    /** ✅ 좀비가 플레이
     public function onUpdate(int $currentTick): bool {
         if (!$this->isAlive()) {
             return false;
