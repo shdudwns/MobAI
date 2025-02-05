@@ -3,10 +3,7 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\AsyncTask;
-use pocketmine\Server;
-use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
-use pocketmine\world\World;
 
 class PathfindingTask extends AsyncTask {
     private float $startX;
@@ -32,16 +29,16 @@ class PathfindingTask extends AsyncTask {
     }
 
     public function onRun(): void {
-        // 경로 탐색 알고리즘 실행
+        // Perform pathfinding logic without accessing Server instance
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-        $pathfinder = new Pathfinder($world); // World 객체 전달
+        $pathfinder = new Pathfinder(); // Remove the need to pass World instance
         $path = $pathfinder->findPath($start, $goal, $this->algorithm);
         $this->setResult($path);
     }
 
     public function onCompletion(): void {
+        // Handle server interaction on the main thread
         $server = Server::getInstance();
         $path = $this->getResult();
         $entity = $server->getWorldManager()->findEntity($this->mobId);
