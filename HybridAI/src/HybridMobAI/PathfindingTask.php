@@ -6,12 +6,13 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 
 class PathfindingTask extends AsyncTask {
     private Vector3 $start;
     private Vector3 $goal;
-    private string $algorithm;
     private int $mobId;
+    private string $algorithm;
 
     public function __construct(Vector3 $start, Vector3 $goal, int $mobId, string $algorithm) {
         $this->start = $start;
@@ -21,6 +22,7 @@ class PathfindingTask extends AsyncTask {
     }
 
     public function onRun(): void {
+        // 경로 탐색 알고리즘 실행
         $pathfinder = new Pathfinder();
         $path = $pathfinder->findPath($this->start, $this->goal, $this->algorithm);
         $this->setResult($path);
@@ -29,16 +31,16 @@ class PathfindingTask extends AsyncTask {
     public function onCompletion(): void {
         $server = Server::getInstance();
         $path = $this->getResult();
-        $entity = $server->getWorldManager()->findEntity($this->mobId); // ✅ Entity ID를 기반으로 찾음
+        $entity = $server->getWorldManager()->findEntity($this->mobId);
 
         if ($entity instanceof Creature) {
             if ($path === null) {
-                $this->moveRandomly($entity); // 랜덤 이동
+                $this->moveRandomly($entity);
             } else {
                 $nextStep = $path[1] ?? null;
                 if ($nextStep !== null) {
                     $entity->lookAt($nextStep);
-                    $entity->setMotion($nextStep->subtract($entity->getPosition())->normalize()->multiply(0.25)); // ✅ `move()` 대신 `setMotion()` 사용
+                    $entity->setMotion($nextStep->subtract($entity->getPosition())->normalize()->multiply(0.25));
                 }
             }
         }
@@ -52,6 +54,6 @@ class PathfindingTask extends AsyncTask {
             new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $mob->setMotion($randomDirection->multiply(0.15)); // ✅ `move()` 대신 `setMotion()` 사용
+        $mob->setMotion($randomDirection->multiply(0.15));
     }
 }
