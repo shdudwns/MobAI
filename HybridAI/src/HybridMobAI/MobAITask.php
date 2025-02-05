@@ -9,6 +9,7 @@ use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\player\Player;
+use pocketmine\math\VectorMath;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -83,21 +84,26 @@ class MobAITask extends Task {
     }
 
     /** ✅ 장애물 감지 후 점프 */
+    
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $directionVector = $mob->getLocation()->getDirectionVector();
-        $frontPosition = new Vector3(
-            $position->getX() + $directionVector->getX(),
-            $position->getY(),
-            $position->getZ() + $directionVector->getZ()
-        );
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    
+    // ✅ 방향 벡터를 `getYaw()`을 사용하여 직접 계산
+    $yaw = $mob->getLocation()->getYaw();
+    $directionVector = VectorMath::getDirection2D($yaw); // ✅ 방향 벡터 계산
 
-        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+    $frontPosition = new Vector3(
+        $position->getX() + $directionVector->getX(),
+        $position->getY(),
+        $position->getZ() + $directionVector->getZ()
+    );
 
-        if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
-            $this->jump($mob);
+    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
+    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+
+    if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
+        $this->jump($mob);
         }
     }
 
