@@ -41,7 +41,7 @@ class MobAITask extends Task {
         }
     }
 
-    private function handleMobAI(Creature $mob): void {
+    public function handleMobAI(Creature $mob): void {
         $start = $mob->getPosition();
         $goal = $this->findNearestPlayer($mob);
 
