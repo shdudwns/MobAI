@@ -51,7 +51,7 @@ class MobAITask extends Task {
         $this->checkForObstaclesAndJump($mob);
     }
 
-    private function findNearestPlayer(Zombie $mob): ?Creature {
+    private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
         $nearestPlayer = null;
 
@@ -66,7 +66,7 @@ class MobAITask extends Task {
         return $nearestPlayer;
     }
 
-    private function moveToPlayer(Zombie $mob, Creature $player): void {
+    private function moveToPlayer(Zombie $mob, Player $player): void {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
