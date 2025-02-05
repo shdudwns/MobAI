@@ -2,44 +2,34 @@
 
 namespace HybridMobAI;
 
-use pocketmine\entity\Living;
-use pocketmine\entity\EntitySizeInfo;
-use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
-use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\Monster;
 use pocketmine\entity\Location;
-use pocketmine\player\Player;
-use pocketmine\world\World;
-use pocketmine\entity\EntityDataHelper;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\plugin\PluginBase;
 
-class Zombie extends Living {
-    private AIBehavior $aiBehavior;
-    private $plugin;
+class Zombie extends Monster {
+    private Main $plugin;
+    private MobAITask $aiTask;
 
-    public function __construct(World $world, CompoundTag $nbt, $plugin) {
-        parent::__construct(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+    public function __construct(Location $location, CompoundTag $nbt, Main $plugin) {
+        parent::__construct($location, $nbt);
         $this->plugin = $plugin;
-        $this->aiBehavior = new AIBehavior($plugin);
+        $this->aiTask = new MobAITask($plugin);
+        $this->plugin->getScheduler()->scheduleRepeatingTask($this->aiTask, 20);
     }
 
-    public function getName(): string {
-        return "Zombie";
-    }
-
-    protected function getInitialSizeInfo(): EntitySizeInfo {
-        return new EntitySizeInfo(1.95, 0.6);
-    }
-
-    public static function getNetworkTypeId(): string {
-        return EntityIds::ZOMBIE;
+    protected function initEntity(CompoundTag $nbt): void {
+        parent::initEntity($nbt);
+        // 추가적인 초기화 코드가 필요하다면 여기에 작성
     }
 
     public function onUpdate(int $currentTick): bool {
-        if ($this->isClosed() || !$this->isAlive()) {
+        if (!$this->isAlive()) {
             return false;
         }
 
-        // ✅ AI 실행 (경로 탐색 포함)
-        $this->aiBehavior->performAI($this);
+        // AI 동작 수행
+        $this->aiTask->handleMobAI($this);
 
         return parent::onUpdate($currentTick);
     }
