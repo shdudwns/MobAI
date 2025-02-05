@@ -42,7 +42,7 @@ class MobAITask extends Task {
     }
 
     public function handleMobAI(Living $mob): void {
-        $start = $mob->getPosition();
+        $start = $mob->getPosition()->asVector3(); // Vector3 객체로 변환
         $goal = $this->findNearestPlayer($mob);
 
         if ($goal === null) {
@@ -52,7 +52,7 @@ class MobAITask extends Task {
 
         $grid = $this->createGrid($mob->getWorld());
         $algorithm = $this->selectAlgorithm();
-        $task = new PathfindingTask($start, $goal->getPosition(), $mob->getId(), $algorithm); // Player 객체의 위치 전달
+        $task = new PathfindingTask($start, $goal->getPosition()->asVector3(), $mob->getId(), $algorithm); // Vector3 객체로 변환
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
 
         if ($this->useAI && $this->aiModel !== null) {
@@ -60,7 +60,7 @@ class MobAITask extends Task {
             $action = $this->aiModel->chooseAction($state);
             switch ($action) {
                 case 0: $this->moveRandomly($mob); break;
-                case 1: $this->moveToPlayer($mob, $goal); break; // goal은 Player 객체
+                case 1: $this->moveToPlayer($mob, $goal); break;
                 case 2: $this->attackPlayer($mob); break;
                 case 3: $this->retreat($mob); break;
                 case 4: $this->jump($mob); break;
@@ -100,8 +100,8 @@ class MobAITask extends Task {
 
     /** ✅ `PathfindingTask`를 사용하여 플레이어에게 이동 */
     public function moveToPlayer(Living $mob, Player $player): void {
-        $start = $mob->getPosition();
-        $goal = $player->getPosition(); // Player 객체의 위치 전달
+        $start = $mob->getPosition()->asVector3(); // Vector3 객체로 변환
+        $goal = $player->getPosition()->asVector3(); // Vector3 객체로 변환
         $mobId = $mob->getId();
 
         $task = new PathfindingTask($start, $goal, $mobId, "AStar");
