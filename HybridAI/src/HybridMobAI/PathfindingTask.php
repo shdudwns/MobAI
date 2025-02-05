@@ -3,7 +3,9 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\AsyncTask;
+use pocketmine\Server;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 
 class PathfindingTask extends AsyncTask {
     private float $startX;
@@ -29,22 +31,28 @@ class PathfindingTask extends AsyncTask {
     }
 
     public function onRun(): void {
-        // Perform pathfinding logic without accessing Server instance
-        $start = new Vector3($this->startX, $this->startY, $this->startZ);
-        $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $pathfinder = new Pathfinder(); // Remove the need to pass World instance
-        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
-        $this->setResult($path);
+        try {
+            // 경로 탐색 알고리즘 실행
+            $start = new Vector3($this->startX, $this->startY, $this->startZ);
+            $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
+            $server = Server::getInstance();
+            $world = $server->getWorldManager()->getWorldByName($this->worldName);
+            $pathfinder = new Pathfinder($world); // World 객체 전달
+            $path = $pathfinder->findPath($start, $goal, $this->algorithm);
+            $this->setResult($path);
+        } catch (\Throwable $e) {
+            $this->setResult([]);
+            $server->getLogger()->error("PathfindingTask error: " . $e->getMessage());
+        }
     }
 
     public function onCompletion(): void {
-        // Handle server interaction on the main thread
         $server = Server::getInstance();
         $path = $this->getResult();
         $entity = $server->getWorldManager()->findEntity($this->mobId);
 
         if ($entity instanceof Creature) {
-            if ($path === null) {
+            if (empty($path)) {
                 $this->moveRandomly($entity);
             } else {
                 $nextStep = $path[1] ?? null;
