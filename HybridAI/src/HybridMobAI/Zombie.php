@@ -5,7 +5,6 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\entity\Location;
 use pocketmine\entity\EntitySizeInfo;
-use pocketmine\entity\EntityLegacyIds; // 수정된 부분
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\plugin\PluginBase;
 use pocketmine\world\World;
@@ -65,6 +64,6 @@ class Zombie extends Living {
     }
 
     public static function getNetworkTypeId(): string {
-        return EntityLegacyIds::ZOMBIE; // 수정된 부분
+        return "minecraft:zombie"; // 네트워크 ID를 직접 정의
     }
 }
