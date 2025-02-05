@@ -19,7 +19,7 @@ class Zombie extends Living {
         parent::__construct(EntityDataHelper::parseLocation($nbt, $world), $nbt);
         $this->plugin = $plugin;
         $this->scheduleAITask($plugin->getScheduler());
-        $this->adjustSpawnLocation()
+        $this->adjustSpawnLocation();
     }
 
     protected function initEntity(CompoundTag $nbt): void {
