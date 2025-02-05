@@ -6,7 +6,6 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 
 class PathfindingTask extends AsyncTask {
-
     private float $startX;
     private float $startY;
     private float $startZ;
@@ -35,7 +34,7 @@ class PathfindingTask extends AsyncTask {
             $start = new Vector3($this->startX, $this->startY, $this->startZ);
             $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-            // 비동기 작업 내에서는 서버 인스턴스를 직접 접근하지 않음
+            // 비동기 작업 내에서는 서버 인스턴스에 직접 접근하지 않음
             $pathfinder = new Pathfinder($this->worldName);
             $path = $pathfinder->findPath($start, $goal, $this->algorithm);
             $this->setResult($path);
