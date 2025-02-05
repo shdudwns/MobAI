@@ -152,7 +152,7 @@ class MobAITask extends Task {
         // TODO: 몬스터 공격 로직 추가
     }
 
-    private void retreat(Creature $mob): void {
+    private function retreat(Creature $mob): void {
         // TODO: 후퇴 로직 추가
     }
 }
