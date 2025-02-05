@@ -4,8 +4,10 @@ namespace HybridMobAI;
 
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
+use pocketmine\entity\Living;
 use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -41,10 +43,15 @@ class MobAITask extends Task {
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $this->moveToPlayer($mob, $nearestPlayer);
+        } else {
+            $this->moveRandomly($mob);
         }
+
+        // ✅ 장애물 감지 후 점프 실행
+        $this->checkForObstaclesAndJump($mob);
     }
 
-    private function findNearestPlayer(Zombie $mob): ?Player {
+    private function findNearestPlayer(Zombie $mob): ?Creature {
         $closestDistance = PHP_FLOAT_MAX;
         $nearestPlayer = null;
 
@@ -59,7 +66,7 @@ class MobAITask extends Task {
         return $nearestPlayer;
     }
 
-    private function moveToPlayer(Zombie $mob, Player $player): void {
+    private function moveToPlayer(Zombie $mob, Creature $player): void {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
@@ -72,5 +79,57 @@ class MobAITask extends Task {
         $motion = $direction->normalize()->multiply(0.15);
         $mob->setMotion($motion);
         $mob->lookAt($playerPos);
+    }
+
+    /** ✅ 장애물 감지 후 점프 */
+    private function checkForObstaclesAndJump(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $directionVector = $mob->getLocation()->getDirectionVector();
+        $frontPosition = new Vector3(
+            $position->getX() + $directionVector->getX(),
+            $position->getY(),
+            $position->getZ() + $directionVector->getZ()
+        );
+
+        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
+        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+
+        if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
+            $this->jump($mob);
+        }
+    }
+
+    /** ✅ 랜덤 이동 */
+    public function moveRandomly(Living $mob): void {
+        $directionVectors = [
+            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
+        ];
+        $randomDirection = $directionVectors[array_rand($directionVectors)];
+        $mob->setMotion($randomDirection->multiply(0.15));
+    }
+
+    /** ✅ 점프 */
+    public function jump(Living $mob): void {
+        $jumpForce = 0.6;
+        $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
+    }
+
+    private function createGrid(World $world): array {
+        return []; // TODO: 실제 맵 데이터 기반 경로 탐색 구현
+    }
+
+    private function selectAlgorithm(): string {
+        $algorithms = ["AStar", "BFS", "DFS"];
+        return $algorithms[array_rand($algorithms)];
+    }
+
+    private function attackPlayer(Creature $mob): void {
+        // TODO: 몬스터 공격 로직 추가
+    }
+
+    private function retreat(Creature $mob): void {
+        // TODO: 후퇴 로직 추가
     }
 }
