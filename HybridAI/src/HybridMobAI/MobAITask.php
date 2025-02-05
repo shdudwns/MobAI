@@ -42,7 +42,7 @@ class MobAITask extends Task {
     }
 
     public function handleMobAI(Living $mob): void {
-        $start = $mob->getPosition()->asVector3(); // Vector3 객체로 변환
+        $start = $mob->getPosition();
         $goal = $this->findNearestPlayer($mob);
 
         if ($goal === null) {
@@ -52,7 +52,7 @@ class MobAITask extends Task {
 
         $grid = $this->createGrid($mob->getWorld());
         $algorithm = $this->selectAlgorithm();
-        $task = new PathfindingTask($start, $goal->getPosition()->asVector3(), $mob->getId(), $algorithm); // Vector3 객체로 변환
+        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getPosition()->getX(), $goal->getPosition()->getY(), $goal->getPosition()->getZ(), $mob->getId(), $algorithm);
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
 
         if ($this->useAI && $this->aiModel !== null) {
@@ -100,11 +100,11 @@ class MobAITask extends Task {
 
     /** ✅ `PathfindingTask`를 사용하여 플레이어에게 이동 */
     public function moveToPlayer(Living $mob, Player $player): void {
-        $start = $mob->getPosition()->asVector3(); // Vector3 객체로 변환
-        $goal = $player->getPosition()->asVector3(); // Vector3 객체로 변환
+        $start = $mob->getPosition();
+        $goal = $player->getPosition();
         $mobId = $mob->getId();
 
-        $task = new PathfindingTask($start, $goal, $mobId, "AStar");
+        $task = new PathfindingTask($start->getX(), $start->getY(), $start->getZ(), $goal->getX(), $goal->getY(), $goal->getZ(), $mobId, "AStar");
         Server::getInstance()->getAsyncPool()->submitTask($task);
     }
 
@@ -152,7 +152,7 @@ class MobAITask extends Task {
         // TODO: 몬스터 공격 로직 추가
     }
 
-    private function retreat(Creature $mob): void {
+    private void retreat(Creature $mob): void {
         // TODO: 후퇴 로직 추가
     }
 }
