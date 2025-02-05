@@ -47,18 +47,20 @@ class PathfindingTask extends AsyncTask {
     public function onCompletion(): void {
         // 메인 스레드로 돌아와서 서버 인스턴스 접근
         $server = \pocketmine\Server::getInstance();
-        $path = $this->getResult();
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
-        $entity = $world->getEntity($this->mobId);
+        if ($world !== null) {
+            $path = $this->getResult();
+            $entity = $world->getEntity($this->mobId);
 
-        if ($entity instanceof \pocketmine\entity\Creature) {
-            if (empty($path)) {
-                $this->moveRandomly($entity);
-            } else {
-                $nextStep = $path[1] ?? null;
-                if ($nextStep !== null) {
-                    $entity->lookAt($nextStep);
-                    $entity->setMotion($nextStep->subtract($entity->getPosition())->normalize()->multiply(0.25));
+            if ($entity instanceof \pocketmine\entity\Creature) {
+                if (empty($path)) {
+                    $this->moveRandomly($entity);
+                } else {
+                    $nextStep = $path[1] ?? null;
+                    if ($nextStep !== null) {
+                        $entity->lookAt($nextStep);
+                        $entity->setMotion($nextStep->subtract($entity->getPosition())->normalize()->multiply(0.25));
+                    }
                 }
             }
         }
