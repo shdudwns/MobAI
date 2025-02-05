@@ -29,22 +29,20 @@ class Pathfinder {
         }
     }
 
-    /** ✅ A* 알고리즘 구현 **/
     private function findPathAStar(Vector3 $start, Vector3 $goal): ?array {
         $openList = new SplPriorityQueue();
         $closedList = [];
         $startNode = new Node($start, null, 0, $this->heuristic($start, $goal));
-        $openList->insert($startNode, -$startNode->fCost()); // ✅ 낮은 fCost()가 우선순위 되도록 수정
+        $openList->insert($startNode, -$startNode->fCost());
 
         while (!$openList->isEmpty()) {
-            /** @var Node $current */
             $current = $openList->extract();
 
             if ($current->position->equals($goal)) {
                 return $this->reconstructPath($current);
             }
 
-            $closedList[] = clone $current->position; // ✅ asVector3() 제거 후 clone 사용
+            $closedList[] = clone $current->position;
 
             foreach ($this->getNeighbors($current->position) as $neighbor) {
                 if (in_array($neighbor, $closedList)) {
@@ -60,21 +58,19 @@ class Pathfinder {
         return null;
     }
 
-    /** ✅ BFS 알고리즘 구현 **/
     private function findPathBFS(Vector3 $start, Vector3 $goal): ?array {
         $queue = new SplQueue();
         $queue->enqueue(new Node($start));
         $visited = [];
 
         while (!$queue->isEmpty()) {
-            /** @var Node $current */
             $current = $queue->dequeue();
 
             if ($current->position->equals($goal)) {
                 return $this->reconstructPath($current);
             }
 
-            $visited[] = clone $current->position; // ✅ clone 사용하여 값 보호
+            $visited[] = clone $current->position;
 
             foreach ($this->getNeighbors($current->position) as $neighbor) {
                 if (!in_array($neighbor, $visited)) {
@@ -86,21 +82,19 @@ class Pathfinder {
         return null;
     }
 
-    /** ✅ DFS 알고리즘 구현 **/
     private function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
         $stack = new SplStack();
         $stack->push(new Node($start));
         $visited = [];
 
         while (!$stack->isEmpty()) {
-            /** @var Node $current */
             $current = $stack->pop();
 
             if ($current->position->equals($goal)) {
                 return $this->reconstructPath($current);
             }
 
-            $visited[] = clone $current->position; // ✅ clone 사용하여 값 보호
+            $visited[] = clone $current->position;
 
             foreach ($this->getNeighbors($current->position) as $neighbor) {
                 if (!in_array($neighbor, $visited)) {
@@ -112,7 +106,6 @@ class Pathfinder {
         return null;
     }
 
-    /** ✅ 이동 가능한 이웃 노드 찾기 **/
     private function getNeighbors(Vector3 $position): array {
         $neighbors = [];
         $directions = [
@@ -160,7 +153,7 @@ class Node {
     public float $hCost;
 
     public function __construct(Vector3 $position, ?Node $cameFrom = null, float $gCost = 0, float $hCost = 0) {
-        $this->position = clone $position; // ✅ clone을 사용하여 불변성 유지
+        $this->position = clone $position;
         $this->cameFrom = $cameFrom;
         $this->gCost = $gCost;
         $this->hCost = $hCost;
