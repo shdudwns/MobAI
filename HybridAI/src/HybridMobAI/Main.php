@@ -76,8 +76,8 @@ class Main extends PluginBase implements Listener {
         if ($damager instanceof Player && $mob instanceof Zombie) {
         $mob->lookAt($damager->getPosition());
 
-        // ✅ Position을 Vector3로 변환 후 연산 수행
-        $direction = $damager->getPosition()->asVector3()->subtract($mob->getPosition()->asVector3())->normalize();
+        // ✅ `asVector3()` 제거 → 직접 `subtract()` 사용
+        $direction = $damager->getPosition()->subtract($mob->getPosition())->normalize();
 
         $mob->setMotion($direction->multiply(0.25));
     }
