@@ -93,22 +93,23 @@ class MobAITask extends Task {
 
     /** ✅ 장애물 감지 후 점프 (높이 2 블록까지 가능) */
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $frontPosition = $position->add($directionVector);
+    // ✅ `addVector()`를 사용하여 `Vector3` 더하기
+    $frontPosition = $position->addVector($directionVector);
 
-        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
-        $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
+    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
+    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+    $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
 
-        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
-            $this->jump($mob);
-        }
+    if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
+        $this->jump($mob);
     }
+}
 
     /** ✅ 랜덤 이동 (부드러운 방향 전환) */
     public function moveRandomly(Living $mob): void {
