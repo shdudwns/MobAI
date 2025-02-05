@@ -123,7 +123,6 @@ class MobAITask extends Task {
         $mob->setMotion($motion);
         $mob->lookAt($playerPos);
     }
-}
 
     /** ✅ 장애물 감지 후 점프 */
     private function checkForObstaclesAndJump(Living $mob): void {
