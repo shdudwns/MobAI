@@ -3,7 +3,9 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\Task;
+use pocketmine\entity\Living;
 use pocketmine\entity\Creature;
+use pocketmine\player\Player;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
 use pocketmine\world\World;
@@ -41,7 +43,7 @@ class MobAITask extends Task {
 
     private function handleMobAI(Creature $mob): void {
         $start = $mob->getPosition();
-        $goal = $this->findClosestPlayerPosition($mob);
+        $goal = $this->findNearestPlayer($mob);
 
         if ($goal === null) {
             $this->moveRandomly($mob);
@@ -80,38 +82,10 @@ class MobAITask extends Task {
         return 1.0; // TODO: AI 학습용 보상 시스템 추가
     }
 
-    private function moveRandomly(Creature $mob): void {
-        $directionVectors = [
-            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
-        ];
-        $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $mob->setMotion($randomDirection->multiply(0.15));
-    }
-
-    private function moveToPlayer(Creature $mob): void {
-        $playerPosition = $this->findClosestPlayerPosition($mob);
-        if ($playerPosition === null) return;
-
-        $direction = $playerPosition->subtract($mob->getPosition())->normalize();
-        $mob->setMotion($direction->multiply(0.2));
-    }
-
-    private function attackPlayer(Creature $mob): void {
-        // TODO: 몬스터 공격 로직 추가
-    }
-
-    private function retreat(Creature $mob): void {
-        // TODO: 후퇴 로직 추가
-    }
-
-    private function jump(Creature $mob): void {
-        $mob->setMotion(new Vector3($mob->getMotion()->getX(), 0.6, $mob->getMotion()->getZ()));
-    }
-
-    private function findClosestPlayerPosition(Creature $mob): ?Vector3 {
-        $nearestPlayer = null;
+    /** ✅ 가장 가까운 플레이어 찾기 */
+    private function findNearestPlayer(Living $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
+        $nearestPlayer = null;
 
         foreach ($mob->getWorld()->getPlayers() as $player) {
             $distance = $mob->getPosition()->distanceSquared($player->getPosition());
@@ -121,7 +95,48 @@ class MobAITask extends Task {
             }
         }
 
-        return $nearestPlayer !== null ? $nearestPlayer->getPosition() : null;
+        return $nearestPlayer;
+    }
+
+    /** ✅ `PathfindingTask`를 사용하여 플레이어에게 이동 */
+    public function moveToPlayer(Living $mob, Player $player): void {
+        $start = $mob->getPosition();
+        $goal = $player->getPosition();
+        $mobId = $mob->getId();
+
+        $task = new PathfindingTask($start, $goal, $mobId, "AStar");
+        Server::getInstance()->getAsyncPool()->submitTask($task);
+    }
+
+    /** ✅ 장애물 감지 후 점프 */
+    private function checkForObstaclesAndJump(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $directionVector = $mob->getLocation()->getDirectionVector();
+        $frontPosition = $position->add($directionVector->getX(), 0, $directionVector->getZ());
+
+        $blockInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y, (int) $frontPosition->z);
+        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y + 1, (int) $frontPosition->z);
+
+        if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
+            $this->jump($mob);
+        }
+    }
+
+    public function moveRandomly(Living $mob): void {
+        $directionVectors = [
+            new Vector3(1, 0, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(0, 0, -1)
+        ];
+        $randomDirection = $directionVectors[array_rand($directionVectors)];
+        $mob->setMotion($randomDirection->multiply(0.15));
+    }
+
+    public function jump(Living $mob): void {
+        $jumpForce = 0.6;
+        $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 
     private function createGrid(World $world): array {
@@ -131,5 +146,13 @@ class MobAITask extends Task {
     private function selectAlgorithm(): string {
         $algorithms = ["AStar", "BFS", "DFS"];
         return $algorithms[array_rand($algorithms)];
+    }
+
+    private function attackPlayer(Creature $mob): void {
+        // TODO: 몬스터 공격 로직 추가
+    }
+
+    private function retreat(Creature $mob): void {
+        // TODO: 후퇴 로직 추가
     }
 }
