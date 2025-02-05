@@ -13,6 +13,7 @@ use pocketmine\math\Vector3;
 use pocketmine\entity\Location;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntityDataHelper;
 use HybridMobAI\Zombie;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntitySpawnEvent;
@@ -23,7 +24,7 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // 설정 파일 저장 및 불러오기
+        // 기본 설정 값 저장
         $this->saveDefaultConfig();
         $this->reloadConfig();
 
@@ -41,6 +42,25 @@ class Main extends PluginBase implements Listener {
         }), $spawnInterval);
     }
 
+    private function saveDefaultConfig(): void {
+        // 기본 설정 값
+        $defaultConfig = [
+            "use_ai_model" => false,
+            "ai_update_interval" => 20,
+            "spawn_interval" => 600,
+            "logging" => [
+                "enable" => true,
+                "level" => "info" // 가능 값: debug, info, warning, error
+            ]
+        ];
+
+        // config.yml 파일이 없는 경우 기본 설정 값으로 생성
+        if (!$this->getConfig()->exists("use_ai_model")) {
+            $this->getConfig()->setAll($defaultConfig);
+            $this->getConfig()->save();
+        }
+    }
+
     public function onEntitySpawn(EntitySpawnEvent $event): void {
         $entity = $event->getEntity();
 
@@ -55,6 +75,12 @@ class Main extends PluginBase implements Listener {
     private function replaceWithCustomZombie(PmmpZombie $pmmpZombie): void {
         $world = $pmmpZombie->getWorld();
         $location = $pmmpZombie->getLocation();
+
+        // 청크가 로딩되어 있는지 확인
+        if (!$world->isChunkLoaded($location->getFloorX() >> 4, $location->getFloorZ() >> 4)) {
+            $this->getLogger()->warning("Chunk not loaded, cannot replace zombie.");
+            return;
+        }
 
         // 기본 좀비 제거
         $pmmpZombie->flagForDespawn();
@@ -118,6 +144,12 @@ class Main extends PluginBase implements Listener {
 
     public function spawnZombieAt(World $world, Vector3 $position): void {
         $this->getLogger()->info("좀비 스폰 위치: " . $position->__toString());
+
+        // 청크가 로딩되어 있는지 확인
+        if (!$world->isChunkLoaded($position->getFloorX() >> 4, $position->getFloorZ() >> 4)) {
+            $this->getLogger()->warning("Chunk not loaded, cannot spawn zombie.");
+            return;
+        }
 
         // 올바른 Location 객체 생성 (yaw, pitch 추가)
         $location = new Location($position->getX(), $position->getY(), $position->getZ(), $world, 0.0, 0.0);
