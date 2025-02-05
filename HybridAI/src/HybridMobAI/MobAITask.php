@@ -89,9 +89,10 @@ class MobAITask extends Task {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     
-    // ✅ 방향 벡터를 `getYaw()`을 사용하여 직접 계산
+    // ✅ `VectorMath::getDirection2D()`는 `Vector2`를 반환하므로, `Vector3`로 변환 필요
     $yaw = $mob->getLocation()->getYaw();
-    $directionVector = VectorMath::getDirection2D($yaw); // ✅ 방향 벡터 계산
+    $direction2D = VectorMath::getDirection2D($yaw); // ✅ Vector2 반환
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY()); // ✅ Vector3 변환
 
     $frontPosition = new Vector3(
         $position->getX() + $directionVector->getX(),
