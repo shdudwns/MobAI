@@ -26,7 +26,7 @@ class Main extends PluginBase implements Listener {
 
         // 커스텀 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt, $this);
+            return new Zombie($world, $nbt, $this);
         }, ['Zombie', 'minecraft:zombie']);
 
         $this->saveDefaultConfig();
@@ -61,7 +61,7 @@ class Main extends PluginBase implements Listener {
 
         // 커스텀 좀비 생성 및 스폰
         $nbt = CompoundTag::create();
-        $customZombie = new Zombie($location, $nbt, $this);
+        $customZombie = new Zombie($world, $nbt, $this); // World 객체 전달
         $customZombie->spawnToAll();
     }
 
@@ -123,7 +123,7 @@ class Main extends PluginBase implements Listener {
         $location = new Location($position->getX(), $position->getY(), $position->getZ(), $world, 0.0, 0.0);
 
         // 직접 엔티티 인스턴스 생성
-        $zombie = new Zombie($location, CompoundTag::create(), $this);
+        $zombie = new Zombie($world, CompoundTag::create(), $this); // World 객체 전달
 
         // 좀비가 유효한지 확인 후 스폰
         if ($zombie !== null) {
