@@ -24,10 +24,6 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // 기본 설정 값 저장
-        $this->saveDefaultConfig();
-        $this->reloadConfig();
-
         // 커스텀 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
             return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt);
@@ -36,31 +32,10 @@ class Main extends PluginBase implements Listener {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
         $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
 
-        $spawnInterval = $this->getConfig()->get("spawn_interval", 600);
+        $spawnInterval = 600; // 스폰 간격을 600으로 설정
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
             $this->spawnRandomZombies();
         }), $spawnInterval);
-    }
-
-    public function saveDefaultConfig(): bool {
-        // 기본 설정 값
-        $defaultConfig = [
-            "use_ai_model" => false,
-            "ai_update_interval" => 20,
-            "spawn_interval" => 600,
-            "logging" => [
-                "enable" => true,
-                "level" => "info" // 가능 값: debug, info, warning, error
-            ]
-        ];
-
-        // config.yml 파일이 없는 경우 기본 설정 값으로 생성
-        if (!$this->getConfig()->exists("use_ai_model")) {
-            $this->getConfig()->setAll($defaultConfig);
-            $this->getConfig()->save();
-            return true;
-        }
-        return false;
     }
 
     public function onEntitySpawn(EntitySpawnEvent $event): void {
