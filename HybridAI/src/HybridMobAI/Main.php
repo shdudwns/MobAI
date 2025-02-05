@@ -74,11 +74,14 @@ class Main extends PluginBase implements Listener {
 
     private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player && $mob instanceof Zombie) {
-            $mob->lookAt($damager->getPosition());
-            $direction = $damager->getPosition()->subtract($mob->getPosition())->normalize();
-            $mob->setMotion($direction->multiply(0.25));
-        }
+        $mob->lookAt($damager->getPosition());
+
+        // ✅ Position을 Vector3로 변환 후 연산 수행
+        $direction = $damager->getPosition()->asVector3()->subtract($mob->getPosition()->asVector3())->normalize();
+
+        $mob->setMotion($direction->multiply(0.25));
     }
+}
 
     /** ✅ 랜덤 위치에 좀비 스폰 */
     private function spawnRandomZombies(): void {
