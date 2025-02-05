@@ -7,7 +7,7 @@ use pocketmine\Server;
 use pocketmine\world\World;
 use pocketmine\scheduler\AsyncTask;
 
-class PathfinderTask extends AsyncTask {
+class PathfindingTask extends AsyncTask {
     private float $startX;
     private float $startY;
     private float $startZ;
