@@ -2,20 +2,24 @@
 
 namespace HybridMobAI;
 
-use pocketmine\entity\Monster;
+use pocketmine\entity\Living;
 use pocketmine\entity\Location;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\entity\EntityIds;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\plugin\PluginBase;
+use pocketmine\world\World;
+use pocketmine\scheduler\TaskScheduler;
 
-class Zombie extends Monster {
+class Zombie extends Living {
     private Main $plugin;
     private MobAITask $aiTask;
 
-    public function __construct(Location $location, CompoundTag $nbt, Main $plugin) {
+    public function __construct(World $world, CompoundTag $nbt, Main $plugin) {
+        $location = Location::fromObject($world->getSpawnLocation(), $world);
         parent::__construct($location, $nbt);
         $this->plugin = $plugin;
-        $this->aiTask = new MobAITask($plugin);
-        $this->plugin->getScheduler()->scheduleRepeatingTask($this->aiTask, 20);
+        $this->scheduleAITask($plugin->getScheduler());
     }
 
     protected function initEntity(CompoundTag $nbt): void {
@@ -32,5 +36,22 @@ class Zombie extends Monster {
         $this->aiTask->handleMobAI($this);
 
         return parent::onUpdate($currentTick);
+    }
+
+    private function scheduleAITask(TaskScheduler $scheduler): void {
+        $this->aiTask = new MobAITask($this->plugin);
+        $scheduler->scheduleRepeatingTask($this->aiTask, 20);
+    }
+
+    public function getName(): string {
+        return "Zombie";
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo {
+        return new EntitySizeInfo(1.95, 0.6);
+    }
+
+    public static function getNetworkTypeId(): string {
+        return EntityIds::ZOMBIE;
     }
 }
