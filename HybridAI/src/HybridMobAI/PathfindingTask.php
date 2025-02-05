@@ -6,6 +6,7 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 
 class PathfindingTask extends AsyncTask {
     private float $startX;
@@ -16,8 +17,9 @@ class PathfindingTask extends AsyncTask {
     private float $goalZ;
     private int $mobId;
     private string $algorithm;
+    private string $worldName;
 
-    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm) {
+    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName) {
         $this->startX = $startX;
         $this->startY = $startY;
         $this->startZ = $startZ;
@@ -26,14 +28,16 @@ class PathfindingTask extends AsyncTask {
         $this->goalZ = $goalZ;
         $this->mobId = $mobId;
         $this->algorithm = $algorithm;
+        $this->worldName = $worldName;
     }
 
     public function onRun(): void {
         // 경로 탐색 알고리즘 실행
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $pathfinder = new Pathfinder($this->algorithm); // 필요한 인자 전달
-        $path = $pathfinder->findPath($start, $goal);
+        $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+        $pathfinder = new Pathfinder($world); // World 객체 전달
+        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
         $this->setResult($path);
     }
 
