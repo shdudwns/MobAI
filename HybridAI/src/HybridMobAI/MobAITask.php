@@ -28,22 +28,19 @@ class MobAITask extends Task {
     }
 
     public function onRun(): void {
-        $this->tickCounter++;
-        if ($this->tickCounter >= $this->updateInterval) {
-            $this->tickCounter = 0;
-            foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
-                $entities = $world->getEntities();
-                $chunks = array_chunk($entities, 10); // 엔티티를 10개씩 배치 처리
-                foreach ($chunks as $chunk) {
-                    foreach ($chunk as $entity) {
-                        if ($entity instanceof Creature) {
-                            $this->handleMobAI($entity);
-                        }
-                    }
+        $this->plugin->getLogger()->info("MobAITask 실행 중...");
+
+        foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
+            foreach ($world->getEntities() as $entity) {
+                if ($entity instanceof Zombie) {
+                    $this->plugin->getLogger()->info("좀비 감지됨: " . $entity->getId());
+                    $this->handleMobAI($entity);
                 }
             }
         }
     }
+
+
 
     public function handleMobAI(Living $mob): void {
         $start = $mob->getPosition();
