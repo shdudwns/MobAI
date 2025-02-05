@@ -16,7 +16,7 @@ class Zombie extends Living {
     public function __construct(Location $location, CompoundTag $nbt, Main $plugin) {
         parent::__construct($location, $nbt);
         $this->plugin = $plugin;
-        $this->adjustSpawnLocation(); // ✅ 스폰 위치 조정
+        $this->adjustSpawnLocation();
     }
 
     protected function initEntity(CompoundTag $nbt): void {
@@ -50,8 +50,8 @@ class Zombie extends Living {
         return new EntitySizeInfo(1.95, 0.6);
     }
 
-    /** ✅ 네트워크 ID 수정 (string → int) */
-    public static function getNetworkTypeId(): int {
-        return EntityIds::ZOMBIE;
+    /** ✅ 반환 타입을 `string`으로 변경 */
+    public static function getNetworkTypeId(): string {
+        return "minecraft:zombie";
     }
 }
