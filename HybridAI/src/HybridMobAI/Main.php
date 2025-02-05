@@ -35,7 +35,7 @@ class Main extends PluginBase implements Listener {
 
         // ✅ 일정 시간마다 랜덤 좀비 스폰
         $spawnInterval = 600; // 600 ticks (30초)
-        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
+        //$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
     }
 
     /** ✅ 기본 좀비 스폰 시 커스텀 좀비로 교체 */
@@ -101,7 +101,7 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    public function spawnZombieInFrontOfPlayer(Player $player): void {
+    /*public function spawnZombieInFrontOfPlayer(Player $player): void {
     $this->getLogger()->info("플레이어 앞에 좀비 스폰 위치: " . $player->getPosition()->__toString());
     
     $direction = $player->getDirectionVector()->normalize()->multiply(2); // 2 블록 앞에 좀비 생성
@@ -115,7 +115,7 @@ class Main extends PluginBase implements Listener {
     $spawnPosition = $spawnPosition->add(0, 1, 0); // 좀비가 블록 안에 생성되지 않도록 Y 좌표 조정
     
     $this->spawnZombieAt($player->getWorld(), $spawnPosition);
-}
+}*/
 
     /** ✅ 청크가 로드된 경우에만 좀비 스폰 */
     public function spawnZombieAt(World $world, Vector3 $position): void {
