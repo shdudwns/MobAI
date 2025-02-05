@@ -42,7 +42,7 @@ class Main extends PluginBase implements Listener {
         }), $spawnInterval);
     }
 
-    private function saveDefaultConfig(): void {
+    public function saveDefaultConfig(): void {
         // 기본 설정 값
         $defaultConfig = [
             "use_ai_model" => false,
