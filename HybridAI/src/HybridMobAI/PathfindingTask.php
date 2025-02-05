@@ -3,11 +3,10 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\AsyncTask;
-use pocketmine\Server;
 use pocketmine\math\Vector3;
-use pocketmine\entity\Creature;
 
 class PathfindingTask extends AsyncTask {
+
     private float $startX;
     private float $startY;
     private float $startZ;
@@ -35,28 +34,24 @@ class PathfindingTask extends AsyncTask {
             // 경로 탐색 알고리즘 실행
             $start = new Vector3($this->startX, $this->startY, $this->startZ);
             $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
 
-            if ($world === null) {
-                throw new \RuntimeException("World not found: " . $this->worldName);
-            }
-
-            $pathfinder = new Pathfinder($world); // World 객체 전달
+            // 비동기 작업 내에서는 서버 인스턴스를 직접 접근하지 않음
+            $pathfinder = new Pathfinder($this->worldName);
             $path = $pathfinder->findPath($start, $goal, $this->algorithm);
             $this->setResult($path);
         } catch (\Throwable $e) {
             $this->setResult([]);
-            $server = Server::getInstance();
-            $server->getLogger()->error("PathfindingTask error: " . $e->getMessage());
         }
     }
 
     public function onCompletion(): void {
-        $server = Server::getInstance();
+        // 메인 스레드로 돌아와서 서버 인스턴스 접근
+        $server = \pocketmine\Server::getInstance();
         $path = $this->getResult();
-        $entity = $server->getWorldManager()->findEntity($this->mobId);
+        $world = $server->getWorldManager()->getWorldByName($this->worldName);
+        $entity = $world->getEntity($this->mobId);
 
-        if ($entity instanceof Creature) {
+        if ($entity instanceof \pocketmine\entity\Creature) {
             if (empty($path)) {
                 $this->moveRandomly($entity);
             } else {
@@ -69,7 +64,7 @@ class PathfindingTask extends AsyncTask {
         }
     }
 
-    private function moveRandomly(Creature $mob): void {
+    private function moveRandomly(\pocketmine\entity\Creature $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0),
             new Vector3(-1, 0, 0),
