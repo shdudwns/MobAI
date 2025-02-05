@@ -23,13 +23,14 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
+        // 설정 파일 저장 및 불러오기
+        $this->saveDefaultConfig();
+        $this->reloadConfig();
+
         // 커스텀 좀비 엔티티 등록
         EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
             return new Zombie($world, $nbt, $this);
         }, ['Zombie', 'minecraft:zombie']);
-
-        $this->saveDefaultConfig();
-        $this->reloadConfig();
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
         $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
