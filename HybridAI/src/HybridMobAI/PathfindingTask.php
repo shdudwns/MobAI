@@ -32,8 +32,8 @@ class PathfindingTask extends AsyncTask {
         // 경로 탐색 알고리즘 실행
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $pathfinder = new Pathfinder();
-        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
+        $pathfinder = new Pathfinder($this->algorithm); // 필요한 인자 전달
+        $path = $pathfinder->findPath($start, $goal);
         $this->setResult($path);
     }
 
