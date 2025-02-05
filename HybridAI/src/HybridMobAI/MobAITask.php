@@ -8,6 +8,7 @@ use pocketmine\entity\Living;
 use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
+use pocketmine\player\Player;
 
 class MobAITask extends Task {
     private Main $plugin;
