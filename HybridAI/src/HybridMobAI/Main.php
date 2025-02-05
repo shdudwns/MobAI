@@ -76,13 +76,14 @@ class Main extends PluginBase implements Listener {
         if ($damager instanceof Player && $mob instanceof Zombie) {
         $mob->lookAt($damager->getPosition());
 
-        // ✅ `asVector3()` 제거 → 직접 `subtract()` 사용
-        $direction = $damager->getPosition()->subtract($mob->getPosition())->normalize();
+        // ✅ 확실하게 Vector3로 변환 후 연산
+        $damagerPos = new Vector3($damager->getPosition()->getX(), $damager->getPosition()->getY(), $damager->getPosition()->getZ());
+        $mobPos = new Vector3($mob->getPosition()->getX(), $mob->getPosition()->getY(), $mob->getPosition()->getZ());
 
+        $direction = $damagerPos->subtract($mobPos)->normalize();
         $mob->setMotion($direction->multiply(0.25));
     }
 }
-
     /** ✅ 랜덤 위치에 좀비 스폰 */
     private function spawnRandomZombies(): void {
         foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
