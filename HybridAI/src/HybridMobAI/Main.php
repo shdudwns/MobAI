@@ -21,15 +21,18 @@ use pocketmine\entity\Zombie as PmmpZombie;
 class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
-        $this->getLogger()->info("HybridMobAI 플러그인 활성화");
+    $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
-        // ✅ 커스텀 좀비 등록 (World, CompoundTag 사용)
-        EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
-            return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt, $this);
-        }, ['Zombie', 'minecraft:zombie']);
+    EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
+        return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt, $this);
+    }, ['Zombie', 'minecraft:zombie']);
 
-        $this->getServer()->getPluginManager()->registerEvents($this, $this);
-        $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
+    $this->getServer()->getPluginManager()->registerEvents($this, $this);
+
+    // ✅ MobAITask 실행 로그 추가
+    $this->getLogger()->info("MobAITask 실행 중...");
+    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 20);
+}
 
         // ✅ 일정 시간마다 랜덤 좀비 스폰
         $spawnInterval = 600; // 600 ticks (30초)
