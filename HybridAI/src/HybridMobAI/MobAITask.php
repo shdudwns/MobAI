@@ -13,7 +13,7 @@ use pocketmine\math\VectorMath;
 
 class MobAITask extends Task {
     private Main $plugin;
-    private int $tickCounter = 0; // ✅ 실행 주기 관리
+    private int $tickCounter = 0;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -22,8 +22,8 @@ class MobAITask extends Task {
     public function onRun(): void {
         $this->tickCounter++;
 
-        // ✅ 실행 주기를 4 ticks(0.2초)로 설정하여 더 자연스러운 움직임
-        if ($this->tickCounter % 4 !== 0) {
+        // ✅ 실행 주기를 2 ticks(0.1초)로 설정하여 더 빠르게 반응
+        if ($this->tickCounter % 2 !== 0) {
             return;
         }
 
@@ -49,7 +49,6 @@ class MobAITask extends Task {
             $this->moveRandomly($mob);
         }
 
-        // ✅ 장애물 감지 후 점프 실행
         $this->checkForObstaclesAndJump($mob);
     }
 
@@ -78,14 +77,14 @@ class MobAITask extends Task {
             $playerPos->getZ() - $mobPos->getZ()
         );
 
-        $motion = $direction->normalize()->multiply(0.15);
-        
-        // ✅ 기존 모션과 새로운 모션을 부드럽게 보간 (lerp) → 더 자연스러운 이동
+        $motion = $direction->normalize()->multiply(0.12); // ✅ 속도를 줄여 더 부드럽게 이동
+
+        // ✅ 기존 모션과 새로운 모션을 70:30 비율로 보간 (Lerp)
         $currentMotion = $mob->getMotion();
         $blendedMotion = new Vector3(
-            ($currentMotion->getX() * 0.5) + ($motion->getX() * 0.5),
+            ($currentMotion->getX() * 0.7) + ($motion->getX() * 0.3),
             $currentMotion->getY(),
-            ($currentMotion->getZ() * 0.5) + ($motion->getZ() * 0.5)
+            ($currentMotion->getZ() * 0.7) + ($motion->getZ() * 0.3)
         );
 
         $mob->setMotion($blendedMotion);
@@ -100,11 +99,7 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $frontPosition = new Vector3(
-            $position->getX() + $directionVector->getX(),
-            $position->getY(),
-            $position->getZ() + $directionVector->getZ()
-        );
+        $frontPosition = $position->add($directionVector);
 
         $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
         $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
@@ -125,9 +120,9 @@ class MobAITask extends Task {
         
         $currentMotion = $mob->getMotion();
         $blendedMotion = new Vector3(
-            ($currentMotion->getX() * 0.7) + ($randomDirection->getX() * 0.3),
+            ($currentMotion->getX() * 0.8) + ($randomDirection->getX() * 0.2),
             $currentMotion->getY(),
-            ($currentMotion->getZ() * 0.7) + ($randomDirection->getZ() * 0.3)
+            ($currentMotion->getZ() * 0.8) + ($randomDirection->getZ() * 0.2)
         );
 
         $mob->setMotion($blendedMotion);
