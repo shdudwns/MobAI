@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
+use pocketmine\math\Vector3;
 
 class PathfindingTask extends AsyncTask {
     private float $startX;
