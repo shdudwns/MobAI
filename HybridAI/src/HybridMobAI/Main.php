@@ -64,7 +64,7 @@ class Main extends PluginBase implements Listener {
 
         // 커스텀 좀비 생성 및 스폰
         $nbt = CompoundTag::create();
-        $customZombie = new Zombie($world, $nbt);
+        $customZombie = new Zombie($location, $nbt);
         $customZombie->spawnToAll();
     }
 
@@ -132,7 +132,7 @@ class Main extends PluginBase implements Listener {
         $location = new Location($position->getX(), $position->getY(), $position->getZ(), $world, 0.0, 0.0);
 
         // 직접 엔티티 인스턴스 생성
-        $zombie = new Zombie($world, CompoundTag::create());
+        $zombie = new Zombie($location, CompoundTag::create());
 
         // 좀비가 유효한지 확인 후 스폰
         if ($zombie !== null) {
