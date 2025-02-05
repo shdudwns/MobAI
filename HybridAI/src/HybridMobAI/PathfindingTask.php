@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
+use pocketmine\entity\Creature;
 
 class PathfindingTask extends AsyncTask {
     private float $startX, $startY, $startZ;
@@ -28,9 +29,9 @@ class PathfindingTask extends AsyncTask {
     public function onRun(): void {
         $currentTime = microtime(true);
 
-        // ✅ 3초 이내에 동일 몬스터가 또 실행되지 않도록 제한
+        // ✅ 4초 이내에 동일 몬스터가 또 실행되지 않도록 제한
         if (isset(self::$lastExecutionTime[$this->mobId]) &&
-            $currentTime - self::$lastExecutionTime[$this->mobId] < 3) {
+            $currentTime - self::$lastExecutionTime[$this->mobId] < 4) {
             return;
         }
         self::$lastExecutionTime[$this->mobId] = $currentTime;
@@ -41,9 +42,9 @@ class PathfindingTask extends AsyncTask {
             $pathfinder = new Pathfinder($this->worldName);
             $path = $pathfinder->findPath($start, $goal, $this->algorithm);
 
-            // ✅ 너무 긴 경로는 최대 10개 좌표만 반환
-            if (count($path) > 10) {
-                $path = array_slice($path, 0, 10);
+            // ✅ 너무 긴 경로는 최대 5개 좌표만 반환하여 최적화
+            if (count($path) > 5) {
+                $path = array_slice($path, 0, 5);
             }
 
             $this->setResult($path);
@@ -72,7 +73,13 @@ class PathfindingTask extends AsyncTask {
             $this->moveRandomly($entity);
         } else {
             $nextStep = $path[1] ?? null;
+
             if ($nextStep !== null) {
+                // ✅ 현재 위치와 목표 위치가 같으면 이동하지 않음
+                if ($entity->getPosition()->equals($nextStep)) {
+                    return;
+                }
+
                 $entity->lookAt($nextStep);
                 $motion = $nextStep->subtract($entity->getPosition())->normalize()->multiply(0.2);
 
@@ -84,7 +91,7 @@ class PathfindingTask extends AsyncTask {
         }
     }
 
-    private function moveRandomly(\pocketmine\entity\Creature $mob): void {
+    private function moveRandomly(Creature $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
             new Vector3(0, 0, 1), new Vector3(0, 0, -1)
