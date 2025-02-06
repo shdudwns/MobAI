@@ -88,6 +88,25 @@ class MobAITask extends Task {
         $mob->lookAt($playerPos);
     }
 
+    public function moveRandomly(Living $mob): void {
+        $directionVectors = [
+            new Vector3(1, 0, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(0, 0, -1)
+        ];
+        $randomDirection = $directionVectors[array_rand($directionVectors)];
+
+        $currentMotion = $mob->getMotion();
+        $blendedMotion = new Vector3(
+            ($currentMotion->getX() * 0.8) + ($randomDirection->getX() * 0.2),
+            $currentMotion->getY(),
+            ($currentMotion->getZ() * 0.8) + ($randomDirection->getZ() * 0.2)
+        );
+
+        $mob->setMotion($blendedMotion);
+    }
+
     private function checkForObstaclesAndJump(Living $mob): void {
     $entityId = $mob->getId();
 
