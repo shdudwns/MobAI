@@ -174,10 +174,9 @@ class MobAITask extends Task {
                 if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
                     // 좀 더 가까이 다가갔을 때 점프하도록 delay 추가 (값 조절 가능)
                     $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function (int $currentTick) use ($mob, $heightDiff) {
-                        $this->jump($mob, $heightDiff);
-                        $this->isJumping[$mob->getId()] = true;
-                    }), 2); // 2틱 delay
-
+                    $this->jump($mob, $heightDiff);
+                    $this->isJumping[$mob->getId()] = true;
+                    }), 2);
                     return;
                 }
             }
