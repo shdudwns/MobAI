@@ -66,22 +66,22 @@ class MobAITask extends Task {
     }
 
     private function moveToPlayer(Zombie $mob, Player $player): void {
-        $mobPos = $mob->getPosition();
-        $playerPos = $player->getPosition();
+    $mobPos = $mob->getPosition();
+    $playerPos = $player->getPosition(); // 이미 Position 객체
 
-        // Position to Vector3 변환
-        $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ());
+    $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ());
 
-        $distance = $mobPos->distance($playerVec3);
-        $speed = 0.2;
-        if ($distance < 5) {
-            $speed *= $distance / 5;
-        }
-
-        $motion = $playerVec3->subtract($mobPos)->normalize()->multiply($speed);
-        $mob->setMotion($motion);
-        $mob->lookAt($playerPos);
+    $distance = $mobPos->distance($playerVec3);
+    $speed = 0.2;
+    if ($distance < 5) {
+        $speed *= $distance / 5;
     }
+
+    $motion = $playerVec3->subtract($mobPos)->normalize()->multiply($speed);
+    $mob->setMotion($motion);
+    $mob->lookAt($playerPos); // 수정 없음. 이미 Position 객체
+}
+
 
     private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
