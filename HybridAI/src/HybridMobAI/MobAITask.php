@@ -105,8 +105,8 @@ class MobAITask extends Task {
 
         $blockBelow = $world->getBlockAt((int)$positionVec3->floor()->getX(), (int)$positionVec3->floor()->getY() - 1, (int)$positionVec3->floor()->getZ());
 
-        // 시야 범위 확장 (좌우 30도)
-        for ($angle = -30; $angle <= 30; $angle += 10) {
+        // 시야 범위 확장 (좌우 45도)
+        for ($angle = -45; $angle <= 45; $angle += 10) {
             $rad = deg2rad($angle);
             $rotatedX = $directionVector->getX() * cos($rad) + $directionVector->getZ() * sin($rad);
             $rotatedZ = -$directionVector->getX() * sin($rad) + $directionVector->getZ() * cos($rad);
@@ -124,15 +124,13 @@ class MobAITask extends Task {
                 if (
                     $blockInFront->isSolid() &&
                     $blockAboveInFront->isTransparent() &&
-                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid())
+                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid()) &&
+                    $heightDiff <= 1 &&
+                    !$mob->isOnGround()
                 ) {
-                    $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
-
-                    if ($heightDiff <= 1) {
-                        $this->jump($mob);
-                        $isJumping[$entityId] = true;
-                        return;
-                    }
+                    $this->jump($mob);
+                    $isJumping[$entityId] = true;
+                    return;
                 }
             }
         }
@@ -158,7 +156,7 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob): void {
-        $jumpForce = 0.8; // 점프력 증가
+        $jumpForce = 0.5;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 }
