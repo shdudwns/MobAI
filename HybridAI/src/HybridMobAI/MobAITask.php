@@ -138,7 +138,7 @@ class MobAITask extends Task {
             $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
 
             // 계단 감지
-            if ($frontBlock->isStair()) {
+            if ($frontBlock instanceof Stair) { // Stair 클래스 인스턴스인지 확인
                 $this->climbStairs($mob, $frontBlock);
                 return;
             }
@@ -167,7 +167,9 @@ class MobAITask extends Task {
 
 private function climbStairs(Living $mob, Block $stairBlock): void {
     // 계단 오르기 동작 구현
-    // ...
+    // 예시: 계단 위로 작은 점프
+    $mob->jump(); 
+    // 필요에 따라 추가적인 동작 (ex: 이동) 구현 가능
 }
 
 
