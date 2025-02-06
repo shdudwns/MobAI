@@ -85,6 +85,16 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
+        static $isJumping = [];
+        $entityId = $mob->getId();
+
+        if (isset($isJumping[$entityId]) && $isJumping[$entityId]) {
+            if ($mob->isOnGround()) {
+                $isJumping[$entityId] = false;
+            }
+            return;
+        }
+
         $position = $mob->getPosition();
         $world = $mob->getWorld();
         $yaw = $mob->getLocation()->getYaw();
@@ -93,31 +103,33 @@ class MobAITask extends Task {
         $positionVec3 = new Vector3($position->getX(), $position->getY(), $position->getZ());
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 발 밑 블럭 체크 (경사로 감지)
         $blockBelow = $world->getBlockAt((int)$positionVec3->floor()->getX(), (int)$positionVec3->floor()->getY() - 1, (int)$positionVec3->floor()->getZ());
 
-        for ($i = 1; $i <= 2; $i++) {
-            $frontX = $positionVec3->getX() + ($directionVector->getX() * $i);
-            $frontZ = $positionVec3->getZ() + ($directionVector->getZ() * $i);
-            $frontPosition = new Vector3($frontX, $positionVec3->getY(), $frontZ);
+        // 시야 범위 확장 (좌우 30도)
+        for ($angle = -30; $angle <= 30; $angle += 10) {
+            $rotatedDirection = $directionVector->rotateY($angle);
 
-            // floor()와 getX(), getY(), getZ()를 사용하여 정수 좌표를 얻음
-            $blockInFront = $world->getBlockAt((int)$frontPosition->floor()->getX(), (int)$frontPosition->floor()->getY(), (int)$frontPosition->floor()->getZ());
-            $blockAboveInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y + 1, (int)$frontPosition->z);
-            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
+            for ($i = 1; $i <= 2; $i++) {
+                $frontX = $positionVec3->getX() + ($rotatedDirection->getX() * $i);
+                $frontZ = $positionVec3->getZ() + ($rotatedDirection->getZ() * $i);
+                $frontPosition = new Vector3($frontX, $positionVec3->getY(), $frontZ);
 
-            if (
-                $blockInFront->isSolid() &&
-                $blockAboveInFront->isTransparent() &&
-                ($blockBelowInFront->isSolid() || $blockBelow->isSolid()) // 발 밑 블럭 또는 앞 블럭 아래가 solid인지 확인
-            ) {
-                // 점프 시도 전, 현재 위치와 점프할 위치의 높이 차이 확인
-                $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
+                $blockInFront = $world->getBlockAt((int)$frontPosition->floor()->getX(), (int)$frontPosition->floor()->getY(), (int)$frontPosition->floor()->getZ());
+                $blockAboveInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y + 1, (int)$frontPosition->z);
+                $blockBelowInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
 
-                // 높이 차이가 1 이하일 때만 점프 (너무 높은 곳은 점프하지 않도록 방지)
-                if ($heightDiff <= 1) {
-                    $this->jump($mob);
-                    return;
+                if (
+                    $blockInFront->isSolid() &&
+                    $blockAboveInFront->isTransparent() &&
+                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid())
+                ) {
+                    $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
+
+                    if ($heightDiff <= 1) {
+                        $this->jump($mob);
+                        $isJumping[$entityId] = true;
+                        return;
+                    }
                 }
             }
         }
