@@ -133,23 +133,33 @@ class MobAITask extends Task {
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // 대각선 이동 감지 제거
-
     // 좌우 블록 감지 로직 개선
     $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
     $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-    $leftBlock = $world->getBlockAt($position->addVector($leftVector)->floor());
-    $rightBlock = $world->getBlockAt($position->addVector($rightVector)->floor());
+    // Correct way to get the block
+    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
+    $leftBlockY = (int)floor($position->getY());
+    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
+    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
+
+    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
+    $rightBlockY = (int)floor($position->getY());
+    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
+    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+
 
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
 
     // 앞 블록 감지 로직 개선 (높이차 고려, 1칸만 확인)
-    $frontBlockPos = $position->addVector($directionVector)->floor();
-    $frontBlock = $world->getBlockAt($frontBlockPos);
-    $frontBlockAbove = $world->getBlockAt($frontBlockPos->add(0, 1, 0));
+    $frontBlockX = (int)floor($position->getX() + $directionVector->getX());
+    $frontBlockY = (int)floor($position->getY());
+    $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ());
+
+    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
 
     $currentHeight = (int)floor($position->getY());
     $blockHeight = (int)floor($frontBlock->getPosition()->getY());
