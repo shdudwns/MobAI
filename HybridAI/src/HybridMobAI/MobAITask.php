@@ -93,25 +93,24 @@ class MobAITask extends Task {
         $positionVec3 = new Vector3($position->getX(), $position->getY(), $position->getZ());
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 발 밑 블럭 체크 추가 (경사로 감지)
-        $blockBelow = $world->getBlockAt($positionVec3->floor()->subtract(0,1,0));
+        // 발 밑 블럭 체크 (경사로 감지)
+        $blockBelow = $world->getBlockAt((int)$positionVec3->floor()->getX(), (int)$positionVec3->floor()->getY() - 1, (int)$positionVec3->floor()->getZ());
 
-         for ($i = 1; $i <= 2; $i++) {
+        for ($i = 1; $i <= 2; $i++) {
             $frontX = $positionVec3->getX() + ($directionVector->getX() * $i);
             $frontZ = $positionVec3->getZ() + ($directionVector->getZ() * $i);
             $frontPosition = new Vector3($frontX, $positionVec3->getY(), $frontZ);
 
-            $blockInFront = $world->getBlockAt($frontPosition->floor());
-            $blockAboveInFront = $world->getBlockAt($frontPosition->x, $frontPosition->y + 1, $frontPosition->z);
-            $blockBelowInFront = $world->getBlockAt($frontPosition->x, $frontPosition->y - 1, $frontPosition->z);
-
+            // floor()와 getX(), getY(), getZ()를 사용하여 정수 좌표를 얻음
+            $blockInFront = $world->getBlockAt((int)$frontPosition->floor()->getX(), (int)$frontPosition->floor()->getY(), (int)$frontPosition->floor()->getZ());
+            $blockAboveInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y + 1, (int)$frontPosition->z);
+            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
 
             if (
                 $blockInFront->isSolid() &&
                 $blockAboveInFront->isTransparent() &&
                 ($blockBelowInFront->isSolid() || $blockBelow->isSolid()) // 발 밑 블럭 또는 앞 블럭 아래가 solid인지 확인
             ) {
-
                 // 점프 시도 전, 현재 위치와 점프할 위치의 높이 차이 확인
                 $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
 
@@ -123,7 +122,6 @@ class MobAITask extends Task {
             }
         }
     }
-
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
