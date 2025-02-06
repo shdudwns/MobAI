@@ -101,34 +101,25 @@ class MobAITask extends Task {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
-    // ✅ 방향 벡터 계산
+    // ✅ 방향 벡터 계산 (보다 정확한 감지)
     $directionVector = $mob->getDirectionVector()->normalize();
-
-    // ✅ 블록 감지를 위해 위치를 int로 변환 (더 정확한 감지)
-    $frontX = (int) ($position->getX() + $directionVector->getX());
-    $frontZ = (int) ($position->getZ() + $directionVector->getZ());
-    $currentY = (int) $position->getY();
-
-    // ✅ 앞쪽 1칸 및 2칸의 블록 감지
-    $blockInFront1 = $world->getBlockAt($frontX, $currentY, $frontZ);
-    $blockAboveInFront1 = $world->getBlockAt($frontX, $currentY + 1, $frontZ);
     
-    $blockInFront2 = $world->getBlockAt($frontX, $currentY + 1, $frontZ);
-    $blockAboveInFront2 = $world->getBlockAt($frontX, $currentY + 2, $frontZ);
+    // ✅ 앞쪽 블록 위치 계산
+    $frontPosition = $position->addVector($directionVector->multiply(1.2));
 
-    // ✅ 현재 높이와 장애물 높이 비교 (floor 적용)
-    $frontHeight1 = (int) $blockInFront1->getPosition()->getY();
-    $frontHeight2 = (int) $blockInFront2->getPosition()->getY();
+    // ✅ 블록 감지 (앞쪽 1칸 및 위쪽 2칸 감지)
+    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
+    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+    $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
 
-    $heightDiff1 = $frontHeight1 - $currentY;
-    $heightDiff2 = $frontHeight2 - $currentY;
+    // ✅ 현재 높이와 장애물 높이 비교
+    $currentHeight = (int) $position->getY();
+    $frontHeight = (int) $blockInFront->getPosition()->getY();
+    $heightDiff = $frontHeight - $currentHeight;
 
-    // ✅ 높이 차이가 0.5~1.5 사이이고, 블록이 단단한 경우 점프 실행
-    if ($heightDiff1 >= 0.5 && $heightDiff1 <= 1.5 && $blockInFront1->isSolid() && $blockAboveInFront1->isTransparent()) {
-        $this->jump($mob, $heightDiff1);
-        $this->isJumping[$entityId] = true;
-    } elseif ($heightDiff2 >= 0.5 && $heightDiff2 <= 1.5 && $blockInFront2->isSolid() && $blockAboveInFront2->isTransparent()) {
-        $this->jump($mob, $heightDiff2);
+    // ✅ 장애물이 감지되었고, 높이 차이가 적절하면 점프 실행
+    if ($blockInFront->isCollidable() && $blockAboveInFront->isTransparent() && $heightDiff >= 0.5 && $heightDiff <= 1.5) {
+        $this->jump($mob, $heightDiff);
         $this->isJumping[$entityId] = true;
     }
 }
