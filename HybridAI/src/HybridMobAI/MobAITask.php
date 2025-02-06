@@ -69,7 +69,8 @@ class MobAITask extends Task {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
-        $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ()); // Position to Vector3
+        // Position to Vector3 변환
+        $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ());
 
         $distance = $mobPos->distance($playerVec3);
         $speed = 0.2;
@@ -96,10 +97,26 @@ class MobAITask extends Task {
             $frontZ = $basePosition->getZ() + ($directionVector->getZ() * $i);
             $frontPosition = new Vector3($frontX, $basePosition->getY(), $frontZ);
 
-            $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
-            $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
-            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ());
-            $currentBlock = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ());
+            $blockInFront = $world->getBlockAt(
+                (int)$frontPosition->getX(),
+                (int)$frontPosition->getY(),
+                (int)$frontPosition->getZ()
+            );
+            $blockAboveInFront = $world->getBlockAt(
+                (int)$frontPosition->getX(),
+                (int)$frontPosition->getY() + 1,
+                (int)$frontPosition->getZ()
+            );
+            $blockBelowInFront = $world->getBlockAt(
+                (int)$frontPosition->getX(),
+                (int)$frontPosition->getY() - 1,
+                (int)$frontPosition->getZ()
+            );
+            $currentBlock = $world->getBlockAt(
+                (int)$position->getX(),
+                (int)$position->getY() - 1,
+                (int)$position->getZ()
+            );
 
             if (
                 $blockInFront->isSolid() &&
@@ -115,8 +132,10 @@ class MobAITask extends Task {
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
-            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
+            new Vector3(1, 0, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
 
