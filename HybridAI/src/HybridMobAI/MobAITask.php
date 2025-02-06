@@ -143,8 +143,7 @@ class MobAITask extends Task {
                 return;
             }
 
-            // Air 블록이 아닌 경우에만 높이 계산
-            if (!($frontBlock instanceof Air)) { // 이 부분을 추가했습니다.
+            if (!($frontBlock instanceof Air)) { // Air 블록이 아닌 경우에만 높이 계산
                 $frontBlockY = $frontBlock->getY() + $frontBlock->getBoundingBox()->getMaxY() - $frontBlock->getBoundingBox()->getMinY(); // Get top Y
                 $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
@@ -163,7 +162,7 @@ class MobAITask extends Task {
                     $this->jump($mob, 1);
                     return;
                 }
-            } // 이 부분까지
+            }
         }
     }
 }
@@ -175,6 +174,7 @@ private function climbStairs(Living $mob, Block $stairBlock): void {
     // 필요에 따라 이동 로직 추가
     // $mob->move(x, z);
 }
+
 
     private function isClimbable(Block $block): bool {
          return $block->isSolid() || $block instanceof \pocketmine\block\Slab || $block instanceof \pocketmine\block\Stairs || $block instanceof \pocketmine\block\SnowLayer || $block instanceof \pocketmine\block\Fence || $block instanceof \pocketmine\block\GlassPane || $block instanceof \pocketmine\block\ItemFrame;
