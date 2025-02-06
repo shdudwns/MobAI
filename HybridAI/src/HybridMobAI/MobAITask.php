@@ -3,11 +3,9 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\Task;
-use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
-use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
@@ -15,7 +13,7 @@ use pocketmine\block\Block;
 class MobAITask extends Task {
     private Main $plugin;
     private int $tickCounter = 0;
-    private array $isJumping = [];
+    private array $hasLanded = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -30,7 +28,7 @@ class MobAITask extends Task {
 
         foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getEntities() as $entity) {
-                if ($entity instanceof Zombie) { // Zombie 엔티티만 처리
+                if ($entity instanceof Zombie) {
                     $this->handleMobAI($entity);
                 }
             }
@@ -108,7 +106,7 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-        private function checkForObstaclesAndJump(Living $mob): void {
+    private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
 
@@ -130,7 +128,7 @@ class MobAITask extends Task {
         $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
 
         if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
-            return; // 양쪽에 블록이 있으면 점프하지 않음
+            return;
         }
 
         for ($i = 0; $i <= 1; $i++) {
@@ -147,44 +145,51 @@ class MobAITask extends Task {
                 $blockHeight = (int)floor($frontBlock->getPosition()->getY());
                 $heightDiff = $blockHeight - $currentHeight;
 
-                if ($frontBlockBelow->isTransparent()) {
-                    continue; // 내려가는 상황이면 점프하지 않음
+                $entityId = $mob->getId();
+                if (isset($this->hasLanded[$entityId]) && $this->hasLanded[$entityId]) {
+                    if ($mob->isOnGround()) {
+                        unset($this->hasLanded[$entityId]);
+                    } else {
+                        continue;
+                    }
                 }
 
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                if ($frontBlockBelow->isTransparent()) {
+                    continue;
+                }
+
+                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $position->distance($frontBlock->getPosition()) <= 1.5) {
                     $this->jump($mob, $heightDiff);
-                    return; // 틱당 한번만 점프
+                    $this->hasLanded[$entityId] = true;
+                    return;
                 }
             }
         }
     }
 
-
-private function isClimbable(Block $block): bool {
-    $climbableBlocks = [
-        "pocketmine:block:slab",
-        "pocketmine:block:stairs",
-        "pocketmine:block:snow_layer",
-        "pocketmine:block:fence", // 울타리 추가
-        "pocketmine:block:glass", // 유리 추가
-        "pocketmine:block:frame" // 액자 추가
-    ];
-    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-}
-
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
-    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
-
-    // ✅ 현재 점프 중이면 다시 점프하지 않도록 방지
-    if (!$mob->isOnGround()) {
-        return;
+    private function isClimbable(Block $block): bool {
+        $climbableBlocks = [
+            "pocketmine:block:slab",
+            "pocketmine:block:stairs",
+            "pocketmine:block:snow_layer",
+            "pocketmine:block:fence",
+            "pocketmine:block:glass",
+            "pocketmine:block:frame"
+        ];
+        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
     }
 
-    $mob->setMotion(new Vector3(
-        $mob->getMotion()->getX(),
-        $jumpForce,
-        $mob->getMotion()->getZ()
-    ));
-}
+    public function jump(Living $mob, float $heightDiff = 1.0): void {
+        $jumpForce = min(0.4 + ($heightDiff * 0.2), 1.0);
+
+        if (!$mob->isOnGround()) {
+            return;
+        }
+
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->getX(),
+            $jumpForce,
+            $mob->getMotion()->getZ()
+        ));
+    }
 }
