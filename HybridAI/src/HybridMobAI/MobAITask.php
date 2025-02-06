@@ -3,6 +3,7 @@
 namespace HybridMobAI;
 
 use pocketmine\scheduler\Task;
+use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
