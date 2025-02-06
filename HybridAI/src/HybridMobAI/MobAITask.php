@@ -154,7 +154,6 @@ class MobAITask extends Task {
         $this->jump($mob, $heightDiff);
         $this->isJumping[$entityId] = true;
     }
-}
 
     // ✅ 블록에서 떨어질 때 점프 방지 (아래 블록이 없는 경우 점프하지 않음)
     $blockBelow = $world->getBlockAt((int) $position->getX(), (int) $position->getY() - 1, (int) $position->getZ());
