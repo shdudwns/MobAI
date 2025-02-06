@@ -122,7 +122,7 @@ class MobAITask extends Task {
     // ✅ 점프 중이면 착지할 때까지 기다림
     if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
         if ($mob->isOnGround()) {
-            $this->isJumping[$entityId] = false;
+            $this->isJumping[$entityId] = false; // ✅ 착지하면 점프 가능하도록 초기화
         }
         return;
     }
@@ -137,6 +137,27 @@ class MobAITask extends Task {
 
     // ✅ 대각선 이동 감지 (대각선 이동 중이면 점프하지 않음)
     if (abs($directionVector->getX()) === abs($directionVector->getZ())) {
+        return;
+    }
+
+    // ✅ 좌우 블록 감지 (양쪽에 블록이 있으면 점프 방지)
+    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX()); // 왼쪽 방향
+    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX()); // 오른쪽 방향
+
+    $leftBlock = $world->getBlockAt(
+        (int)($position->getX() + $leftVector->getX()), 
+        (int)$position->getY(), 
+        (int)($position->getZ() + $leftVector->getZ())
+    );
+
+    $rightBlock = $world->getBlockAt(
+        (int)($position->getX() + $rightVector->getX()), 
+        (int)$position->getY(), 
+        (int)($position->getZ() + $rightVector->getZ())
+    );
+
+    // ✅ 양쪽 모두 블록이 있으면 점프하지 않음
+    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
 
@@ -166,7 +187,14 @@ class MobAITask extends Task {
     }
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-    $jumpForce = min(0.7 + ($heightDiff * 0.3), 1.2); // ✅ 최대 점프 높이 1.2로 제한
+    // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
+    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
+
+    // ✅ 현재 점프 중이면 다시 점프하지 않도록 방지
+    if (!$mob->isOnGround()) {
+        return;
+    }
+
     $mob->setMotion(new Vector3(
         $mob->getMotion()->getX(),
         $jumpForce,
