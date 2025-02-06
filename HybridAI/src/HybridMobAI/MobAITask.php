@@ -109,48 +109,66 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
 
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 좌우 블록 감지
-        $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
-        $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
+    // 좌우 블록 감지
+    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
+    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-        $leftBlock = $world->getBlockAt((int)floor($position->getX() + $leftVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $leftVector->getZ()));
-        $rightBlock = $world->getBlockAt((int)floor($position->getX() + $rightVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $rightVector->getZ()));
+    $leftBlock = $world->getBlockAt((int)floor($position->getX() + $leftVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $leftVector->getZ()));
+    $rightBlock = $world->getBlockAt((int)floor($position->getX() + $rightVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $rightVector->getZ()));
 
-        if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
-            return; // 양쪽에 블록이 있으면 점프하지 않음
-        }
+    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
+        return; // 양쪽에 블록이 있으면 점프하지 않음
+    }
 
-        // 앞 블록 감지 (높이차 고려)
-        for ($i = 0; $i <= 1; $i++) { // 1칸 앞, 대각선 1칸
-            for ($j = -1; $j <= 1; $j++) { // 좌우 대각선
-                $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
-                $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
-                $frontBlockY = (int)floor($position->getY());
+    // 앞 블록 감지 (높이차 고려)
+    for ($i = 0; $i <= 1; $i++) { // 1칸 앞, 대각선 1칸
+        for ($j = -1; $j <= 1; $j++) { // 좌우 대각선
+            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
+            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+            $frontBlockY = (int)floor($position->getY());
 
-                $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-                $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-                
-                $heightDiff = (int)floor($frontBlock->getPosition()->getY()) - (int)floor($position->getY());
+            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
 
-                // 내려가는 상황 감지 및 점프 방지
-                if ($heightDiff < 0) {
-                    continue; // 내려가는 중이면 점프하지 않음
-                }
+            // 계단 감지
+            if ($frontBlock->isStair()) {
+                $this->climbStairs($mob, $frontBlock);
+                return;
+            }
 
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                    $this->jump($mob, $heightDiff);
-                    return;
-                }
+            $frontBlockY = $frontBlock->getY() + $frontBlock->getBoundingBox()->getMaxY() - $frontBlock->getBoundingBox()->getMinY(); // Get top Y
+            $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
+
+            // 내려가는 상황 감지 및 점프 방지
+            if ($heightDiff < 0) {
+                continue; // 내려가는 중이면 점프하지 않음
+            }
+
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                $this->jump($mob, $heightDiff);
+                return;
+            }
+
+            // 앞에 고체 블록이 있고 위가 비어 있으면 점프
+            if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+                $this->jump($mob, 1);
+                return;
             }
         }
     }
+}
+
+private function climbStairs(Living $mob, Block $stairBlock): void {
+    // 계단 오르기 동작 구현
+    // ...
+}
 
 
     private function isClimbable(Block $block): bool {
