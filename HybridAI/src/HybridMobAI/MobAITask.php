@@ -108,15 +108,6 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    private function isClimbable(Block $block): bool {
-    $climbableBlocks = [
-        "pocketmine:block:slab",
-        "pocketmine:block:stairs",
-        "pocketmine:block:snow_layer"
-    ];
-    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-}
-    
     private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
@@ -161,7 +152,8 @@ class MobAITask extends Task {
                 continue; // 내려가는 중이면 점프하지 않음
             }
 
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            // 점프 조건 완화: 앞 블록이 solid하거나 climbable한 경우 점프 가능
+            if ($frontBlock->isSolid() || $this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
                 // 점프 실행
                 $this->jump($mob, $heightDiff);
 
@@ -180,7 +172,17 @@ class MobAITask extends Task {
     }
 }
 
-
+private function isClimbable(Block $block): bool {
+    $climbableBlocks = [
+        "pocketmine:block:slab",
+        "pocketmine:block:stairs",
+        "pocketmine:block:snow_layer",
+        "pocketmine:block:fence", // 울타리 추가
+        "pocketmine:block:glass", // 유리 추가
+        "pocketmine:block:frame" // 액자 추가
+    ];
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+}
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
