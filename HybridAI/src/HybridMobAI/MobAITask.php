@@ -75,8 +75,7 @@ class MobAITask extends Task {
             $speed *= $distance / 5;
         }
 
-        $direction = $playerPos->subtract($mobPos)->normalize();
-        $motion = $direction->multiply($speed);
+        $motion = $playerPos->subtract($mobPos)->normalize()->multiply($speed); // 핵심 수정 부분
         $mob->setMotion($motion);
         $mob->lookAt($playerPos);
     }
@@ -90,7 +89,7 @@ class MobAITask extends Task {
 
         $basePosition = new Vector3($position->getX(), $position->getY() + 0.1, $position->getZ());
 
-        for ($i = 1; $i <= 2; $i++) { // 2칸까지만 확인
+        for ($i = 1; $i <= 2; $i++) { // 2칸까지만 확인 (3칸은 너무 넓음)
             $frontX = $basePosition->getX() + ($directionVector->getX() * $i);
             $frontZ = $basePosition->getZ() + ($directionVector->getZ() * $i);
             $frontPosition = new Vector3($frontX, $basePosition->getY(), $frontZ);
@@ -104,14 +103,13 @@ class MobAITask extends Task {
                 $blockInFront->isSolid() &&
                 $blockAboveInFront->isTransparent() &&
                 $blockBelowInFront->isSolid() &&
-                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY()
+                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY() // 경사면 체크 추가
             ) {
                 $this->jump($mob);
-                return;
+                return; // 점프 후 불필요한 추가 검사 방지
             }
         }
     }
-
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
