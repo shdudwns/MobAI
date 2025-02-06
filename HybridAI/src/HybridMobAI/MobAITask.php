@@ -95,8 +95,8 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 좀비 발 위치에서 0.5블록 위를 기준으로 함
-        $basePosition = $position->add(0, 0.5, 0);
+        // 좀비 발 위치에서 0.1블록 위를 기준으로 함
+        $basePosition = new Vector3($position->getX(), $position->getY() + 0.1, $position->getZ());
 
         // 전방 3칸까지 확인
         for ($i = 1; $i <= 3; $i++) {
@@ -110,13 +110,15 @@ class MobAITask extends Task {
             $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ()); // 아래 블록 확인
 
             // 전방 1칸 또는 2칸에 장애물이 있고, 착지 지점에 블록이 있는 경우 점프
-            if (($blockInFront instanceof Block && !$blockInFront->isTransparent() &&
-                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
-                $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent() &&
-                $blockBelowInFront instanceof Block) ||
+            if (
+                ($blockInFront instanceof Block && !$blockInFront->isTransparent() &&
+                    $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
+                    $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent() &&
+                    $blockBelowInFront instanceof Block) ||
                 ($i == 2 && $blockInFront instanceof Block && !$blockInFront->isTransparent() &&
-                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
-                $blockBelowInFront instanceof Block)) {
+                    $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
+                    $blockBelowInFront instanceof Block)
+            ) {
                 $this->jump($mob);
                 return;
             }
@@ -145,7 +147,7 @@ class MobAITask extends Task {
         $currentMotion = $mob->getMotion();
         $newMotion = new Vector3(
             $currentMotion->getX(),
-            $jumpForce,
+            $currentMotion->getY() + $jumpForce, // 현재 Y 값에 jumpForce 추가
             $currentMotion->getZ()
         );
         $mob->setMotion($newMotion);
