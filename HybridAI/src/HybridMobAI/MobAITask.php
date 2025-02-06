@@ -95,24 +95,30 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $blockBelow = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ());
+        // 좀비 발 위치에서 0.5블록 위를 기준으로 함
+        $basePosition = $position->add(0, 0.5, 0);
 
-        if ($blockBelow instanceof Block && !$blockBelow->isTransparent()) {
-            for ($i = 1; $i <= 2; $i++) {
-                $frontX = $position->getX() + ($directionVector->getX() * $i);
-                $frontZ = $position->getZ() + ($directionVector->getZ() * $i);
-                $frontPosition = new Vector3($frontX, $position->getY(), $frontZ);
+        // 전방 3칸까지 확인
+        for ($i = 1; $i <= 3; $i++) {
+            $frontX = $basePosition->getX() + ($directionVector->getX() * $i);
+            $frontZ = $basePosition->getZ() + ($directionVector->getZ() * $i);
+            $frontPosition = new Vector3($frontX, $basePosition->getY(), $frontZ);
 
-                $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
-                $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
-                $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
+            $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
+            $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
+            $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
+            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ()); // 아래 블록 확인
 
-                if ($blockInFront instanceof Block && !$blockInFront->isTransparent() && 
-                    $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
-                    $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent()) {
-                    $this->jump($mob);
-                    return;
-                }
+            // 전방 1칸 또는 2칸에 장애물이 있고, 착지 지점에 블록이 있는 경우 점프
+            if (($blockInFront instanceof Block && !$blockInFront->isTransparent() &&
+                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
+                $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent() &&
+                $blockBelowInFront instanceof Block) ||
+                ($i == 2 && $blockInFront instanceof Block && !$blockInFront->isTransparent() &&
+                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
+                $blockBelowInFront instanceof Block)) {
+                $this->jump($mob);
+                return;
             }
         }
     }
