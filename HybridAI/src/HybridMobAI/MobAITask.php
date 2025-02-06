@@ -171,7 +171,7 @@ private function checkForObstaclesAndJump(Living $mob): void {
 
 // 개선된 jump() 메서드
 public function jump(Living $mob, float $heightDiff = 1.0): void {
-    $baseForce = 0.42; // 1블록 점프 기본값
+    $baseForce = 0.6; // 1블록 점프 기본값
     $jumpForce = $baseForce + ($heightDiff * 0.1);
     $jumpForce = min($jumpForce, 0.8);
 
