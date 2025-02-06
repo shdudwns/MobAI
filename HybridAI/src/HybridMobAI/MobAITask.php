@@ -139,15 +139,15 @@ class MobAITask extends Task {
     $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
     $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-    $leftBlock = $world->getBlockAt($position->add($leftVector)->floor());
-    $rightBlock = $world->getBlockAt($position->add($rightVector)->floor());
+    $leftBlock = $world->getBlockAt($position->addVector($leftVector)->floor());
+    $rightBlock = $world->getBlockAt($position->addVector($rightVector)->floor());
 
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
 
     // 앞 블록 감지 로직 개선 (높이차 고려, 1칸만 확인)
-    $frontBlockPos = $position->add($directionVector)->floor();
+    $frontBlockPos = $position->addVector($directionVector)->floor();
     $frontBlock = $world->getBlockAt($frontBlockPos);
     $frontBlockAbove = $world->getBlockAt($frontBlockPos->add(0, 1, 0));
 
