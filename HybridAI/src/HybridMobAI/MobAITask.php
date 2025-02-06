@@ -118,8 +118,16 @@ class MobAITask extends Task {
     $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
     // 좌우 블록 검사 (두 블록 모두 막혀있으면 점프 안함)
-    $leftBlock = $world->getBlockAt($position->addVector($leftVector));
-    $rightBlock = $world->getBlockAt($position->addVector($rightVector));
+    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
+    $leftBlockY = (int)floor($position->getY());
+    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
+    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
+
+    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
+    $rightBlockY = (int)floor($position->getY());
+    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
+    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+
 
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
@@ -128,9 +136,13 @@ class MobAITask extends Task {
     // 앞 블록 검사 (대각선 포함)
     for ($i = 0; $i <= 1; $i++) {
         for ($j = -1; $j <= 1; $j++) {
-            $frontBlock = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))));
-            $frontBlockAbove = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))->add(0, 1, 0)));
-            $frontBlockBelow = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))->add(0, -1, 0)));
+            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
+            $frontBlockY = (int)floor($position->getY());
+            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+
+            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+            $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
 
             $blockHeight = $frontBlock->getPosition()->getY();
             $heightDiff = $blockHeight - $position->getY();
@@ -148,6 +160,7 @@ class MobAITask extends Task {
         }
     }
 }
+
 
 public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 점프 힘 조절 (필요에 따라 조절)
