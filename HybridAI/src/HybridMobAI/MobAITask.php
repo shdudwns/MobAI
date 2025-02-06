@@ -69,17 +69,18 @@ class MobAITask extends Task {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
-        // Position 객체를 Vector3 객체로 변환
         $mobVec3 = new Vector3($mobPos->getX(), $mobPos->getY(), $mobPos->getZ());
         $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ());
 
-        $distance = $mobVec3->distance($playerVec3); // 이제 Vector3 객체로 연산
+        $distance = $mobVec3->distance($playerVec3);
         $speed = 0.2;
         if ($distance < 5) {
             $speed *= $distance / 5;
         }
 
-        $motion = $playerVec3->subtract($mobVec3)->normalize()->multiply($speed); // 수정된 부분
+        // subtractVector()를 사용하여 두 Vector3 객체를 뺍니다.
+        $motion = $playerVec3->subtractVector($mobVec3)->normalize()->multiply($speed);
+
         $mob->setMotion($motion);
         $mob->lookAt($playerPos);
     }
@@ -90,12 +91,10 @@ class MobAITask extends Task {
         $yaw = $mob->getLocation()->getYaw();
         $direction2D = VectorMath::getDirection2D($yaw);
 
-        // Position 객체를 Vector3 객체로 변환
-        $position = new Vector3($position->getX(), $position->getY(), $position->getZ());
-
+        $positionVec3 = new Vector3($position->getX(), $position->getY(), $position->getZ());
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $basePosition = new Vector3($position->getX(), $position->getY() + 0.1, $position->getZ());
+        $basePosition = new Vector3($positionVec3->getX(), $positionVec3->getY() + 0.1, $positionVec3->getZ());
 
         for ($i = 1; $i <= 2; $i++) {
             $frontX = $basePosition->getX() + ($directionVector->getX() * $i);
@@ -118,9 +117,9 @@ class MobAITask extends Task {
                 (int)$frontPosition->getZ()
             );
             $currentBlock = $world->getBlockAt(
-                (int)$position->getX(),
-                (int)$position->getY() - 1,
-                (int)$position->getZ()
+                (int)$positionVec3->getX(),
+                (int)$positionVec3->getY() - 1,
+                (int)$positionVec3->getZ()
             );
 
             if (
