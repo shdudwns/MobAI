@@ -10,7 +10,6 @@ use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
-use pocketmine\scheduler\ClosureTask;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -30,7 +29,7 @@ class MobAITask extends Task {
 
         foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
             foreach ($world->getEntities() as $entity) {
-                if ($entity instanceof Zombie) {
+                if ($entity instanceof Zombie) { // Zombie 엔티티만 처리
                     $this->handleMobAI($entity);
                 }
             }
@@ -109,83 +108,85 @@ class MobAITask extends Task {
     }
 
     private function isClimbable(Block $block): bool {
-        $climbableBlocks = [
-            "pocketmine:block:slab",
-            "pocketmine:block:stairs",
-            "pocketmine:block:snow_layer"
-        ];
-        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+    $climbableBlocks = [
+        "pocketmine:block:slab",
+        "pocketmine:block:stairs",
+        "pocketmine:block:snow_layer"
+    ];
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+}
+    
+    private function checkForObstaclesAndJump(Living $mob): void {
+    $entityId = $mob->getId();
+
+    if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
+        if ($mob->isOnGround()) {
+            $this->isJumping[$entityId] = false;
+        }
+        return;
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
-        $entityId = $mob->getId();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
 
-        if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
-            if ($mob->isOnGround()) {
-                $this->isJumping[$entityId] = false;
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+
+    // 좌우 블록 감지 로직 개선
+    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
+    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
+
+    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
+    $leftBlockY = (int)floor($position->getY());
+    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
+    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
+
+    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
+    $rightBlockY = (int)floor($position->getY());
+    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
+    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+
+    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
+        return;
+    }
+
+    // 앞 블록 감지 로직 개선 (높이차 고려, 1칸 + 대각선 방향 1칸 확인)
+    for ($i = 0; $i <= 1; $i++) { // 0칸, 1칸 확인
+        for ($j = -1; $j <= 1; $j++) { // -1 (왼쪽 대각선), 0 (정면), 1 (오른쪽 대각선) 확인
+            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
+            $frontBlockY = (int)floor($position->getY());
+            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+
+            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+
+            $currentHeight = (int)floor($position->getY());
+            $blockHeight = (int)floor($frontBlock->getPosition()->getY());
+            $heightDiff = $blockHeight - $currentHeight;
+
+            // 내려가는 상황 감지 및 점프 방지
+            if ($heightDiff < 0) {
+                continue; // 다음 블록 확인
             }
-            return;
-        }
 
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
-
-        // 좌우 블록 감지 로직 개선
-        $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
-        $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
-
-        $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
-        $leftBlockY = (int)floor($position->getY());
-        $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
-        $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
-
-        $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
-        $rightBlockY = (int)floor($position->getY());
-        $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
-        $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
-
-        if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
-            return;
-        }
-
-        // 앞 블록 감지 로직 개선 (높이차 고려, 1칸 + 대각선 방향 1칸 확인)
-        for ($i = 0; $i <= 1; $i++) { // 0칸, 1칸 확인
-            for ($j = -1; $j <= 1; $j++) { // -1 (왼쪽 대각선), 0 (정면), 1 (오른쪽 대각선) 확인
-                $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
-                $frontBlockY = (int)floor($position->getY());
-                $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
-
-                $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-                $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-
-                $currentHeight = (int)floor($position->getY());
-                $blockHeight = (int)floor($frontBlock->getPosition()->getY());
-                $heightDiff = $blockHeight - $currentHeight;
-
-                // 내려가는 상황 감지 및 점프 방지
-                if ($heightDiff < 0) {
-                    continue; // 다음 블록 확인
-                }
-
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                    // 좀 더 가까이 다가갔을 때 점프하도록 delay 추가 (값 조절 가능)
-                    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function (int $currentTick) use ($mob, $heightDiff) {
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                // 좀 더 가까이 다가갔을 때 점프하도록 delay 추가 (값 조절 가능)
+                $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob, $heightDiff) {
                     $this->jump($mob, $heightDiff);
                     $this->isJumping[$mob->getId()] = true;
-                    }), 2);
-                    return;
-                }
+                }), 2); // 2틱 delay
+
+                return;
             }
         }
     }
-
+    }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
+    // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
     $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
 
+    // ✅ 현재 점프 중이면 다시 점프하지 않도록 방지
     if (!$mob->isOnGround()) {
         return;
     }
