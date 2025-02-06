@@ -109,7 +109,6 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $entityId = $mob->getId();
 
     $yaw = $mob->getLocation()->getYaw();
     $direction2D = VectorMath::getDirection2D($yaw);
@@ -118,43 +117,41 @@ class MobAITask extends Task {
     $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
     $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-    // Check for blocks directly to the left and right.  If BOTH are solid, don't jump.
-    $leftBlock = $world->getBlockAt($position->add($leftVector));
-    $rightBlock = $world->getBlockAt($position->add($rightVector));
+    // 좌우 블록 검사 (두 블록 모두 막혀있으면 점프 안함)
+    $leftBlock = $world->getBlockAt($position->addVector($leftVector));
+    $rightBlock = $world->getBlockAt($position->addVector($rightVector));
 
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
 
-    // Check blocks in front, including diagonals
-    for ($i = 0; $i <= 1; $i++) { // Check 1 block forward, then 2 blocks forward.
-        for ($j = -1; $j <= 1; $j++) { // Check left, forward, and right diagonals.
-            $frontBlock = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))));
-            $frontBlockAbove = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))->add(0, 1, 0)));
-            $frontBlockBelow = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))->add(0, -1, 0)));
-
+    // 앞 블록 검사 (대각선 포함)
+    for ($i = 0; $i <= 1; $i++) {
+        for ($j = -1; $j <= 1; $j++) {
+            $frontBlock = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))));
+            $frontBlockAbove = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))->add(0, 1, 0)));
+            $frontBlockBelow = $world->getBlockAt($position->addVector($directionVector->multiply($i)->addVector($leftVector->multiply($j))->add(0, -1, 0)));
 
             $blockHeight = $frontBlock->getPosition()->getY();
             $heightDiff = $blockHeight - $position->getY();
 
-            // Prevent jumping if going down or if there's no ground below the front block
+            // 내려가는 상황이거나 앞 블록 아래가 비어있으면 점프 안함
             if ($heightDiff < 0 || $frontBlockBelow->isTransparent()) {
                 continue;
             }
 
-            // Check if the block is climbable and there's space above it.  Also, check distance.
+            // 점프 조건: 오를 수 있는 블록이고, 위에 공간이 있고, 너무 멀리 있지 않아야 함
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $position->distance($frontBlock->getPosition()) <= 1.5) {
-
                 $this->jump($mob, $heightDiff);
-                return; // Only jump once per tick
+                return; // 틱 당 한 번만 점프
             }
         }
     }
 }
 
 public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // Increased jump force. Adjust as needed.  0.4 was too low.
-    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);  // Start higher, scale with height.
+    // 점프 힘 조절 (필요에 따라 조절)
+    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
 
     if (!$mob->isOnGround()) {
         return;
@@ -166,6 +163,7 @@ public function jump(Living $mob, float $heightDiff = 1.0): void {
         $mob->getMotion()->getZ()
     ));
 }
+
 
 
     private function isClimbable(Block $block): bool {
