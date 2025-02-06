@@ -158,7 +158,7 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob): void {
-        $jumpForce = 0.5; // 점프력 증가
+        $jumpForce = 0.8; // 점프력 증가
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 }
