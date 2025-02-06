@@ -169,18 +169,20 @@ private function checkForObstaclesAndJump(Living $mob): void {
 }
 
 
+// 개선된 jump() 메서드
 public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // 점프 힘 조절 (필요에 따라 조절)
-    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
+    $baseForce = 0.42; // 1블록 점프 기본값
+    $jumpForce = $baseForce + ($heightDiff * 0.1);
+    $jumpForce = min($jumpForce, 0.8);
 
-    if (!$mob->isOnGround()) {
-        return;
+    if (!$mob->isOnGround() || $mob->getMotion()->y > 0) {
+        return; // 공중에 떠있거나 이미 점프 중이면 취소
     }
 
     $mob->setMotion(new Vector3(
-        $mob->getMotion()->getX(),
+        $mob->getMotion()->x,
         $jumpForce,
-        $mob->getMotion()->getZ()
+        $mob->getMotion()->z
     ));
 }
 }
