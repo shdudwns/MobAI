@@ -89,44 +89,49 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        $entityId = $mob->getId();
+    $entityId = $mob->getId();
 
-        if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
-            if ($mob->isOnGround()) {
-                $this->isJumping[$entityId] = false;
-            }
-            return;
+    if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
+        if ($mob->isOnGround()) {
+            $this->isJumping[$entityId] = false;
         }
-
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-
-        $directionVector = $mob->getDirectionVector()->normalize();
-
-        $frontPosition1 = $position->addVector($directionVector->multiply(1.5));
-        $frontPosition2 = $position->addVector($directionVector->multiply(1.5));
-
-        $blockInFront1 = $world->getBlockAt((int) $frontPosition1->getX(), (int) $frontPosition1->getY() - 1, (int) $frontPosition1->getZ());
-        $blockAboveInFront1 = $world->getBlockAt((int) $frontPosition1->getX(), (int) $frontPosition1->getY() + 1, (int) $frontPosition1->getZ());
-
-        $blockInFront2 = $world->getBlockAt((int) $frontPosition2->getX(), (int) $frontPosition2->getY() - 1, (int) $frontPosition2->getZ());
-        $blockAboveInFront2 = $world->getBlockAt((int) $frontPosition2->getX(), (int) $frontPosition2->getY() + 1, (int) $frontPosition2->getZ());
-
-        $currentHeight = $position->getY();
-        $frontHeight1 = $blockInFront1->getPosition()->getY();
-        $frontHeight2 = $blockInFront2->getPosition()->getY();
-
-        $heightDiff1 = $frontHeight1 - $currentHeight;
-        $heightDiff2 = $frontHeight2 - $currentHeight;
-
-        if ($heightDiff1 >= 0 && $heightDiff1 <= 1 && $blockAboveInFront1->isTransparent() && !$blockInFront1->isTransparent()) {
-            $this->jump($mob, $heightDiff1);
-            $this->isJumping[$entityId] = true;
-        } else if ($heightDiff2 >= 0 && $heightDiff2 <= 1 && $blockAboveInFront2->isTransparent() && !$blockInFront2->isTransparent()) {
-            $this->jump($mob, $heightDiff2);
-            $this->isJumping[$entityId] = true;
-        }
+        return;
     }
+
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+
+    // ✅ 방향 벡터 계산
+    $directionVector = $mob->getDirectionVector()->normalize();
+
+    // ✅ 블록 감지를 위해 위치를 int로 변환 (더 정확한 감지)
+    $frontX = (int) ($position->getX() + $directionVector->getX());
+    $frontZ = (int) ($position->getZ() + $directionVector->getZ());
+    $currentY = (int) $position->getY();
+
+    // ✅ 앞쪽 1칸 및 2칸의 블록 감지
+    $blockInFront1 = $world->getBlockAt($frontX, $currentY, $frontZ);
+    $blockAboveInFront1 = $world->getBlockAt($frontX, $currentY + 1, $frontZ);
+    
+    $blockInFront2 = $world->getBlockAt($frontX, $currentY + 1, $frontZ);
+    $blockAboveInFront2 = $world->getBlockAt($frontX, $currentY + 2, $frontZ);
+
+    // ✅ 현재 높이와 장애물 높이 비교 (floor 적용)
+    $frontHeight1 = (int) $blockInFront1->getPosition()->getY();
+    $frontHeight2 = (int) $blockInFront2->getPosition()->getY();
+
+    $heightDiff1 = $frontHeight1 - $currentY;
+    $heightDiff2 = $frontHeight2 - $currentY;
+
+    // ✅ 높이 차이가 0.5~1.5 사이이고, 블록이 단단한 경우 점프 실행
+    if ($heightDiff1 >= 0.5 && $heightDiff1 <= 1.5 && $blockInFront1->isSolid() && $blockAboveInFront1->isTransparent()) {
+        $this->jump($mob, $heightDiff1);
+        $this->isJumping[$entityId] = true;
+    } elseif ($heightDiff2 >= 0.5 && $heightDiff2 <= 1.5 && $blockInFront2->isSolid() && $blockAboveInFront2->isTransparent()) {
+        $this->jump($mob, $heightDiff2);
+        $this->isJumping[$entityId] = true;
+    }
+}
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
