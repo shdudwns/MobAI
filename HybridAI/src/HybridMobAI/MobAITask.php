@@ -69,22 +69,15 @@ class MobAITask extends Task {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
-        $direction = new Vector3(
-            $playerPos->getX() - $mobPos->getX(),
-            0,
-            $playerPos->getZ() - $mobPos->getZ()
-        );
+        $distance = $mobPos->distance($playerPos);
+        $speed = 0.2; // 기본 속도
+        if ($distance < 5) { // 가까울수록 속도 감소
+            $speed *= $distance / 5;
+        }
 
-        $motion = $direction->normalize()->multiply(0.12);
-
-        $currentMotion = $mob->getMotion();
-        $blendedMotion = new Vector3(
-            ($currentMotion->getX() * 0.7) + ($motion->getX() * 0.3),
-            $currentMotion->getY(),
-            ($currentMotion->getZ() * 0.7) + ($motion->getZ() * 0.3)
-        );
-
-        $mob->setMotion($blendedMotion);
+        $direction = $playerPos->subtract($mobPos)->normalize();
+        $motion = $direction->multiply($speed);
+        $mob->setMotion($motion);
         $mob->lookAt($playerPos);
     }
 
@@ -95,45 +88,22 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 좀비 발 위치에서 0.1블록 위를 기준으로 함
         $basePosition = new Vector3($position->getX(), $position->getY() + 0.1, $position->getZ());
 
-        // 전방 3칸까지 확인
-        for ($i = 1; $i <= 3; $i++) {
+        for ($i = 1; $i <= 2; $i++) { // 2칸까지만 확인
             $frontX = $basePosition->getX() + ($directionVector->getX() * $i);
             $frontZ = $basePosition->getZ() + ($directionVector->getZ() * $i);
             $frontPosition = new Vector3($frontX, $basePosition->getY(), $frontZ);
 
             $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
             $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
-            $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
-            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ()); // 아래 블록 확인
-
-            $currentBlock = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ()); // 현재 블록 객체 가져오기
-
-            // 풀 블록에서 점프 방지
-            if ($blockInFront->getId() === Block::GRASS) {
-                continue;
-            }
-
-            // 고체 블록 여부 확인 및 경사면 감지
-            if (
-                $blockInFront instanceof Block && $blockInFront->isSolid() && // 고체 블록인지 확인
-                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
-                $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent() &&
-                $blockBelowInFront instanceof Block && $blockBelowInFront->isSolid() && // 착지 지점 아래 블록 확인
-                // 경사면 감지: 현재 블록보다 앞 블록이 낮으면 점프 안함
-                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY()
-            ) {
-                $this->jump($mob);
-                return;
-            }
+            $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ());
+            $currentBlock = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ());
 
             if (
-                $i == 2 && $blockInFront instanceof Block && $blockInFront->isSolid() && // 고체 블록인지 확인
-                $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
-                $blockBelowInFront instanceof Block && $blockBelowInFront->isSolid() && // 착지 지점 아래 블록 확인
-                // 경사면 감지: 현재 블록보다 앞 블록이 낮으면 점프 안함
+                $blockInFront->isSolid() &&
+                $blockAboveInFront->isTransparent() &&
+                $blockBelowInFront->isSolid() &&
                 $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY()
             ) {
                 $this->jump($mob);
@@ -141,6 +111,7 @@ class MobAITask extends Task {
             }
         }
     }
+
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
@@ -161,7 +132,6 @@ class MobAITask extends Task {
 
     public function jump(Living $mob): void {
         $jumpForce = 0.42;
-        // Y축 속도 고정
-        $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ())); 
+        $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 }
