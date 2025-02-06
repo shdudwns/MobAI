@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
+use pocketmine\block\Block;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -22,7 +23,6 @@ class MobAITask extends Task {
     public function onRun(): void {
         $this->tickCounter++;
 
-        // ✅ 실행 주기를 2 ticks(0.1초)로 설정하여 더 빠르게 반응
         if ($this->tickCounter % 2 !== 0) {
             return;
         }
@@ -35,7 +35,6 @@ class MobAITask extends Task {
             }
         }
 
-        // ✅ 서버 과부하 방지를 위해 10초마다 1번만 로그 출력
         if ($this->tickCounter % 200 === 0) {
             $this->plugin->getLogger()->info("MobAITask 실행 중...");
         }
@@ -77,9 +76,8 @@ class MobAITask extends Task {
             $playerPos->getZ() - $mobPos->getZ()
         );
 
-        $motion = $direction->normalize()->multiply(0.12); // ✅ 속도를 줄여 더 부드럽게 이동
+        $motion = $direction->normalize()->multiply(0.12);
 
-        // ✅ 기존 모션과 새로운 모션을 70:30 비율로 보간 (Lerp)
         $currentMotion = $mob->getMotion();
         $blendedMotion = new Vector3(
             ($currentMotion->getX() * 0.7) + ($motion->getX() * 0.3),
@@ -91,34 +89,39 @@ class MobAITask extends Task {
         $mob->lookAt($playerPos);
     }
 
-    /** ✅ 장애물 감지 후 점프 (높이 2 블록까지 가능) */
     private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $yaw = $mob->getLocation()->getYaw();
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $yaw = $mob->getLocation()->getYaw();
+        $direction2D = VectorMath::getDirection2D($yaw);
+        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // ✅ `addVector()`를 사용하여 `Vector3` 더하기
-    $frontPosition = $position->addVector($directionVector);
+        $blockBelow = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ());
 
-    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
-    //$blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
+        if ($blockBelow instanceof Block && !$blockBelow->isTransparent()) {
+            for ($i = 1; $i <= 2; $i++) {
+                $frontPosition = $position->addVector($directionVector->multiply($i));
+                $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
+                $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
+                $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
 
-    if ($blockInFront !== null && !$blockInFront->isTransparent() && $blockAboveInFront !== null && $blockAboveInFront->isTransparent()) {
-        $this->jump($mob);
+                if ($blockInFront instanceof Block && !$blockInFront->isTransparent() && 
+                    $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
+                    $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent()) {
+                    $this->jump($mob);
+                    return;
+                }
+            }
+        }
     }
-}
 
-    /** ✅ 랜덤 이동 (부드러운 방향 전환) */
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
             new Vector3(0, 0, 1), new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
-        
+
         $currentMotion = $mob->getMotion();
         $blendedMotion = new Vector3(
             ($currentMotion->getX() * 0.8) + ($randomDirection->getX() * 0.2),
@@ -131,6 +134,12 @@ class MobAITask extends Task {
 
     public function jump(Living $mob): void {
         $jumpForce = 0.6;
-        $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
+        $currentMotion = $mob->getMotion();
+        $newMotion = new Vector3(
+            $currentMotion->getX(),
+            $jumpForce,
+            $currentMotion->getZ()
+        );
+        $mob->setMotion($newMotion);
     }
 }
