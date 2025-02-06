@@ -107,65 +107,66 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $entityId = $mob->getId();
 
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
-        $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
+    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
+    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-        $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
-        $leftBlockY = (int)floor($position->getY());
-        $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
-        $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
+    // Check for blocks directly to the left and right.  If BOTH are solid, don't jump.
+    $leftBlock = $world->getBlockAt($position->add($leftVector));
+    $rightBlock = $world->getBlockAt($position->add($rightVector));
 
-        $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
-        $rightBlockY = (int)floor($position->getY());
-        $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
-        $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
+        return;
+    }
 
-        if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
-            return;
-        }
+    // Check blocks in front, including diagonals
+    for ($i = 0; $i <= 1; $i++) { // Check 1 block forward, then 2 blocks forward.
+        for ($j = -1; $j <= 1; $j++) { // Check left, forward, and right diagonals.
+            $frontBlock = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))));
+            $frontBlockAbove = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))->add(0, 1, 0)));
+            $frontBlockBelow = $world->getBlockAt($position->add($directionVector->multiply($i)->add($leftVector->multiply($j))->add(0, -1, 0)));
 
-        for ($i = 0; $i <= 1; $i++) {
-            for ($j = -1; $j <= 1; $j++) {
-                $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
-                $frontBlockY = (int)floor($position->getY());
-                $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
 
-                $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-                $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-                $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
+            $blockHeight = $frontBlock->getPosition()->getY();
+            $heightDiff = $blockHeight - $position->getY();
 
-                $currentHeight = (int)floor($position->getY());
-                $blockHeight = (int)floor($frontBlock->getPosition()->getY());
-                $heightDiff = $blockHeight - $currentHeight;
+            // Prevent jumping if going down or if there's no ground below the front block
+            if ($heightDiff < 0 || $frontBlockBelow->isTransparent()) {
+                continue;
+            }
 
-                $entityId = $mob->getId();
-                if (isset($this->hasLanded[$entityId]) && $this->hasLanded[$entityId]) {
-                    if ($mob->isOnGround()) {
-                        unset($this->hasLanded[$entityId]);
-                    } else {
-                        continue;
-                    }
-                }
+            // Check if the block is climbable and there's space above it.  Also, check distance.
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $position->distance($frontBlock->getPosition()) <= 1.5) {
 
-                if ($frontBlockBelow->isTransparent()) {
-                    continue;
-                }
-
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $position->distance($frontBlock->getPosition()) <= 1.5) {
-                    $this->jump($mob, $heightDiff);
-                    $this->hasLanded[$entityId] = true;
-                    return;
-                }
+                $this->jump($mob, $heightDiff);
+                return; // Only jump once per tick
             }
         }
     }
+}
+
+public function jump(Living $mob, float $heightDiff = 1.0): void {
+    // Increased jump force. Adjust as needed.  0.4 was too low.
+    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);  // Start higher, scale with height.
+
+    if (!$mob->isOnGround()) {
+        return;
+    }
+
+    $mob->setMotion(new Vector3(
+        $mob->getMotion()->getX(),
+        $jumpForce,
+        $mob->getMotion()->getZ()
+    ));
+}
+
 
     private function isClimbable(Block $block): bool {
         $climbableBlocks = [
@@ -177,19 +178,5 @@ class MobAITask extends Task {
             "pocketmine:block:frame"
         ];
         return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-    }
-
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
-        $jumpForce = min(0.4 + ($heightDiff * 0.2), 1.0);
-
-        if (!$mob->isOnGround()) {
-            return;
-        }
-
-        $mob->setMotion(new Vector3(
-            $mob->getMotion()->getX(),
-            $jumpForce,
-            $mob->getMotion()->getZ()
-        ));
     }
 }
