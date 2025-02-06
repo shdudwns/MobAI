@@ -157,7 +157,6 @@ class MobAITask extends Task {
             $blockHeight = (int)floor($frontBlock->getPosition()->getY());
             $heightDiff = $blockHeight - $currentHeight;
 
-            // 내려가는 상황 감지 및 점프 방지
             if ($heightDiff < 0) {
                 continue; // 내려가는 중이면 점프하지 않음
             }
@@ -168,17 +167,19 @@ class MobAITask extends Task {
 
                 // 2틱 뒤에 착지 여부 확인
                 $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
-                    // 착지 확인
-                    if ($mob->isOnGround()) {
-                        // 다시 점프 가능하도록 함
+                    // 착지 확인 (motion의 Y축 값이 0인지 확인)
+                    if ($mob->getMotion()->y == 0) {
+                        // 착지 후 다시 점프 가능하도록 설정
+                        // (필요한 경우 추가적인 동작 수행)
                     }
                 }), 2);
 
-                return; // 점프를 실행했으므로 더 이상 확인하지 않음
+                return;
             }
         }
     }
 }
+
 
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
