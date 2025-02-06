@@ -111,6 +111,7 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
+    $entityId = $mob->getId();
 
     $yaw = $mob->getLocation()->getYaw();
     $direction2D = VectorMath::getDirection2D($yaw);
@@ -148,29 +149,26 @@ class MobAITask extends Task {
             $blockHeight = (int)floor($frontBlock->getPosition()->getY());
             $heightDiff = $blockHeight - $currentHeight;
 
+            // 내려가는 상황 감지 및 점프 방지
             if ($heightDiff < 0) {
                 continue; // 내려가는 중이면 점프하지 않음
             }
 
-            // 점프 조건 완화: 앞 블록이 solid하거나 climbable한 경우 점프 가능
-            if ($frontBlock->isSolid() || $this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
                 // 점프 실행
                 $this->jump($mob, $heightDiff);
 
-                // 2틱 뒤에 착지 여부 확인
-                $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
-                    // 착지 확인 (motion의 Y축 값이 0인지 확인)
-                    if ($mob->getMotion()->y == 0) {
-                        // 착지 후 다시 점프 가능하도록 설정
-                        // (필요한 경우 추가적인 동작 수행)
-                    }
-                }), 2);
+                // 착지 확인 (motion의 Y축 값이 0인지 확인)
+                if ($mob->getMotion()->y == 0) {
+                    // 즉시 다시 점프 가능
+                }
 
                 return;
             }
         }
     }
 }
+
 
 private function isClimbable(Block $block): bool {
     $climbableBlocks = [
