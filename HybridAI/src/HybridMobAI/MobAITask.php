@@ -154,12 +154,6 @@ class MobAITask extends Task {
         $this->jump($mob, $heightDiff);
         $this->isJumping[$entityId] = true;
     }
-
-    // ✅ 블록에서 떨어질 때 점프 방지 (아래 블록이 없는 경우 점프하지 않음)
-    $blockBelow = $world->getBlockAt((int) $position->getX(), (int) $position->getY() - 1, (int) $position->getZ());
-    if (!$blockBelow->isSolid()) {
-        return;
-    }
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     $jumpForce = min(0.7 + ($heightDiff * 0.3), 1.2); // ✅ 최대 점프 높이 1.2로 제한
