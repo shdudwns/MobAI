@@ -91,6 +91,7 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $entityId = $mob->getId();
 
+    // ✅ 점프 중이면 착지할 때까지 기다림
     if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
         if ($mob->isOnGround()) {
             $this->isJumping[$entityId] = false;
@@ -100,33 +101,43 @@ class MobAITask extends Task {
 
     $position = $mob->getPosition();
     $world = $mob->getWorld();
+    
+    // ✅ 정확한 이동 방향 계산 (Yaw 값 기반)
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // ✅ 이동 방향 벡터 계산 (더 정확한 감지)
-    $directionVector = $mob->getDirectionVector()->normalize();
+    // ✅ 앞으로 이동할 블록 위치 계산
+    $frontPosition = new Vector3(
+        floor($position->getX() + $directionVector->getX()), 
+        floor($position->getY()), 
+        floor($position->getZ() + $directionVector->getZ())
+    );
 
-    // ✅ 블록 감지 위치 계산
-    $frontPosition = $position->addVector($directionVector->multiply(1.2));
-
-    // ✅ 앞쪽 블록과 위쪽 블록 감지
-    $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-    $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
+    // ✅ 앞쪽 블록 감지
+    $blockInFront = $world->getBlockAt($frontPosition->getX(), $frontPosition->getY(), $frontPosition->getZ());
+    $blockAboveInFront = $world->getBlockAt($frontPosition->getX(), $frontPosition->getY() + 1, $frontPosition->getZ());
 
     // ✅ 현재 높이와 장애물 높이 비교
-    $currentHeight = (int) $position->getY();
-    $frontHeight = (int) $blockInFront->getPosition()->getY();
+    $currentHeight = floor($position->getY());
+    $frontHeight = floor($blockInFront->getPosition()->getY());
     $heightDiff = $frontHeight - $currentHeight;
 
-    // ✅ 블록이 점프 가능한 장애물인지 확인 (isSolid() + 예외 처리)
+    // ✅ 점프 가능 장애물 리스트
     $jumpableBlocks = [
         "pocketmine:block:slab",
         "pocketmine:block:stairs",
-        "pocketmine:block:snow_layer",
+        "pocketmine:block:snow_layer"
     ];
 
-    $isObstacle = $blockInFront->isSolid() || in_array($blockInFront->getName(), $jumpableBlocks);
-
-    // ✅ 점프 가능 조건: (1) 장애물 존재, (2) 위쪽 블록 비어 있음, (3) 높이 차이 적절함
-    if ($isObstacle && $blockAboveInFront->isTransparent() && $heightDiff >= 0.5 && $heightDiff <= 1.5) {
+    // ✅ 점프 조건:
+    // (1) 장애물 존재
+    // (2) 위쪽 블록이 비어 있음
+    // (3) 높이 차이가 0.5~1.5 사이
+    if (($blockInFront->isSolid() || in_array($blockInFront->getName(), $jumpableBlocks)) 
+        && $blockAboveInFront->isTransparent() 
+        && $heightDiff >= 0.5 && $heightDiff <= 1.5) {
+        
         $this->jump($mob, $heightDiff);
         $this->isJumping[$entityId] = true;
     }
