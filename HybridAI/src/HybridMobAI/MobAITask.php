@@ -143,38 +143,33 @@ private function checkForObstaclesAndJump(Living $mob): void {
                 return;
             }
 
-            // Air 블록인 경우 건너뛰기
-            if ($frontBlock instanceof Air) {
-                continue; // Air 블록이면 다음 블록으로
+            // Air 블록이거나 null인 경우 건너뛰기 (핵심 수정, 안전 장치)
+            if ($frontBlock === null || $frontBlock instanceof Air) {
+                continue; // Air 블록이거나 블록이 없는 경우 다음 블록으로
             }
 
-            // Air 블록이 아닌 경우에만 높이 계산  <-- 이 부분 다시 확인
-            if (!($frontBlock instanceof Air)) { // 중복 조건 제거
-                $frontBlockY = $frontBlock->getY();
-                $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
+            // Air 블록이 아닌 경우에만 높이 계산 및 점프 로직 실행
+            $frontBlockY = $frontBlock->getY();
+            $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
-                // 내려가는 상황 감지 및 점프 방지
-                if ($heightDiff < 0) {
-                    continue; // 내려가는 중이면 점프하지 않음
-                }
+            // 내려가는 상황 감지 및 점프 방지
+            if ($heightDiff < 0) {
+                continue; // 내려가는 중이면 점프하지 않음
+            }
 
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                    $this->jump($mob, $heightDiff);
-                    return;
-                }
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                $this->jump($mob, $heightDiff);
+                return;
+            }
 
-                // 앞에 고체 블록이 있고 위가 비어 있으면 점프
-                if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
-                    $this->jump($mob, 1);
-                    return;
-                }
-            } // <-- Air 체크 끝
+            // 앞에 고체 블록이 있고 위가 비어 있으면 점프
+            if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+                $this->jump($mob, 1);
+                return;
+            }
         }
     }
 }
-
-
-
 
 private function climbStairs(Living $mob, Block $stairBlock): void {
     // 계단 오르기 동작 구현
