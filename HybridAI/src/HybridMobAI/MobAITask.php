@@ -153,11 +153,11 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-        $jumpForce = min(0.7 + ($heightDiff * 0.3), 1.2);
-        $mob->setMotion(new Vector3(
-            $mob->getMotion()->getX(),
-            $jumpForce,
-            $mob->getMotion()->getZ()
-        ));
-    }
+    $jumpForce = min(0.7 + ($heightDiff * 0.3), 1.2); // ✅ 최대 점프 높이 1.2로 제한
+    $mob->setMotion(new Vector3(
+        $mob->getMotion()->getX(),
+        $jumpForce,
+        $mob->getMotion()->getZ()
+    ));
+}
 }
