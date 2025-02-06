@@ -102,28 +102,45 @@ class MobAITask extends Task {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     
-    // ✅ 정확한 이동 방향 계산 (Yaw 값 기반)
+    // ✅ 이동 방향 계산 (Yaw 값 기반)
     $yaw = $mob->getLocation()->getYaw();
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // ✅ 앞으로 이동할 블록 위치 계산
-    $frontPosition = new Vector3(
+    // ✅ 대각선 이동 감지 (대각선 이동 중이면 점프하지 않음)
+    if (abs($directionVector->getX()) === abs($directionVector->getZ())) {
+        return;
+    }
+
+    // ✅ 앞으로 이동할 블록 위치 계산 (앞쪽 1칸, 2칸 감지)
+    $frontPosition1 = new Vector3(
         floor($position->getX() + $directionVector->getX()), 
         floor($position->getY()), 
         floor($position->getZ() + $directionVector->getZ())
     );
+    
+    $frontPosition2 = new Vector3(
+        floor($position->getX() + ($directionVector->getX() * 2)), 
+        floor($position->getY()), 
+        floor($position->getZ() + ($directionVector->getZ() * 2))
+    );
 
-    // ✅ 앞쪽 블록 감지
-    $blockInFront = $world->getBlockAt($frontPosition->getX(), $frontPosition->getY(), $frontPosition->getZ());
-    $blockAboveInFront = $world->getBlockAt($frontPosition->getX(), $frontPosition->getY() + 1, $frontPosition->getZ());
+    // ✅ 앞쪽 블록 감지 (1칸, 2칸)
+    $blockInFront1 = $world->getBlockAt($frontPosition1->getX(), $frontPosition1->getY(), $frontPosition1->getZ());
+    $blockAboveInFront1 = $world->getBlockAt($frontPosition1->getX(), $frontPosition1->getY() + 1, $frontPosition1->getZ());
+
+    $blockInFront2 = $world->getBlockAt($frontPosition2->getX(), $frontPosition2->getY(), $frontPosition2->getZ());
+    $blockAboveInFront2 = $world->getBlockAt($frontPosition2->getX(), $frontPosition2->getY() + 1, $frontPosition2->getZ());
 
     // ✅ 현재 높이와 장애물 높이 비교
     $currentHeight = floor($position->getY());
-    $frontHeight = floor($blockInFront->getPosition()->getY());
-    $heightDiff = $frontHeight - $currentHeight;
+    $frontHeight1 = floor($blockInFront1->getPosition()->getY());
+    $frontHeight2 = floor($blockInFront2->getPosition()->getY());
 
-    // ✅ 점프 가능 장애물 리스트
+    $heightDiff1 = $frontHeight1 - $currentHeight;
+    $heightDiff2 = $frontHeight2 - $currentHeight;
+
+    // ✅ 점프 가능 장애물 리스트 (반블록, 계단, 눈)
     $jumpableBlocks = [
         "pocketmine:block:slab",
         "pocketmine:block:stairs",
@@ -134,11 +151,18 @@ class MobAITask extends Task {
     // (1) 장애물 존재
     // (2) 위쪽 블록이 비어 있음
     // (3) 높이 차이가 0.5~1.5 사이
-    if (($blockInFront->isSolid() || in_array($blockInFront->getName(), $jumpableBlocks)) 
-        && $blockAboveInFront->isTransparent() 
-        && $heightDiff >= 0.5 && $heightDiff <= 1.5) {
+    if (($blockInFront1->isSolid() || in_array($blockInFront1->getName(), $jumpableBlocks)) 
+        && $blockAboveInFront1->isTransparent() 
+        && $heightDiff1 >= 0.5 && $heightDiff1 <= 1.5) {
         
-        $this->jump($mob, $heightDiff);
+        $this->jump($mob, $heightDiff1);
+        $this->isJumping[$entityId] = true;
+    }
+        elseif (($blockInFront2->isSolid() || in_array($blockInFront2->getName(), $jumpableBlocks)) 
+        && $blockAboveInFront2->isTransparent() 
+        && $heightDiff2 >= 0.5 && $heightDiff2 <= 1.5) {
+        
+        $this->jump($mob, $heightDiff2);
         $this->isJumping[$entityId] = true;
     }
 }
