@@ -170,6 +170,8 @@ class MobAITask extends Task {
 
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
                 // 점프 예약 (착지 후 바로 점프 방지)
+                $this->isJumping[$entityId] = true; // 점프 시작 전에 isJumping 플래그 설정
+
                 $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob, $heightDiff, $entityId) {
                     $this->jump($mob, $heightDiff);
                     // 착지 확인 후 isJumping 플래그 설정
@@ -183,6 +185,7 @@ class MobAITask extends Task {
         }
     }
 }
+
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
     $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
