@@ -120,17 +120,22 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $entityId = $mob->getId();
 
-    // 점프 중이거나 땅에 있지 않으면 아무것도 하지 않음 (착지 후 바로 점프 방지)
+    // Check if the zombie is currently jumping.
     if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
+        return; // If jumping, do nothing.
+    }
+
+    // Check if the zombie is in the air (after a jump).
+    if (!$mob->isOnGround()) {
+        $this->isJumping[$entityId] = true; // Set jumping flag while in the air.
         return;
     }
 
-    if (!$mob->isOnGround()) { // 공중에 떠 있는 경우 (점프 후)
-        $this->isJumping[$entityId] = true; // 점프 상태 유지
-        return;
-    } else if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) { // 땅에 착지한 경우
-        unset($this->isJumping[$entityId]); // 점프 상태 해제
+    // Check if the zombie has just landed.
+    if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId] && $mob->isOnGround()) {
+        unset($this->isJumping[$entityId]); // Unset jumping flag after landing.
     }
+
 
     $position = $mob->getPosition();
     $world = $mob->getWorld();
