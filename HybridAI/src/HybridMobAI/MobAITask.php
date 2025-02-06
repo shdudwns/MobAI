@@ -160,7 +160,10 @@ class MobAITask extends Task {
 
                 // 착지 확인 (motion의 Y축 값이 0인지 확인)
                 if ($mob->getMotion()->y == 0) {
-                    // 즉시 다시 점프 가능
+                    // 1틱 뒤에 다시 점프 가능
+                    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
+                        // (필요한 경우 추가적인 동작 수행)
+                    }), 1);
                 }
 
                 return;
