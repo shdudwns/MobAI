@@ -143,30 +143,34 @@ private function checkForObstaclesAndJump(Living $mob): void {
                 return;
             }
 
+            // Air 블록인 경우 건너뛰기 (핵심 수정 부분)
+            if ($frontBlock instanceof Air) {
+                continue; // Air 블록이면 다음 블록으로
+            }
+
             // Air 블록이 아닌 경우에만 높이 계산
-            if (!($frontBlock instanceof Air)) {
-                $frontBlockY = $frontBlock->getY(); // 이 부분을 수정했습니다.
-                $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
+            $frontBlockY = $frontBlock->getY();
+            $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
-                // 내려가는 상황 감지 및 점프 방지
-                if ($heightDiff < 0) {
-                    continue; // 내려가는 중이면 점프하지 않음
-                }
+            // 내려가는 상황 감지 및 점프 방지
+            if ($heightDiff < 0) {
+                continue; // 내려가는 중이면 점프하지 않음
+            }
 
-                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                    $this->jump($mob, $heightDiff);
-                    return;
-                }
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                $this->jump($mob, $heightDiff);
+                return;
+            }
 
-                // 앞에 고체 블록이 있고 위가 비어 있으면 점프
-                if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
-                    $this->jump($mob, 1);
-                    return;
-                }
+            // 앞에 고체 블록이 있고 위가 비어 있으면 점프
+            if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+                $this->jump($mob, 1);
+                return;
             }
         }
     }
 }
+
 
 
 private function climbStairs(Living $mob, Block $stairBlock): void {
