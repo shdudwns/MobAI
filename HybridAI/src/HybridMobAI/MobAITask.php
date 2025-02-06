@@ -143,23 +143,25 @@ class MobAITask extends Task {
                 return;
             }
 
-            $frontBlockY = $frontBlock->getY() + $frontBlock->getBoundingBox()->getMaxY() - $frontBlock->getBoundingBox()->getMinY(); // Get top Y
-            $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
+            if (!($frontBlock instanceof Air)) { // Air 블록이 아닌 경우에만 높이 계산
+                $frontBlockY = $frontBlock->getY() + $frontBlock->getBoundingBox()->getMaxY() - $frontBlock->getBoundingBox()->getMinY(); // Get top Y
+                $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
-            // 내려가는 상황 감지 및 점프 방지
-            if ($heightDiff < 0) {
-                continue; // 내려가는 중이면 점프하지 않음
-            }
+                // 내려가는 상황 감지 및 점프 방지
+                if ($heightDiff < 0) {
+                    continue; // 내려가는 중이면 점프하지 않음
+                }
 
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
+                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                    $this->jump($mob, $heightDiff);
+                    return;
+                }
 
-            // 앞에 고체 블록이 있고 위가 비어 있으면 점프
-            if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
-                $this->jump($mob, 1);
-                return;
+                // 앞에 고체 블록이 있고 위가 비어 있으면 점프
+                if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+                    $this->jump($mob, 1);
+                    return;
+                }
             }
         }
     }
@@ -167,10 +169,12 @@ class MobAITask extends Task {
 
 private function climbStairs(Living $mob, Block $stairBlock): void {
     // 계단 오르기 동작 구현
-    // 예시: 계단 위로 작은 점프
-    $mob->jump(); 
-    // 필요에 따라 추가적인 동작 (ex: 이동) 구현 가능
+    // 예시: 계단 위로 작은 점프 후 이동
+    $mob->jump();
+    // 필요에 따라 이동 로직 추가
+    // $mob->move(x, z);
 }
+
 
 
     private function isClimbable(Block $block): bool {
