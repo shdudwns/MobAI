@@ -133,7 +133,6 @@ class MobAITask extends Task {
         $this->isJumping[$entityId] = true;
     }
 }
-}
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
