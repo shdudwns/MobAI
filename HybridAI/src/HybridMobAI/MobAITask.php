@@ -110,6 +110,7 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $entityId = $mob->getId();
 
+    // ✅ 점프 중이면 착지할 때까지 기다림
     if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
         if ($mob->isOnGround()) {
             $this->isJumping[$entityId] = false;
@@ -119,34 +120,69 @@ class MobAITask extends Task {
 
     $position = $mob->getPosition();
     $world = $mob->getWorld();
+    
+    // ✅ 이동 방향 계산 (Yaw 값 기반)
     $yaw = $mob->getLocation()->getYaw();
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // ✅ 장애물 감지 범위 확장 (1~2 블록 앞까지 감지)
-    for ($i = 1; $i <= 2; $i++) {
-        $frontPosition = new Vector3(
-            $position->getX() + ($directionVector->getX() * $i),
-            $position->getY(),
-            $position->getZ() + ($directionVector->getZ() * $i)
-        );
+    // ✅ 대각선 이동 감지
+    $isDiagonalMove = abs($directionVector->getX()) === abs($directionVector->getZ());
 
-        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
-        $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
+    // ✅ 앞으로 이동할 블록 위치 계산 (앞쪽 1칸, 2칸 감지)
+    $frontPosition1 = new Vector3(
+        floor($position->getX() + $directionVector->getX()), 
+        floor($position->getY()), 
+        floor($position->getZ() + $directionVector->getZ())
+    );
+    
+    $frontPosition2 = new Vector3(
+        floor($position->getX() + ($directionVector->getX() * 2)), 
+        floor($position->getY()), 
+        floor($position->getZ() + ($directionVector->getZ() * 2))
+    );
 
-        // ✅ 장애물이 있는 경우 점프 (2 블록 높이까지 점프 가능)
-        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
-            $this->jump($mob, $blockInFront->getPosition()->getY() - $position->getY());
-            $this->isJumping[$entityId] = true;
-            return;
-        }
+    // ✅ 앞쪽 블록 감지 (1칸, 2칸)
+    $blockInFront1 = $world->getBlockAt($frontPosition1->getX(), $frontPosition1->getY(), $frontPosition1->getZ());
+    $blockAboveInFront1 = $world->getBlockAt($frontPosition1->getX(), $frontPosition1->getY() + 1, $frontPosition1->getZ());
+
+    $blockInFront2 = $world->getBlockAt($frontPosition2->getX(), $frontPosition2->getY(), $frontPosition2->getZ());
+    $blockAboveInFront2 = $world->getBlockAt($frontPosition2->getX(), $frontPosition2->getY() + 1, $frontPosition2->getZ());
+
+    // ✅ 현재 높이와 장애물 높이 비교
+    $currentHeight = floor($position->getY());
+    $frontHeight1 = floor($blockInFront1->getPosition()->getY());
+    $frontHeight2 = floor($blockInFront2->getPosition()->getY());
+
+    $heightDiff1 = $frontHeight1 - $currentHeight;
+    $heightDiff2 = $frontHeight2 - $currentHeight;
+
+    // ✅ 점프 가능 장애물 리스트 (반블록, 계단, 눈)
+    $jumpableBlocks = [
+        "pocketmine:block:slab",
+        "pocketmine:block:stairs",
+        "pocketmine:block:snow_layer"
+    ];
+
+    // ✅ 점프 조건:
+    // (1) 장애물 존재
+    // (2) 위쪽 블록이 비어 있음
+    // (3) 높이 차이가 0.5~1.5 사이
+    if (!$isDiagonalMove && 
+        ($blockInFront1->isSolid() || in_array($blockInFront1->getName(), $jumpableBlocks)) 
+        && $blockAboveInFront1->isTransparent() 
+        && $heightDiff1 >= 0.5 && $heightDiff1 <= 1.5) {
+        
+        $this->jump($mob, $heightDiff1);
+        $this->isJumping[$entityId] = true;
     }
-
-    // ✅ 블록에서 떨어질 때 점프 방지 (아래 블록이 없는 경우 점프하지 않음)
-    $blockBelow = $world->getBlockAt((int) $position->getX(), (int) $position->getY() - 1, (int) $position->getZ());
-    if (!$blockBelow->isSolid()) {
-        return;
+    elseif (!$isDiagonalMove && 
+        ($blockInFront2->isSolid() || in_array($blockInFront2->getName(), $jumpableBlocks)) 
+        && $blockAboveInFront2->isTransparent() 
+        && $heightDiff2 >= 0.5 && $heightDiff2 <= 1.5) {
+        
+        $this->jump($mob, $heightDiff2);
+        $this->isJumping[$entityId] = true;
     }
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
