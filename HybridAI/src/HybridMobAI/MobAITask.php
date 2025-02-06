@@ -15,7 +15,7 @@ use pocketmine\block\Block;
 class MobAITask extends Task {
     private Main $plugin;
     private int $tickCounter = 0;
-    private array $isJumping = []; // 사용하지 않는 변수
+    private array $isJumping = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -81,7 +81,7 @@ class MobAITask extends Task {
         $currentMotion = $mob->getMotion();
         $blendedMotion = new Vector3(
             ($currentMotion->getX() * 0.5) + ($motion->getX() * 0.5),
-            $currentMotion->getY(), // Y축은 변경하지 않음
+            $currentMotion->getY(),
             ($currentMotion->getZ() * 0.5) + ($motion->getZ() * 0.5)
         );
 
@@ -90,47 +90,114 @@ class MobAITask extends Task {
     }
 
     public function moveRandomly(Living $mob): void {
-        $x = mt_rand(-1, 1);
-        $z = mt_rand(-1, 1);
-        $motion = new Vector3($x * 0.2, $mob->getMotion()->getY(), $z * 0.2);
-        $mob->setMotion($motion);
-    }
+        $directionVectors = [
+            new Vector3(1, 0, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(0, 0, -1)
+        ];
+        $randomDirection = $directionVectors[array_rand($directionVectors)];
 
+        $currentMotion = $mob->getMotion();
+        $blendedMotion = new Vector3(
+            ($currentMotion->getX() * 0.8) + ($randomDirection->getX() * 0.2),
+            $currentMotion->getY(),
+            ($currentMotion->getZ() * 0.8) + ($randomDirection->getZ() * 0.2)
+        );
+
+        $mob->setMotion($blendedMotion);
+    }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $entityId = $mob->getId();
 
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+    $yaw = $mob->getLocation()->getYaw();
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        // 앞 블록 감지 (높이차 고려)
-        $frontBlockX = (int)floor($position->getX() + $directionVector->getX());
-        $frontBlockY = (int)floor($position->getY());
-        $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ());
+    // 좌우 블록 감지 로직 개선
+    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
+    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-        $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-        $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
+    $leftBlockY = (int)floor($position->getY());
+    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
+    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
 
-        if ($frontBlock->isSolid() || $frontBlockAbove->isSolid()) {
-            $this->jump($mob);
+    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
+    $rightBlockY = (int)floor($position->getY());
+    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
+    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+
+    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
+        return; // 양쪽에 블록이 있으면 점프하지 않음
+    }
+
+    // 앞 블록 감지 로직 개선 (높이차 고려, 1칸 + 대각선 방향 1칸 확인)
+    for ($i = 0; $i <= 1; $i++) {
+        for ($j = -1; $j <= 1; $j++) {
+            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
+            $frontBlockY = (int)floor($position->getY());
+            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+
+            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+
+            $currentHeight = (int)floor($position->getY());
+            $blockHeight = (int)floor($frontBlock->getPosition()->getY());
+            $heightDiff = $blockHeight - $currentHeight;
+
+            // 내려가는 상황 감지 및 점프 방지
+            if ($heightDiff < 0) {
+                continue; // 내려가는 중이면 점프하지 않음
+            }
+
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                // 점프 실행
+                $this->jump($mob, $heightDiff);
+
+                // 착지 확인 (motion의 Y축 값이 0인지 확인)
+                if ($mob->getMotion()->y == 0) {
+                    // 1틱 뒤에 다시 점프 가능
+                    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
+                        // (필요한 경우 추가적인 동작 수행)
+                    }), 1);
+                }
+
+                return;
+            }
         }
     }
+}
 
 
-    private function isClimbable(Block $block): bool {
-        // 필요에 따라 추가적인 블록을 climbable list에 추가할 수 있습니다.
-        return $block->isSolid(); // 기본적으로 모든 solid block은 climbable로 취급
-    }
-
+private function isClimbable(Block $block): bool {
+    $climbableBlocks = [
+        "pocketmine:block:slab",
+        "pocketmine:block:stairs",
+        "pocketmine:block:snow_layer",
+        "pocketmine:block:fence", // 울타리 추가
+        "pocketmine:block:glass", // 유리 추가
+        "pocketmine:block:frame" // 액자 추가
+    ];
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+}
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-        if (!$mob->isOnGround()) {
-            return;
-        }
+    // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
+    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
 
-        $jumpForce = 0.4; // 점프 강도 고정
-        $mob->setMotion($mob->getMotion()->add(0, $jumpForce, 0));
+    // ✅ 현재 점프 중이면 다시 점프하지 않도록 방지
+    if (!$mob->isOnGround()) {
+        return;
     }
+
+    $mob->setMotion(new Vector3(
+        $mob->getMotion()->getX(),
+        $jumpForce,
+        $mob->getMotion()->getZ()
+    ));
+}
 }
