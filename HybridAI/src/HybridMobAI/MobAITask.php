@@ -107,7 +107,10 @@ class MobAITask extends Task {
 
         // 시야 범위 확장 (좌우 30도)
         for ($angle = -30; $angle <= 30; $angle += 10) {
-            $rotatedDirection = $directionVector->rotateY($angle);
+            $rad = deg2rad($angle);
+            $rotatedX = $directionVector->getX() * cos($rad) + $directionVector->getZ() * sin($rad);
+            $rotatedZ = -$directionVector->getX() * sin($rad) + $directionVector->getZ() * cos($rad);
+            $rotatedDirection = new Vector3($rotatedX, 0, $rotatedZ);
 
             for ($i = 1; $i <= 2; $i++) {
                 $frontX = $positionVec3->getX() + ($rotatedDirection->getX() * $i);
