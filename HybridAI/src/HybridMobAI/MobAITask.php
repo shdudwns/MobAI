@@ -128,7 +128,6 @@ class MobAITask extends Task {
     $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
     $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
 
-
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
@@ -147,13 +146,15 @@ class MobAITask extends Task {
             $blockHeight = $frontBlock->getPosition()->getY();
             $heightDiff = $blockHeight - $position->getY();
 
-            // 내려가는 상황이거나 앞 블록 아래가 비어있으면 점프 안함
             if ($heightDiff < 0 || $frontBlockBelow->isTransparent()) {
                 continue;
             }
 
-            // 점프 조건: 오를 수 있는 블록이고, 위에 공간이 있고, 너무 멀리 있지 않아야 함
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $position->distance($frontBlock->getPosition()) <= 1.5) {
+            // ***KEY CHANGE: Use integer coordinates for distance check too***
+            $distanceSquared = ($frontBlockX - $position->getX())**2 + ($frontBlockZ - $position->getZ())**2;
+            $distance = sqrt($distanceSquared);
+
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $distance <= 1.5) {
                 $this->jump($mob, $heightDiff);
                 return; // 틱 당 한 번만 점프
             }
