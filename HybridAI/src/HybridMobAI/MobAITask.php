@@ -133,11 +133,11 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob): void {
-        $jumpForce = 0.6;
+        $jumpForce = 0.42;
         $currentMotion = $mob->getMotion();
         $newMotion = new Vector3(
             $currentMotion->getX(),
-            $jumpForce,
+            $currentMotion->getX()+$jumpForce,
             $currentMotion->getZ()
         );
         $mob->setMotion($newMotion);
