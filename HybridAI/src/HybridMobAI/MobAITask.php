@@ -105,31 +105,34 @@ class MobAITask extends Task {
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // ✅ 장애물 감지 범위 확장 (1~2 블록 앞까지 감지)
-    for ($i = 1; $i <= 2; $i++) {
-        $frontPosition = new Vector3(
-            $position->getX() + ($directionVector->getX() * $i),
-            $position->getY(),
-            $position->getZ() + ($directionVector->getZ() * $i)
-        );
+    // ✅ 블록 한 개만 감지 (앞쪽 1칸만 검사)
+    $nextPosition = new Vector3(
+        $position->getX() + $directionVector->getX(),
+        $position->getY(),
+        $position->getZ() + $directionVector->getZ()
+    );
 
-        $blockInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY(), (int) $frontPosition->getZ());
-        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 1, (int) $frontPosition->getZ());
-        $blockAbove2InFront = $world->getBlockAt((int) $frontPosition->getX(), (int) $frontPosition->getY() + 2, (int) $frontPosition->getZ());
+    $blockInFront = $world->getBlockAt((int) $nextPosition->getX(), (int) $nextPosition->getY(), (int) $nextPosition->getZ());
+    $blockAboveInFront = $world->getBlockAt((int) $nextPosition->getX(), (int) $nextPosition->getY() + 1, (int) $nextPosition->getZ());
+    $blockAbove2InFront = $world->getBlockAt((int) $nextPosition->getX(), (int) $nextPosition->getY() + 2, (int) $nextPosition->getZ());
 
-        // ✅ 장애물이 있는 경우 점프 (2 블록 높이까지 점프 가능)
-        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
-            $this->jump($mob, $blockInFront->getPosition()->getY() - $position->getY());
-            $this->isJumping[$entityId] = true;
-            return;
-        }
-    }
-
-    // ✅ 블록에서 떨어질 때 점프 방지 (아래 블록이 없는 경우 점프하지 않음)
+    // ✅ 현재 발밑 블록 높이 가져오기
     $blockBelow = $world->getBlockAt((int) $position->getX(), (int) $position->getY() - 1, (int) $position->getZ());
-    if (!$blockBelow->isSolid()) {
+    $currentHeight = $position->getY();
+    $frontHeight = $blockInFront->getPosition()->getY();
+
+    // ✅ 높이 차이가 0.1 이하이면 점프하지 않음 (대각선 길 방지)
+    if (abs($frontHeight - $currentHeight) <= 0.1) {
         return;
     }
+
+    // ✅ 높이 차이가 0.6~1.2 사이일 때만 점프 (대각선 점프 방지)
+    $heightDiff = $frontHeight - $currentHeight;
+    if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent() && $heightDiff >= 0.6 && $heightDiff <= 1.2) {
+        $this->jump($mob, $heightDiff);
+        $this->isJumping[$entityId] = true;
+    }
+}
 }
 
     public function moveRandomly(Living $mob): void {
@@ -152,7 +155,7 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-    $jumpForce = min(0.6 + ($heightDiff * 0.3), 1.2); // ✅ 기본 점프력 + 추가 높이 보정
+    $jumpForce = min(0.7 + ($heightDiff * 0.3), 1.1); // ✅ 최대 점프 높이 1.1로 제한
     $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
 }
 }
