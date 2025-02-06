@@ -14,6 +14,7 @@ use pocketmine\block\Block;
 class MobAITask extends Task {
     private Main $plugin;
     private int $tickCounter = 0;
+    private array $isJumping = []; // ✅ 점프 상태 저장
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -32,10 +33,6 @@ class MobAITask extends Task {
                     $this->handleMobAI($entity);
                 }
             }
-        }
-
-        if ($this->tickCounter % 200 === 0) {
-            $this->plugin->getLogger()->info("MobAITask 실행 중...");
         }
     }
 
@@ -80,17 +77,24 @@ class MobAITask extends Task {
 
         $motion = $playerVec3->subtractVector($mobVec3)->normalize()->multiply($speed);
 
-        $mob->setMotion($motion);
+        // ✅ 기존 속도와 새로운 속도를 부드럽게 혼합 (50:50)
+        $currentMotion = $mob->getMotion();
+        $blendedMotion = new Vector3(
+            ($currentMotion->getX() * 0.5) + ($motion->getX() * 0.5),
+            $currentMotion->getY(),
+            ($currentMotion->getZ() * 0.5) + ($motion->getZ() * 0.5)
+        );
+
+        $mob->setMotion($blendedMotion);
         $mob->lookAt($playerPos);
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        static $isJumping = [];
         $entityId = $mob->getId();
 
-        if (isset($isJumping[$entityId]) && $isJumping[$entityId]) {
+        if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
             if ($mob->isOnGround()) {
-                $isJumping[$entityId] = false;
+                $this->isJumping[$entityId] = false;
             }
             return;
         }
@@ -99,42 +103,17 @@ class MobAITask extends Task {
         $world = $mob->getWorld();
         $yaw = $mob->getLocation()->getYaw();
         $direction2D = VectorMath::getDirection2D($yaw);
-
-        $positionVec3 = new Vector3($position->getX(), $position->getY(), $position->getZ());
         $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-        $blockBelow = $world->getBlockAt((int)$positionVec3->floor()->getX(), (int)$positionVec3->floor()->getY() - 1, (int)$positionVec3->floor()->getZ());
+        $frontPosition = $position->addVector($directionVector);
 
-        // 시야 범위 확장 (좌우 45도)
-        for ($angle = -45; $angle <= 45; $angle += 10) {
-            $rad = deg2rad($angle);
-            $rotatedX = $directionVector->getX() * cos($rad) + $directionVector->getZ() * sin($rad);
-            $rotatedZ = -$directionVector->getX() * sin($rad) + $directionVector->getZ() * cos($rad);
-            $rotatedDirection = new Vector3($rotatedX, 0, $rotatedZ);
+        $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
+        $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
+        $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
 
-            for ($i = 1; $i <= 2; $i++) {
-                $frontX = $positionVec3->getX() + ($rotatedDirection->getX() * $i);
-                $frontZ = $positionVec3->getZ() + ($rotatedDirection->getZ() * $i);
-                $frontPosition = new Vector3($frontX, $positionVec3->getY(), $frontZ);
-
-                $blockInFront = $world->getBlockAt((int)$frontPosition->floor()->getX(), (int)$frontPosition->floor()->getY(), (int)$frontPosition->floor()->getZ());
-                $blockAboveInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y + 1, (int)$frontPosition->z);
-                $blockBelowInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
-
-                if (
-                    $blockInFront->isSolid() &&
-                    $blockAboveInFront->isTransparent() &&
-                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid())
-                ) {
-                    $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
-
-                    if ($heightDiff <= 1 && !$mob->isOnGround()) {
-                        $this->jump($mob);
-                        $isJumping[$entityId] = true;
-                        return;
-                    }
-                }
-            }
+        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent() && $blockAbove2InFront->isTransparent()) {
+            $this->jump($mob);
+            $this->isJumping[$entityId] = true;
         }
     }
 
@@ -158,7 +137,7 @@ class MobAITask extends Task {
     }
 
     public function jump(Living $mob): void {
-        $jumpForce = 0.5;
+        $jumpForce = 0.7;
         $mob->setMotion(new Vector3($mob->getMotion()->getX(), $jumpForce, $mob->getMotion()->getZ()));
     }
 }
