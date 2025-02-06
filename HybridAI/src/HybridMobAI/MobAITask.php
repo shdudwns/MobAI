@@ -106,7 +106,17 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
+    private function isClimbable(Block $block): bool {
+    $climbableBlocks = [
+        "pocketmine:block:snow_layer",
+        "pocketmine:block:fence",
+        "pocketmine:block:glass",
+        "pocketmine:block:frame"
+    ];
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+}
+
+private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
@@ -117,46 +127,42 @@ class MobAITask extends Task {
     $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
     $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-    // 좌우 블록 검사 (두 블록 모두 막혀있으면 점프 안함)
-    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
-    $leftBlockY = (int)floor($position->getY());
-    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
-    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
-
-    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
-    $rightBlockY = (int)floor($position->getY());
-    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
-    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+    // Check left and right blocks at feet level
+    $leftBlock = $world->getBlockAt((int)floor($position->x + $leftVector->x), (int)$position->y, (int)floor($position->z + $leftVector->z));
+    $rightBlock = $world->getBlockAt((int)floor($position->x + $rightVector->x), (int)$position->y, (int)floor($position->z + $rightVector->z));
 
     if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
         return;
     }
 
-    // 앞 블록 검사 (대각선 포함)
+    // Check front blocks
     for ($i = 0; $i <= 1; $i++) {
         for ($j = -1; $j <= 1; $j++) {
-            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
-            $frontBlockY = (int)floor($position->getY());
-            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+            $frontBlockX = (int)floor($position->x + $directionVector->x * $i + $leftVector->x * $j);
+            $frontBlockY = (int)$position->y;
+            $frontBlockZ = (int)floor($position->z + $directionVector->z * $i + $leftVector->z * $j);
 
             $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
             $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
             $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
 
-            $blockHeight = $frontBlock->getPosition()->getY();
-            $heightDiff = $blockHeight - $position->getY();
+            $blockHeight = $frontBlock->getPosition()->y;
+            $heightDiff = $blockHeight - $position->y;
 
             if ($heightDiff < 0 || $frontBlockBelow->isTransparent()) {
                 continue;
             }
 
-            // ***KEY CHANGE: Use integer coordinates for distance check too***
-            $distanceSquared = ($frontBlockX - $position->getX())**2 + ($frontBlockZ - $position->getZ())**2;
-            $distance = sqrt($distanceSquared);
+            // Calculate distance to block's center
+            $blockCenterX = $frontBlockX + 0.5;
+            $blockCenterZ = $frontBlockZ + 0.5;
+            $dx = $blockCenterX - $position->x;
+            $dz = $blockCenterZ - $position->z;
+            $distance = sqrt($dx * $dx + $dz * $dz);
 
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $distance <= 1.5) {
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $distance <= 1.0) {
                 $this->jump($mob, $heightDiff);
-                return; // 틱 당 한 번만 점프
+                return;
             }
         }
     }
@@ -177,18 +183,4 @@ public function jump(Living $mob, float $heightDiff = 1.0): void {
         $mob->getMotion()->getZ()
     ));
 }
-
-
-
-    private function isClimbable(Block $block): bool {
-        $climbableBlocks = [
-            "pocketmine:block:slab",
-            "pocketmine:block:stairs",
-            "pocketmine:block:snow_layer",
-            "pocketmine:block:fence",
-            "pocketmine:block:glass",
-            "pocketmine:block:frame"
-        ];
-        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-    }
 }
