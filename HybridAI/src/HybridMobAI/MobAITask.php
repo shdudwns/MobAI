@@ -11,7 +11,6 @@ use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
-use pocketmine\entity\Zombie; // Zombie 클래스 임포트
 
 class MobAITask extends Task {
     private Main $plugin;
