@@ -108,7 +108,9 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
+    <?php
+
+private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
@@ -138,14 +140,14 @@ class MobAITask extends Task {
             $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
 
             // 계단 감지
-            if ($frontBlock instanceof Stair) { // Stair 클래스 인스턴스인지 확인
+            if ($frontBlock instanceof Stair) {
                 $this->climbStairs($mob, $frontBlock);
                 return;
             }
 
             // Air 블록이 아닌 경우에만 높이 계산
-            if (!($frontBlock instanceof Air)) { // Air 블록이 아닌 경우에만 높이 계산
-                $frontBlockY = $frontBlock->getY() + $frontBlock->getBoundingBox()->getMaxY() - $frontBlock->getBoundingBox()->getMinY(); // Get top Y
+            if (!($frontBlock instanceof Air)) {
+                $frontBlockY = $frontBlock->getY(); // 이 부분을 수정했습니다.
                 $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
                 // 내려가는 상황 감지 및 점프 방지
@@ -167,6 +169,7 @@ class MobAITask extends Task {
         }
     }
 }
+
 
 private function climbStairs(Living $mob, Block $stairBlock): void {
     // 계단 오르기 동작 구현
