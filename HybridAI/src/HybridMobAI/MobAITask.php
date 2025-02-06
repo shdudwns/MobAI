@@ -124,13 +124,15 @@ class MobAITask extends Task {
                 if (
                     $blockInFront->isSolid() &&
                     $blockAboveInFront->isTransparent() &&
-                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid()) &&
-                    $heightDiff <= 1 &&
-                    !$mob->isOnGround()
+                    ($blockBelowInFront->isSolid() || $blockBelow->isSolid())
                 ) {
-                    $this->jump($mob);
-                    $isJumping[$entityId] = true;
-                    return;
+                    $heightDiff = $blockInFront->getPosition()->getY() - $positionVec3->getY();
+
+                    if ($heightDiff <= 1 && !$mob->isOnGround()) {
+                        $this->jump($mob);
+                        $isJumping[$entityId] = true;
+                        return;
+                    }
                 }
             }
         }
