@@ -143,13 +143,13 @@ private function checkForObstaclesAndJump(Living $mob): void {
                 return;
             }
 
-            // Air 블록인 경우 건너뛰기 (핵심 수정 부분)
+            // Air 블록인 경우 건너뛰기
             if ($frontBlock instanceof Air) {
-                continue; // Air 블록이면 다음 블록으로
+                continue;
             }
 
             // Air 블록이 아닌 경우에만 높이 계산
-            $frontBlockY = $frontBlock->getY();
+            $frontBlockY = $frontBlock->getY(); // $frontBlockY 변수 선언 위치를 if 조건문 안으로 이동
             $heightDiff = (int)floor($frontBlockY) - (int)floor($position->getY());
 
             // 내려가는 상황 감지 및 점프 방지
