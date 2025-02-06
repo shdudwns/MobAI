@@ -109,6 +109,8 @@ class MobAITask extends Task {
             $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
             $blockBelowInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() - 1, (int)$frontPosition->getZ()); // 아래 블록 확인
 
+            $currentBlock = $world->getBlockAt((int)$position->getX(), (int)$position->getY() - 1, (int)$position->getZ()); // 현재 블록 객체 가져오기
+
             // **고체 블록 여부 확인 및 경사면 감지**
             if (
                 $blockInFront instanceof Block && $blockInFront->isSolid() && // 고체 블록인지 확인
@@ -116,7 +118,7 @@ class MobAITask extends Task {
                 $blockAbove2InFront instanceof Block && $blockAbove2InFront->isTransparent() &&
                 $blockBelowInFront instanceof Block && $blockBelowInFront->isSolid() && // 착지 지점 아래 블록 확인
                 // 경사면 감지: 현재 블록보다 앞 블록이 낮으면 점프 안함
-                $world->getBlockAt((int)$position->getX(), (int)$position->getY() -1, (int)$position->getZ())->getY() <= $blockInFront->getY()
+                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY() // getY() 대신 getPosition()->getY() 사용
             ) {
                 $this->jump($mob);
                 return;
@@ -127,7 +129,7 @@ class MobAITask extends Task {
                 $blockAboveInFront instanceof Block && $blockAboveInFront->isTransparent() &&
                 $blockBelowInFront instanceof Block && $blockBelowInFront->isSolid() && // 착지 지점 아래 블록 확인
                 // 경사면 감지: 현재 블록보다 앞 블록이 낮으면 점프 안함
-                $world->getBlockAt((int)$position->getX(), (int)$position->getY() -1, (int)$position->getZ())->getY() <= $blockInFront->getY()
+                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY() // getY() 대신 getPosition()->getY() 사용
             ) {
                 $this->jump($mob);
                 return;
