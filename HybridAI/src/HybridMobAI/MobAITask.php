@@ -118,25 +118,6 @@ class MobAITask extends Task {
 }
     
     private function checkForObstaclesAndJump(Living $mob): void {
-    $entityId = $mob->getId();
-
-    // Check if the zombie is currently jumping.
-    if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
-        return; // If jumping, do nothing.
-    }
-
-    // Check if the zombie is in the air (after a jump).
-    if (!$mob->isOnGround()) {
-        $this->isJumping[$entityId] = true; // Set jumping flag while in the air.
-        return;
-    }
-
-    // Check if the zombie has just landed.
-    if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId] && $mob->isOnGround()) {
-        unset($this->isJumping[$entityId]); // Unset jumping flag after landing.
-    }
-
-
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
@@ -182,17 +163,23 @@ class MobAITask extends Task {
             }
 
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                // 점프 시작 전에 isJumping 플래그 설정
-                $this->isJumping[$entityId] = true;
-
                 // 점프 실행
                 $this->jump($mob, $heightDiff);
+
+                // 2틱 뒤에 착지 여부 확인
+                $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
+                    // 착지 확인
+                    if ($mob->isOnGround()) {
+                        // 다시 점프 가능하도록 함
+                    }
+                }), 2);
 
                 return; // 점프를 실행했으므로 더 이상 확인하지 않음
             }
         }
     }
 }
+
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
