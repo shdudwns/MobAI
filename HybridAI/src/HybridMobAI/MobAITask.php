@@ -198,3 +198,4 @@ class MobAITask extends Task {
         $mob->getMotion()->getZ()
     ));
 }
+}
