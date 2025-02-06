@@ -108,8 +108,6 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    <?php
-
 private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
