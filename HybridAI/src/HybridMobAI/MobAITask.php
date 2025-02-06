@@ -5,7 +5,6 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
-use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\player\Player;
@@ -100,7 +99,10 @@ class MobAITask extends Task {
 
         if ($blockBelow instanceof Block && !$blockBelow->isTransparent()) {
             for ($i = 1; $i <= 2; $i++) {
-                $frontPosition = $position->addVector($directionVector->multiply($i));
+                $frontX = $position->getX() + ($directionVector->getX() * $i);
+                $frontZ = $position->getZ() + ($directionVector->getZ() * $i);
+                $frontPosition = new Vector3($frontX, $position->getY(), $frontZ);
+
                 $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
                 $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
                 $blockAbove2InFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 2, (int)$frontPosition->getZ());
@@ -137,7 +139,7 @@ class MobAITask extends Task {
         $currentMotion = $mob->getMotion();
         $newMotion = new Vector3(
             $currentMotion->getX(),
-            $currentMotion->getX()+$jumpForce,
+            $jumpForce,
             $currentMotion->getZ()
         );
         $mob->setMotion($newMotion);
