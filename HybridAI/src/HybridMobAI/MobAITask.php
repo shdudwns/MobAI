@@ -10,6 +10,7 @@ use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
+use pocketmine\entity\Zombie;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -69,13 +70,15 @@ class MobAITask extends Task {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
 
-        $distance = $mobPos->distance($playerPos);
-        $speed = 0.2; // 기본 속도
-        if ($distance < 5) { // 가까울수록 속도 감소
+        $playerVec3 = new Vector3($playerPos->getX(), $playerPos->getY(), $playerPos->getZ()); // Position to Vector3
+
+        $distance = $mobPos->distance($playerVec3);
+        $speed = 0.2;
+        if ($distance < 5) {
             $speed *= $distance / 5;
         }
 
-        $motion = $playerPos->subtract($mobPos)->normalize()->multiply($speed); // 핵심 수정 부분
+        $motion = $playerVec3->subtract($mobPos)->normalize()->multiply($speed);
         $mob->setMotion($motion);
         $mob->lookAt($playerPos);
     }
@@ -89,7 +92,7 @@ class MobAITask extends Task {
 
         $basePosition = new Vector3($position->getX(), $position->getY() + 0.1, $position->getZ());
 
-        for ($i = 1; $i <= 2; $i++) { // 2칸까지만 확인 (3칸은 너무 넓음)
+        for ($i = 1; $i <= 2; $i++) {
             $frontX = $basePosition->getX() + ($directionVector->getX() * $i);
             $frontZ = $basePosition->getZ() + ($directionVector->getZ() * $i);
             $frontPosition = new Vector3($frontX, $basePosition->getY(), $frontZ);
@@ -103,10 +106,10 @@ class MobAITask extends Task {
                 $blockInFront->isSolid() &&
                 $blockAboveInFront->isTransparent() &&
                 $blockBelowInFront->isSolid() &&
-                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY() // 경사면 체크 추가
+                $currentBlock->getPosition()->getY() <= $blockInFront->getPosition()->getY()
             ) {
                 $this->jump($mob);
-                return; // 점프 후 불필요한 추가 검사 방지
+                return;
             }
         }
     }
