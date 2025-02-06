@@ -11,6 +11,7 @@ use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
+use pocketmine\entity\Zombie; // Zombie 클래스 임포트
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -109,95 +110,65 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $entityId = $mob->getId();
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
 
-    $yaw = $mob->getLocation()->getYaw();
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
+        $yaw = $mob->getLocation()->getYaw();
+        $direction2D = VectorMath::getDirection2D($yaw);
+        $directionVector = new Vector3($direction2D->getX(), 0, $direction2D->getY());
 
-    // 좌우 블록 감지 로직 개선
-    $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
-    $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
+        // 좌우 블록 감지
+        $leftVector = new Vector3(-$directionVector->getZ(), 0, $directionVector->getX());
+        $rightVector = new Vector3($directionVector->getZ(), 0, -$directionVector->getX());
 
-    $leftBlockX = (int)floor($position->getX() + $leftVector->getX());
-    $leftBlockY = (int)floor($position->getY());
-    $leftBlockZ = (int)floor($position->getZ() + $leftVector->getZ());
-    $leftBlock = $world->getBlockAt($leftBlockX, $leftBlockY, $leftBlockZ);
+        $leftBlock = $world->getBlockAt((int)floor($position->getX() + $leftVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $leftVector->getZ()));
+        $rightBlock = $world->getBlockAt((int)floor($position->getX() + $rightVector->getX()), (int)floor($position->getY()), (int)floor($position->getZ() + $rightVector->getZ()));
 
-    $rightBlockX = (int)floor($position->getX() + $rightVector->getX());
-    $rightBlockY = (int)floor($position->getY());
-    $rightBlockZ = (int)floor($position->getZ() + $rightVector->getZ());
-    $rightBlock = $world->getBlockAt($rightBlockX, $rightBlockY, $rightBlockZ);
+        if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
+            return; // 양쪽에 블록이 있으면 점프하지 않음
+        }
 
-    if ($leftBlock->isSolid() && $rightBlock->isSolid()) {
-        return; // 양쪽에 블록이 있으면 점프하지 않음
-    }
+        // 앞 블록 감지 (높이차 고려)
+        for ($i = 0; $i <= 1; $i++) { // 1칸 앞, 대각선 1칸
+            for ($j = -1; $j <= 1; $j++) { // 좌우 대각선
+                $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
+                $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+                $frontBlockY = (int)floor($position->getY());
 
-    // 앞 블록 감지 로직 개선 (높이차 고려, 1칸 + 대각선 방향 1칸 확인)
-    for ($i = 0; $i <= 1; $i++) {
-        for ($j = -1; $j <= 1; $j++) {
-            $frontBlockX = (int)floor($position->getX() + $directionVector->getX() * $i + $leftVector->getX() * $j);
-            $frontBlockY = (int)floor($position->getY());
-            $frontBlockZ = (int)floor($position->getZ() + $directionVector->getZ() * $i + $leftVector->getZ() * $j);
+                $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+                $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+                
+                $heightDiff = (int)floor($frontBlock->getPosition()->getY()) - (int)floor($position->getY());
 
-            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-
-            $currentHeight = (int)floor($position->getY());
-            $blockHeight = (int)floor($frontBlock->getPosition()->getY());
-            $heightDiff = $blockHeight - $currentHeight;
-
-            // 내려가는 상황 감지 및 점프 방지
-            if ($heightDiff < 0) {
-                continue; // 내려가는 중이면 점프하지 않음
-            }
-
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                // 점프 실행
-                $this->jump($mob, $heightDiff);
-
-                // 착지 확인 (motion의 Y축 값이 0인지 확인)
-                if ($mob->getMotion()->y == 0) {
-                    // 1틱 뒤에 다시 점프 가능
-                    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob) {
-                        // (필요한 경우 추가적인 동작 수행)
-                    }), 1);
+                // 내려가는 상황 감지 및 점프 방지
+                if ($heightDiff < 0) {
+                    continue; // 내려가는 중이면 점프하지 않음
                 }
 
-                return;
+                if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                    $this->jump($mob, $heightDiff);
+                    return;
+                }
             }
         }
     }
-}
 
 
-private function isClimbable(Block $block): bool {
-    $climbableBlocks = [
-        "pocketmine:block:slab",
-        "pocketmine:block:stairs",
-        "pocketmine:block:snow_layer",
-        "pocketmine:block:fence", // 울타리 추가
-        "pocketmine:block:glass", // 유리 추가
-        "pocketmine:block:frame" // 액자 추가
-    ];
-    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-}
-
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // ✅ 점프 높이를 자연스럽게 조정 (최대 1블록 점프)
-    $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
-
-    // ✅ 현재 점프 중이면 다시 점프하지 않도록 방지
-    if (!$mob->isOnGround()) {
-        return;
+    private function isClimbable(Block $block): bool {
+         return $block->isSolid() || $block instanceof \pocketmine\block\Slab || $block instanceof \pocketmine\block\Stairs || $block instanceof \pocketmine\block\SnowLayer || $block instanceof \pocketmine\block\Fence || $block instanceof \pocketmine\block\GlassPane || $block instanceof \pocketmine\block\ItemFrame;
     }
 
-    $mob->setMotion(new Vector3(
-        $mob->getMotion()->getX(),
-        $jumpForce,
-        $mob->getMotion()->getZ()
-    ));
-}
+    public function jump(Living $mob, float $heightDiff = 1.0): void {
+        $jumpForce = min(0.6 + ($heightDiff * 0.2), 1.0);
+
+        if (!$mob->isOnGround()) {
+            return;
+        }
+
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->getX(),
+            $jumpForce,
+            $mob->getMotion()->getZ()
+        ));
+    }
 }
