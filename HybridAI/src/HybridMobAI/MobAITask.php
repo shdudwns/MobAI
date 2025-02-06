@@ -177,6 +177,7 @@ private function climbStairs(Living $mob, Block $stairBlock): void {
 
 
 
+
     private function isClimbable(Block $block): bool {
          return $block->isSolid() || $block instanceof \pocketmine\block\Slab || $block instanceof \pocketmine\block\Stairs || $block instanceof \pocketmine\block\SnowLayer || $block instanceof \pocketmine\block\Fence || $block instanceof \pocketmine\block\GlassPane || $block instanceof \pocketmine\block\ItemFrame;
     }
