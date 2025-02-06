@@ -120,8 +120,16 @@ class MobAITask extends Task {
     private function checkForObstaclesAndJump(Living $mob): void {
     $entityId = $mob->getId();
 
+    // 점프 중이거나 땅에 있지 않으면 아무것도 하지 않음 (착지 후 바로 점프 방지)
     if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) {
-        return; // 점프 중에는 다른 행동을 하지 않음
+        return;
+    }
+
+    if (!$mob->isOnGround()) { // 공중에 떠 있는 경우 (점프 후)
+        $this->isJumping[$entityId] = true; // 점프 상태 유지
+        return;
+    } else if (isset($this->isJumping[$entityId]) && $this->isJumping[$entityId]) { // 땅에 착지한 경우
+        unset($this->isJumping[$entityId]); // 점프 상태 해제
     }
 
     $position = $mob->getPosition();
@@ -169,18 +177,13 @@ class MobAITask extends Task {
             }
 
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                // 점프 예약 (착지 후 바로 점프 방지)
-                $this->isJumping[$entityId] = true; // 점프 시작 전에 isJumping 플래그 설정
+                // 점프 시작 전에 isJumping 플래그 설정
+                $this->isJumping[$entityId] = true;
 
-                $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($mob, $heightDiff, $entityId) {
-                    $this->jump($mob, $heightDiff);
-                    // 착지 확인 후 isJumping 플래그 설정
-                    if ($mob->isOnGround()) {
-                        $this->isJumping[$entityId] = false;
-                    }
-                }), 2); // 2틱 후 실행
+                // 점프 실행
+                $this->jump($mob, $heightDiff);
 
-                return; // 점프를 예약했으므로 더 이상 확인하지 않음
+                return; // 점프를 실행했으므로 더 이상 확인하지 않음
             }
         }
     }
