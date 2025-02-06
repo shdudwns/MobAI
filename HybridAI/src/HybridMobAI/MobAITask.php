@@ -10,7 +10,6 @@ use pocketmine\world\World;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
-use pocketmine\entity\Zombie;
 use pocketmine\scheduler\ClosureTask;
 
 class MobAITask extends Task {
