@@ -14,6 +14,10 @@ class EntityAI {
     private array $entityPaths = [];
     private Main $plugin;
 
+    public function __construct() {
+        // 생성자에서 아무것도 하지 않음
+    }
+    
     public function setEnabled(bool $enabled): void {
         $this->enabled = $enabled;
     }
