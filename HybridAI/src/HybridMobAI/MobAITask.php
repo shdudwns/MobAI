@@ -75,13 +75,11 @@ class MobAITask extends Task {
     $mobPos = $mob->getPosition();
     $playerPos = $player->getPosition();
 
-    // 항상 일정한 속도로 이동
     $speed = 0.2; // 속도를 일정하게 설정
 
     $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
     $currentMotion = $mob->getMotion();
 
-    // 관성 동적 조절
     $inertiaFactor = 0.2; // 관성을 줄여서 부드럽게 이동하도록 설정
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
@@ -91,6 +89,12 @@ class MobAITask extends Task {
 
     $mob->setMotion($blendedMotion);
     $mob->lookAt($playerPos);
+
+    // 계단 오르기 로직 추가
+    $this->stepUp($mob);
+
+    // 낙하 방지 로직 추가
+    $this->avoidFalling($mob);
 }
 
     private function moveRandomly(Living $mob): void {
@@ -151,14 +155,6 @@ class MobAITask extends Task {
             if ($heightDiff <= 1.5 && $heightDiff > 0) {
                 $this->jump($mob, $heightDiff);
                 $this->landedTick[$mobId] = $currentTick;
-                return;
-            }
-        }
-
-        // 계단 로직 추가
-        if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
-            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
-                $this->stepUp($mob); // 계단에 올라가는 로직
                 return;
             }
         }
