@@ -48,10 +48,7 @@ class MobAITask extends Task {
         } else {
             $this->moveRandomly($mob);
         }
-
-        $this->detectLanding($mob); // 필요하다면
-        $this->checkForObstaclesAndJump($mob); // 필요하다면
-        return; // 기본 AI 실행 후 함수 종료
+        return;
     }
 
     // AI 활성화 시 EntityAI 실행
@@ -66,18 +63,15 @@ class MobAITask extends Task {
         $this->moveRandomly($mob);
     }
 }
-    private function findBestPath(Zombie $mob, Vector3 $target): ?array {
-    $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "A*");
-    
-    if ($path === null) {
-        $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "Greedy");
-    }
-    
-    if ($path === null) {
-        $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "Dijkstra");
-    }
 
-    return $path;
+private function findBestPath(Zombie $mob, Vector3 $target): ?array {
+    foreach ($this->algorithmPriority as $algorithm) {
+        $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, $algorithm);
+        if ($path !== null) {
+            return $path;
+        }
+    }
+    return null;
 }
     
     private function detectLanding(Living $mob): void {
