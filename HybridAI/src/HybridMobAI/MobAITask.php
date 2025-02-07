@@ -54,8 +54,7 @@ class MobAITask extends Task {
             $worldName = $mob->getWorld()->getFolderName();
             $algorithm = $this->algorithm; // 알고리즘 복사
 
-            $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName, $algorithm) {
-                $server = Server::getInstance();
+            $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName) {                $server = Server::getInstance();
                 $world = $server->getWorldManager()->getWorldByName($worldName);
 
                 if ($world === null) {
