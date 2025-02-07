@@ -5,7 +5,6 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
-use pocketmine\entity\Zombie;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
