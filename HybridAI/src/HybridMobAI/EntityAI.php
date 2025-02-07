@@ -42,10 +42,10 @@ class EntityAI {
     public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
     // ✅ Position이 들어오면 Vector3로 변환
     if ($start instanceof Position) {
-        $start = new Vector3($start->x, $start->y, $start->z);
+        $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
     }
     if ($goal instanceof Position) {
-        $goal = new Vector3($goal->x, $goal->y, $goal->z);
+        $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
     }
 
     $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
