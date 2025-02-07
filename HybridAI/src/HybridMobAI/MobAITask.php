@@ -203,7 +203,10 @@ private function moveRandomly(Living $mob): void {
 }
 private function changeDirection(Living $mob): void {
     $randomYaw = mt_rand(0, 360); // 무작위 회전
-    $mob->teleport($mob->getLocation()->setRotation($randomYaw, 0));
+    $location = $mob->getLocation();
+    $location->setYaw($randomYaw); // Yaw 설정
+    $location->setPitch(0); // Pitch 설정 (필요에 따라 조정)
+    $mob->teleport($location); // 변경된 위치로 텔레포트
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
