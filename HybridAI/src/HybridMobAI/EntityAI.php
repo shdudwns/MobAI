@@ -30,6 +30,10 @@ class EntityAI {
             return $pathfinder->findPathDijkstra($start, $goal);
         case "Greedy":
             return $pathfinder->findPathGreedy($start, $goal);
+        case "BFS":
+            return $pathfinder->findPathBFS($start, $goal);
+        case "DFS":
+            return $pathfinder->findPathDFS($start, $goal);
         default:
             return null;
     }
