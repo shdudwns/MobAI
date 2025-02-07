@@ -45,31 +45,29 @@ class EntityAI {
     }
 }
     public function findPathAsync(World $world, $start, $goal, string $algorithm, callable $callback): void {
-    // ✅ Position 또는 배열 형태의 좌표가 들어오면 Vector3로 변환
-    if ($start instanceof Position) {
-        $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
-    } elseif (is_array($start)) {
-        $start = new Vector3((float)$start[0], (float)$start[1], (float)$start[2]);
+        // ✅ Position 또는 배열 형태의 좌표가 들어오면 Vector3로 변환
+        if ($start instanceof Position) {
+            $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
+        } elseif (is_array($start)) {
+            $start = new Vector3((float)$start[0], (float)$start[1], (float)$start[2]);
+        }
+
+        if ($goal instanceof Position) {
+            $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
+        } elseif (is_array($goal)) {
+            $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
+        }
+
+        // ✅ PathfinderTask 생성자에 올바른 인자 전달
+        $task = new PathfinderTask(
+            $world->getFolderName(), // 월드 이름
+            $start,                 // 시작 좌표 (Vector3)
+            $goal,                  // 목표 좌표 (Vector3)
+            $algorithm              // 알고리즘
+        );
+        $task->callback = $callback;
+        Server::getInstance()->getAsyncPool()->submitTask($task);
     }
-
-    if ($goal instanceof Position) {
-        $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
-    } elseif (is_array($goal)) {
-        $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
-    }
-
-    // ✅ 변환된 $start와 $goal을 PathfinderTask 생성자에 전달
-    $task = new PathfinderTask(
-        $this->plugin,
-        $world->getFolderName(),
-        $start, // 변환된 Vector3 객체 전달
-        $goal, // 변환된 Vector3 객체 전달
-        $algorithm
-    );
-    $task->callback = $callback;
-    Server::getInstance()->getAsyncPool()->submitTask($task);
-
-    $task->onCompletion(Server::getInstance());
 }
 
 
