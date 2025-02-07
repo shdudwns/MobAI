@@ -96,6 +96,55 @@ public function findPathGreedy(Vector3 $start, Vector3 $goal): ?array {
 
     return $path;
 }
+    public function findPathBFS(Vector3 $start, Vector3 $goal): ?array {
+    $queue = [[$start]];
+    $visited = [self::vectorToStr($start) => true];
+
+    while (!empty($queue)) {
+        $path = array_shift($queue);
+        $current = end($path);
+
+        if ($current->equals($goal)) {
+            return $path;
+        }
+
+        foreach ($this->getNeighbors($current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            if (!isset($visited[$neighborKey])) {
+                $visited[$neighborKey] = true;
+                $newPath = $path;
+                $newPath[] = $neighbor;
+                $queue[] = $newPath;
+            }
+        }
+    }
+    return null;
+}
+
+public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
+    $stack = [[$start]];
+    $visited = [self::vectorToStr($start) => true];
+
+    while (!empty($stack)) {
+        $path = array_pop($stack);
+        $current = end($path);
+
+        if ($current->equals($goal)) {
+            return $path;
+        }
+
+        foreach ($this->getNeighbors($current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            if (!isset($visited[$neighborKey])) {
+                $visited[$neighborKey] = true;
+                $newPath = $path;
+                $newPath[] = $neighbor;
+                $stack[] = $newPath;
+            }
+        }
+    }
+    return null;
+}
 private static function vectorToStr(Vector3 $vector): string {
     return "{$vector->x}:{$vector->y}:{$vector->z}";
 }
