@@ -198,7 +198,7 @@ class PathfinderTask extends AsyncTask {
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
-        $this->startX = (float)$start->x; // float로 형변환
+        $this->startX = (float)$start->x;
         $this->startY = (float)$start->y;
         $this->startZ = (float)$start->z;
         $this->goalX = (float)$goal->x;
@@ -206,6 +206,7 @@ class PathfinderTask extends AsyncTask {
         $this->goalZ = (float)$goal->z;
         $this->algorithm = $algorithm;
     }
+    
     public function onRun(): void {
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
