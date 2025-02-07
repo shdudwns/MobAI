@@ -39,24 +39,30 @@ class EntityAI {
             return null;
     }
 }
-    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ Position이 들어오면 Vector3로 변환
+    public function findPathAsync(World $world, $start, $goal, string $algorithm, callable $callback): void {
+    // ✅ Position 또는 배열 형태의 좌표가 들어오면 Vector3로 변환
     if ($start instanceof Position) {
         $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
+    } elseif (is_array($start)) {
+        $start = new Vector3((float)$start[0], (float)$start[1], (float)$start[2]);
     }
+
     if ($goal instanceof Position) {
         $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
+    } elseif (is_array($goal)) {
+        $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
     }
 
+
     $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
+    $task->callback = $callback; // 콜백 저장
     Server::getInstance()->getAsyncPool()->submitTask($task);
 
-    Server::getInstance()->getAsyncPool()->addWorkerStartHook(function() use ($task, $callback) {
-        if (($path = $task->getResult()) !== null) {
-            $callback($path);
-        }
-    });
+    // WorkerStartHook 제거: onCompletion에서 처리
+    $task->onCompletion(Server::getInstance());
+
 }
+
 public function setPath(Living $mob, array $path): void {
     $this->entityPaths[$mob->getId()] = $path;
 }
