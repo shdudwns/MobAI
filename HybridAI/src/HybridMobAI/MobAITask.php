@@ -146,7 +146,6 @@ class MobAITask extends Task {
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
             if ($heightDiff <= 1.5 && $heightDiff > 0) {
-                // 점프를 하도록 설정
                 $this->jump($mob, $heightDiff);
                 $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
                 return;
@@ -154,8 +153,10 @@ class MobAITask extends Task {
         }
 
         // 블록 옆에 있을 때 점프하지 않도록 추가 조건
-        if (abs($heightDiff) < 1.0) { // 블록의 높이 차가 작을 경우 점프하지 않음
-            return; // 블록 옆에 있으므로 점프하지 않음
+        if (abs($heightDiff) < 1.0) {
+            // 앞에 있는 블록의 높이 차가 작을 경우 점프하지 않음
+            // 높이 차가 1.0 이하인 경우 점프하지 않도록 설정
+            continue; // 블록 옆을 지나갈 경우 점프 하지 않음
         }
 
         // 계단 로직 추가 (ID 직접 사용)
