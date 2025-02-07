@@ -114,54 +114,53 @@ class MobAITask extends Task {
     }
 
     private function checkForObstaclesAndJump(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $currentTick = Server::getInstance()->getTick();
-        $mobId = $mob->getId();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $currentTick = Server::getInstance()->getTick();
+    $mobId = $mob->getId();
 
-        // 5틱(0.25초)마다 검사
-        if (isset($this->landedTick[$mobId]) && $currentTick - $this->landedTick[$mobId] < 5) return;
+    // 5틱(0.25초)마다 검사
+    if (isset($this->landedTick[$mobId]) && $currentTick - $this->landedTick[$mobId] < 5) return;
 
-        $yaw = $mob->getLocation()->yaw;
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+    $yaw = $mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $maxJumpDistance = 1.5; // 점프 거리 조정
-        for ($i = 0; $i <= 1; $i++) {
-            $frontBlockX = (int)floor($position->x + $directionVector->x * $i);
-            $frontBlockY = (int)$position->y;
-            $frontBlockZ = (int)floor($position->z + $directionVector->z * $i);
+    for ($i = 0; $i <= 1; $i++) {
+        $frontBlockX = (int)floor($position->x + $directionVector->x * $i);
+        $frontBlockY = (int)$position->y;
+        $frontBlockZ = (int)floor($position->z + $directionVector->z * $i);
 
-            $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-            $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-            $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
+        $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+        $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+        $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
 
-            $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
+        $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-            // 블록 아래가 투명한지 확인하여 점프 방지
-            if ($frontBlockBelow->isTransparent() && $heightDiff <= 0) {
-                return; // 블록 아래가 투명하면 점프하지 않음
+        // 블록 아래가 투명한지 확인하여 점프 방지
+        if ($frontBlockBelow->isTransparent() && $heightDiff <= 0) {
+            return; // 블록 아래가 투명하면 점프하지 않음
+        }
+
+        // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
+            if ($heightDiff <= 1.5 && $heightDiff > 0) {
+                $this->jump($mob, $heightDiff);
+                $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
+                return;
             }
+        }
 
-            // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
-                if ($heightDiff <= 1.5 && $heightDiff > 0) {
-                    $this->jump($mob, $heightDiff);
-                    $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
-                    return;
-                }
-            }
-
-            // 계단 로직 추가
-            if ($frontBlock->getId() === Block::STEPS || $frontBlock->getId() === Block::DOUBLE_STEPS) {
-                if ($heightDiff <= 1.2) {
-                    $this->stepUp($mob);
-                    return;
-                }
+        // 계단 로직 추가
+        if ($frontBlock->getTypeId() === Block::STEPS || $frontBlock->getTypeId() === Block::DOUBLE_STEPS) {
+            if ($heightDiff <= 1.2) {
+                $this->stepUp($mob);
+                return;
             }
         }
     }
+}
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
         // 낙하 속도 리셋
@@ -201,12 +200,12 @@ class MobAITask extends Task {
         }
     }
     private function isClimbable(Block $block): bool {
-        $climbableBlocks = [
-            "pocketmine:block:snow_layer",
-            "pocketmine:block:fence",
-            "pocketmine:block:glass",
-            "pocketmine:block:frame"
-        ];
-        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
-    }
+    $climbableBlocks = [
+        "pocketmine:block:snow_layer",
+        "pocketmine:block:fence",
+        "pocketmine:block:glass",
+        "pocketmine:block:frame"
+    ];
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+}
 }
