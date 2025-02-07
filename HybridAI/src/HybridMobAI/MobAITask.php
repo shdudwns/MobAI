@@ -45,7 +45,7 @@ class MobAITask extends Task {
         if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
             $this->lastPathUpdate[$mob->getId()] = microtime(true);
             
-            $this->plugin->getScheduler()->scheduleAsyncTask(
+            this->getServer()->getAsyncPool()->submitTask(
                 new PathfinderTask(
                     $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                     $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
