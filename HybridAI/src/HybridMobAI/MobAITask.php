@@ -15,6 +15,7 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
+    private int $changeDirectionTick = 0;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -97,24 +98,28 @@ class MobAITask extends Task {
     $this->avoidFalling($mob);
 }
 
-    private function moveRandomly(Living $mob): void {
-        $directionVectors = [
-            new Vector3(1, 0, 0),
-            new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1),
-            new Vector3(0, 0, -1)
-        ];
-        $randomDirection = $directionVectors[array_rand($directionVectors)];
+private function moveRandomly(Living $mob): void {
+    if ($this->changeDirectionTick > Server::getInstance()->getTick()) return;
 
-        $currentMotion = $mob->getMotion();
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * 0.8) + ($randomDirection->x * 0.2),
-            $currentMotion->y,
-            ($currentMotion->z * 0.8) + ($randomDirection->z * 0.2)
-        );
+    $this->changeDirectionTick = Server::getInstance()->getTick() + mt_rand(40, 80); // 2~4초마다 방향 변경
 
-        $mob->setMotion($blendedMotion);
-    }
+    $directionVectors = [
+        new Vector3(1, 0, 0),
+        new Vector3(-1, 0, 0),
+        new Vector3(0, 0, 1),
+        new Vector3(0, 0, -1)
+    ];
+    $randomDirection = $directionVectors[array_rand($directionVectors)];
+
+    $currentMotion = $mob->getMotion();
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * 0.8) + ($randomDirection->x * 0.2),
+        $currentMotion->y,
+        ($currentMotion->z * 0.8) + ($randomDirection->z * 0.2)
+    );
+
+    $mob->setMotion($blendedMotion);
+}
 
     private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
@@ -122,49 +127,38 @@ class MobAITask extends Task {
     $currentTick = Server::getInstance()->getTick();
     $mobId = $mob->getId();
 
-    // 5틱(0.25초)마다 검사
     if (isset($this->landedTick[$mobId]) && $currentTick - $this->landedTick[$mobId] < 5) return;
 
     $yaw = $mob->getLocation()->yaw;
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    for ($i = 1; $i <= 2; $i++) { // 2블록 거리까지 감지
-        $frontBlockX = (int)floor($position->x + $directionVector->x * $i);
-        $frontBlockY = (int)$position->y;
-        $frontBlockZ = (int)floor($position->z + $directionVector->z * $i);
+    // 바로 앞 블록만 검사 (옆 블록 무시)
+    $frontBlockX = (int)floor($position->x + $directionVector->x);
+    $frontBlockY = (int)$position->y;
+    $frontBlockZ = (int)floor($position->z + $directionVector->z);
 
-        $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-        $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-        $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
+    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+    $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
 
-        $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
+    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-        // 블록 아래가 투명하면 점프하지 않음
-        if ($frontBlockBelow->isTransparent() && $heightDiff <= 0) {
-            return;
-        }
-
-        // 작은 높이 차이는 무시 (부드러운 이동)
-        if (abs($heightDiff) < 0.5) {
-            continue;
-        }
-
-        // 점프 가능한 블록인지 확인
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5 && $heightDiff > 0) {
-                $this->jump($mob, $heightDiff);
-                $this->landedTick[$mobId] = $currentTick;
-                return;
-            }
-        }
-
-        // 벽 감지 후 방향 변경
-        if ($frontBlock->isSolid() && $heightDiff > 1.5) {
-            $this->changeDirection($mob);
+    // 정면 블록만 점프 처리 (옆 블록 무시)
+    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+        if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            $this->jump($mob, $heightDiff);
+            $this->landedTick[$mobId] = $currentTick;
             return;
         }
     }
+        // 계단 감지 추가 (Slab, Stairs)
+        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1.2) {
+                $this->stepUp($mob, $heightDiff);
+                return;
+    }
+}
 }
     private function avoidFalling(Living $mob): void {
     $position = $mob->getPosition();
@@ -178,7 +172,7 @@ class MobAITask extends Task {
 }
 private function changeDirection(Living $mob): void {
     $randomYaw = mt_rand(0, 360); // 무작위 회전
-    $mob->setRotation($randomYaw, 0); // Yaw만 변경하고 Pitch는 0으로 설정
+    $mob->teleport($mob->getLocation()->setRotation($randomYaw, 0));
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
@@ -208,8 +202,8 @@ private function changeDirection(Living $mob): void {
     }
 }
 
-    private function stepUp(Living $mob): void {
-    if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
+    private function stepUp(Living $mob, float $heightDiff): void {
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // 1블록 이하 높이면 계단처럼 이동
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
             0.35, // 계단을 오를 때 자연스럽게 상승
@@ -217,6 +211,13 @@ private function changeDirection(Living $mob): void {
         ));
     }
 }
+    private function isStairOrSlab(Block $block): bool {
+    $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단 ID 목록
+    $slabIds = [44, 126, 182]; // 슬라브 ID 목록
+
+    return in_array($block->getTypeId(), $stairIds) || in_array($block->getTypeId(), $slabIds);
+}
+    
     private function isClimbable(Block $block): bool {
     $climbableBlocks = [
         "pocketmine:block:snow_layer",
