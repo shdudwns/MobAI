@@ -17,6 +17,8 @@ class MobAITask extends Task {
     private array $landedTick = [];
     private array $lastPathUpdate = [];
     private string $algorithm;
+    private array $path = []; // 몬스터별 경로 저장
+    private array $pathIndex = []; // 몬스터별 현재 경로 인덱스
     
 
     public function __construct(Main $plugin) {
@@ -40,26 +42,71 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-    $nearestPlayer = $this->findNearestPlayer($mob);
+        $nearestPlayer = $this->findNearestPlayer($mob);
 
-    if ($nearestPlayer !== null) {
-        // ✅ PathfinderTask를 20틱(1초)에 한 번만 실행
-        if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
-            $this->lastPathUpdate[$mob->getId()] = microtime(true);
-            
-            $this->plugin->getServer()->getAsyncPool()->submitTask(
-                new PathfinderTask(
-                    $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
-                    $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
-                    $mob->getId(), "AStar", $mob->getWorld()->getFolderName()
-                )
-            );
+        if ($nearestPlayer !== null) {
+            $currentTime = microtime(true);
+            if (!isset($this->lastPathUpdate[$mob->getId()]) || ($currentTime - $this->lastPathUpdate[$mob->getId()]) >= 1) {
+                $this->lastPathUpdate[$mob->getId()] = $currentTime;
+
+                $this->plugin->getServer()->getAsyncPool()->submitTask(
+                    new PathfinderTask(
+                        $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
+                        $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
+                        $mob->getId(), $this->algorithm, $mob->getWorld()->getFolderName()
+                    )
+                );
+            }
+
+            if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
+                $this->moveAlongPath($mob);
+            }
+
+        } else {
+            $this->moveRandomly($mob);
         }
-    } else {
-        $this->moveRandomly($mob);
-    }
-}
 
+        $this->checkForObstaclesAndJump($mob);
+    }
+
+
+    public function setPath(int $mobId, ?array $path): void {
+        $this->path[$mobId] = $path;
+        $this->pathIndex[$mobId] = 0; // 경로 시작 인덱스 초기화
+    }
+
+    private function moveAlongPath(Zombie $mob): void {
+        $mobId = $mob->getId();
+        $path = $this->path[$mobId];
+        $index = $this->pathIndex[$mobId];
+
+        if ($index < count($path) - 1 && $path[$index] instanceof Vector3 && $path[$index + 1] instanceof Vector3) {
+            $currentPos = $mob->getPosition();
+            $nextPos = $path[$index + 1];
+
+            $diffX = $nextPos->x - $currentPos->x;
+            $diffZ = $nextPos->z - $currentPos->z;
+
+            $distance = sqrt($diffX ** 2 + $diffZ ** 2);
+
+            if ($distance > 0.1) { // 0.1은 이동 오차 범위
+                $motion = $nextPos->subtractVector($currentPos)->normalize()->multiply(0.15);
+                if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
+                    $mob->setMotion($motion);
+                    $mob->lookAt($nextPos); // 몹 바라보게 하기
+                }
+            } else {
+                $this->pathIndex[$mobId]++; // 다음 경로 지점으로 이동
+                if ($this->pathIndex[$mobId] >= count($path) - 1) {
+                    unset($this->path[$mobId]);
+                    unset($this->pathIndex[$mobId]);
+                }
+            }
+        } else {
+            unset($this->path[$mobId]);
+            unset($this->pathIndex[$mobId]);
+        }
+    }
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
         $isOnGround = $mob->isOnGround();
