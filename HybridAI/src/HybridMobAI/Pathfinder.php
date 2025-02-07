@@ -15,6 +15,7 @@ class Pathfinder {
 
     public function findPathAStar(Vector3 $start, Vector3 $goal): ?array {
     $openSet = [$start];
+    $openSetHash = [self::vectorToStr($start) => true];
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
@@ -42,6 +43,7 @@ class Pathfinder {
 
                 if (!in_array($neighbor, $openSet, true)) {
                     $openSet[] = $neighbor;
+                    $openSetHash[$neighborKey] = true;
                 }
             }
         }
@@ -154,32 +156,33 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
     }
 
     private function reconstructPath(array $cameFrom, Vector3 $current): array {
-        $path = [$current];
-
-        while (isset($cameFrom[spl_object_hash($current)])) {
-            $current = $cameFrom[spl_object_hash($current)];
-            array_unshift($path, $current);
-        }
-
-        return $path;
+    $path = [$current];
+    $currentKey = self::vectorToStr($current);
+    while (isset($cameFrom[$currentKey])) {
+        $current = $cameFrom[$currentKey];
+        array_unshift($path, $current);
+        $currentKey = self::vectorToStr($current);
     }
+    return $path;
+}
 
     private function getNeighbors(Vector3 $pos): array {
-        $neighbors = [];
-        $directions = [
-            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
-        ];
+    $neighbors = [];
+    $directions = [
+        new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+        new Vector3(0, 0, 1), new Vector3(0, 0, -1)
+    ];
 
-        foreach ($directions as $dir) {
-            $neighbor = $pos->addVector($dir);
-            $block = $this->world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+    foreach ($directions as $dir) {
+        $neighbor = $pos->addVector($dir);
+        $block = $this->world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+        $blockBelow = $this->world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
 
-            if (!$block->isSolid()) {
-                $neighbors[] = $neighbor;
-            }
+        if (!$block->isSolid() && $blockBelow->isSolid()) {
+            $neighbors[] = $neighbor;
         }
-
-        return $neighbors;
     }
+
+    return $neighbors;
+}
 }
