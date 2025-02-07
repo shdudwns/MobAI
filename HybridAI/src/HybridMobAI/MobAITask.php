@@ -43,7 +43,7 @@ class MobAITask extends Task {
 
     private function handleMobAI(Zombie $mob): void {
     if (!$this->aiEnabled) {
-        // AI 비활성화 시 기본 AI 실행
+        // ✅ AI 비활성화 시 기본 AI 사용
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $this->moveToPlayer($mob, $nearestPlayer);
@@ -53,13 +53,21 @@ class MobAITask extends Task {
         return;
     }
 
-    // AI 활성화 시 EntityAI 실행
+    // ✅ AI 활성화 시 기존 기본 AI 사용 + 비동기 경로 탐색 적용
     if (($player = $this->findNearestPlayer($mob)) !== null) {
-        $path = $this->findBestPath($mob, $player->getPosition());
-        if ($path !== null) {
-            $this->entityAI->moveAlongPath($mob, $path);
+        if ($this->entityAI->hasPath($mob)) {
+            // 기존 경로 따라 이동
+            $this->entityAI->moveAlongPath($mob);
         } else {
-            $this->moveRandomly($mob);
+            // 비동기적으로 경로 탐색
+            $this->entityAI->findPathAsync($mob->getWorld(), $mob->getPosition(), $player->getPosition(), function(?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->entityAI->setPath($mob, $path);
+                } else {
+                    // 경로가 없으면 랜덤 이동
+                    $this->moveRandomly($mob);
+                }
+            });
         }
     } else {
         $this->moveRandomly($mob);
