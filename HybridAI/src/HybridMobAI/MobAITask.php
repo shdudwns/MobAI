@@ -120,6 +120,19 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $this->changeDirection($mob);
     }
 }
+    private function checkFrontBlock(Living $mob): ?Block {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = $mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+    $frontBlockX = (int)floor($position->x + $directionVector->x);
+    $frontBlockY = (int)$position->y;
+    $frontBlockZ = (int)floor($position->z + $directionVector->z);
+
+    return $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+}
 private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     return $frontBlock->getPosition()->y + 0.5 - $mob->getPosition()->y;
 }
