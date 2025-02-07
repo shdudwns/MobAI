@@ -41,7 +41,7 @@ class PathfindingTask extends AsyncTask {
             if ($mob instanceof Creature) {
                 $nextStep = $path[1];
                 $mob->lookAt($nextStep);
-                $mob->move($nextStep->subtract($mob->getPosition())->normalize()->multiply(0.25));
+                $mob->move($nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.25));
             }
         }
     }
