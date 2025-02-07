@@ -106,10 +106,12 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
+
         $mob->setMotion(new Vector3(
-            $mob->getMotion()->x,
-            0.4, // 계단을 오를 때 자연스럽게 상승
-            $mob->getMotion()->z
+            $direction->x,
+            0.5, // 계단을 오를 때 자연스럽게 상승
+            $direction->z
         ));
     }
 }
