@@ -16,6 +16,7 @@ class MobAITask extends Task {
     private array $hasLanded = [];
     private array $landedTick = [];
     private string $algorithm;
+    
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -45,7 +46,7 @@ class MobAITask extends Task {
         if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
             $this->lastPathUpdate[$mob->getId()] = microtime(true);
             
-            this->getServer()->getAsyncPool()->submitTask(
+            $this->getServer()->getAsyncPool()->submitTask(
                 new PathfinderTask(
                     $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                     $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
