@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\block\Block;
+use pocketmine\scheduler\AsyncTask;
 
 class Pathfinder {
     private World $world;
@@ -185,4 +186,41 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
 
     return $neighbors;
 }
+}
+
+class PathfinderTask extends AsyncTask {
+    private string $worldName;
+    private string $startPos;
+    private string $goalPos;
+    private string $algorithm;
+
+    public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
+        $this->worldName = $worldName;
+        $this->startPos = "{$start->x}:{$start->y}:{$start->z}";
+        $this->goalPos = "{$goal->x}:{$goal->y}:{$goal->z}";
+        $this->algorithm = $algorithm;
+    }
+
+    public function onRun(): void {
+        // ✅ 비동기 경로 탐색 로직 수행
+        $start = $this->parseVector($this->startPos);
+        $goal = $this->parseVector($this->goalPos);
+        
+        $pathfinder = new Pathfinder();
+        $path = match ($this->algorithm) {
+            "A*" => $pathfinder->findPathAStar($start, $goal),
+            "BFS" => $pathfinder->findPathBFS($start, $goal),
+            "DFS" => $pathfinder->findPathDFS($start, $goal),
+            "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
+            "Greedy" => $pathfinder->findPathGreedy($start, $goal),
+            default => null
+        };
+
+        $this->setResult($path);
+    }
+
+    private function parseVector(string $str): Vector3 {
+        [$x, $y, $z] = explode(":", $str);
+        return new Vector3((float)$x, (float)$y, (float)$z);
+    }
 }
