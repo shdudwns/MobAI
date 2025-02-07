@@ -63,7 +63,7 @@ public function reloadAISettings(): void {
     $config = $this->getConfig()->get("AI");
     $aiEnabled = $config["enabled"];
     $algorithmPriority = $config["pathfinding_priority"];
-    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled, $algorithmPriority), 20);
+    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled, $algorithmPriority), 2);
 }
     
     public function getMobAITask(): ?MobAITask {
