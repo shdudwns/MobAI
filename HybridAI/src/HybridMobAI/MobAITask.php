@@ -9,7 +9,6 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
-use pocketmine\entity\Zombie;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -61,7 +60,9 @@ class MobAITask extends Task {
         $goal = $player->getPosition();
         $mobId = $mob->getId();
         $worldName = $mob->getWorld()->getFolderName();
-
+        $callback = function (int $mobId, ?array $path, int $taskId) {
+            $this->applyPathResult($mobId, $path, $taskId);
+        };
         $task = new PathfinderTask(
             $start->getX(), $start->getY(), $start->getZ(),
             $goal->getX(), $goal->getY(), $goal->getZ(),
