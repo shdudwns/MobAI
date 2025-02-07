@@ -72,27 +72,26 @@ class MobAITask extends Task {
     }
 
     private function moveToPlayer(Zombie $mob, Player $player): void {
-        $mobPos = $mob->getPosition();
-        $playerPos = $player->getPosition();
+    $mobPos = $mob->getPosition();
+    $playerPos = $player->getPosition();
 
-        $distance = $mobPos->distance($playerPos);
-        $speed = 0.3;
-        if ($distance < 5) $speed *= $distance / 5;
+    // 항상 일정한 속도로 이동
+    $speed = 0.2; // 속도를 일정하게 설정
 
-        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
-        $currentMotion = $mob->getMotion();
+    $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
+    $currentMotion = $mob->getMotion();
 
-        // 관성 동적 조절
-        $inertiaFactor = ($distance < 3) ? 0.1 : 0.2;
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
-            $currentMotion->y,
-            ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
-        );
+    // 관성 동적 조절
+    $inertiaFactor = 0.2; // 관성을 줄여서 부드럽게 이동하도록 설정
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
+    );
 
-        $mob->setMotion($blendedMotion);
-        $mob->lookAt($playerPos);
-    }
+    $mob->setMotion($blendedMotion);
+    $mob->lookAt($playerPos);
+}
 
     private function moveRandomly(Living $mob): void {
         $directionVectors = [
@@ -152,16 +151,9 @@ class MobAITask extends Task {
             }
         }
 
-        // 블록 옆에 있을 때 점프하지 않도록 추가 조건
-        if (abs($heightDiff) < 1.0) {
-            // 앞에 있는 블록의 높이 차가 작을 경우 점프하지 않음
-            // 높이 차가 1.0 이하인 경우 점프하지 않도록 설정
-            continue; // 블록 옆을 지나갈 경우 점프 하지 않음
-        }
-
         // 계단 로직 추가 (ID 직접 사용)
         if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
-            if ($heightDiff <= 1.2) {
+            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
                 $this->stepUp($mob);
                 return;
             }
