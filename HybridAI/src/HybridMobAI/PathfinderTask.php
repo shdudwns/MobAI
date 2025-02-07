@@ -6,15 +6,15 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
+use pocketmine\player\Player;
 
 class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
     private float $goalX, $goalY, $goalZ;
     private int $mobId;
     private string $algorithm, $worldName;
-    private $callback; // 콜백 함수 저장
 
-    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName, callable $callback) {
+    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName) {
         $this->startX = $startX;
         $this->startY = $startY;
         $this->startZ = $startZ;
@@ -24,7 +24,6 @@ class PathfinderTask extends AsyncTask {
         $this->mobId = $mobId;
         $this->algorithm = $algorithm;
         $this->worldName = $worldName;
-        $this->callback = $callback; // 콜백 함수 초기화
     }
 
     public function onRun(): void {
@@ -42,25 +41,35 @@ class PathfinderTask extends AsyncTask {
 
     public function onCompletion(): void {
         $server = Server::getInstance();
-        $worldName = $this->worldName; // Copy the world name
+        $world = $server->getWorldManager()->getWorldByName($this->worldName);
 
-        $entityId = $this->mobId;     // Copy the entity ID
-        $callback = $this->callback; // Copy the callback
-        $path = $this->getResult();   // Copy the path
+        if ($world === null) return;
 
-        $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($worldName, $entityId, $path, $callback) {
-            $server = Server::getInstance(); // Get Server instance inside the task
-            $world = $server->getWorldManager()->getWorldByName($worldName); // Get world on main thread
+        $entity = $world->getEntity($this->mobId);
+        if ($entity === null || !$entity->isAlive()) return;
 
-            if ($world === null) {
-                // Handle world not found error.  Log or take other action.
-                return; // Important: Return to prevent further errors.
+        $path = $this->getResult();
+        $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
+
+        if ($plugin instanceof Main) {
+            $mobAITask = $plugin->getMobAITask();
+
+            if ($path === null) {
+                // ✅ 경로를 찾지 못하면 랜덤 이동 실행
+                $mobAITask->moveRandomly($entity);
+            } else {
+                // ✅ 정상적으로 경로를 찾았을 경우 이동
+                if ($entity instanceof Creature) {
+                    $nextStep = $path[1] ?? null;
+                    if ($nextStep !== null) {
+                        $entity->lookAt($nextStep);
+                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.15);
+                        if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
+                            $entity->setMotion($motion);
+                        }
+                    }
+                }
             }
-
-            $entity = $world->getEntity($entityId); // Get entity on main thread
-            if ($entity instanceof Creature) { // Check if the entity is valid
-                call_user_func($callback, $entity, $path);
-            }
-        }, 0, false));
+        }
     }
 }
