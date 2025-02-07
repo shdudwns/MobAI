@@ -178,7 +178,7 @@ class MobAITask extends Task {
 }
 private function changeDirection(Living $mob): void {
     $randomYaw = mt_rand(0, 360); // 무작위 회전
-    $mob->setRotation($randomYaw, $mob->getPitch()); // Yaw만 변경
+    $mob->setRotation($randomYaw, 0); // Yaw만 변경하고 Pitch는 0으로 설정
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
