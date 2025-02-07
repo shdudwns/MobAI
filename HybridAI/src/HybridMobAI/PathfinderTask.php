@@ -6,6 +6,7 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
+use pocketmine\player\Player;
 
 class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
@@ -29,20 +30,13 @@ class PathfinderTask extends AsyncTask {
         $pathfinder = new Pathfinder();
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        
-        try {
-            $path = $pathfinder->findPath($start, $goal, $this->algorithm);
-        } catch (\Throwable $e) {
-            $this->setResult([]);
-            return;
-        }
+        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
 
-        // ✅ 너무 긴 경로 제한 (최대 10칸)
-        if (is_array($path) && count($path) > 10) {
-            $path = array_slice($path, 0, 10);
+        if (empty($path)) {
+            $this->setResult(null); // ✅ 실패하면 null 반환
+        } else {
+            $this->setResult($path);
         }
-
-        $this->setResult($path);
     }
 
     public function onCompletion(): void {
@@ -50,26 +44,23 @@ class PathfinderTask extends AsyncTask {
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
 
         if ($world === null) {
-            return; // ✅ 월드가 없으면 실행 종료
+            return;
         }
 
         $entity = $world->getEntity($this->mobId);
 
         if ($entity === null || !$entity->isAlive()) {
-            return; // ✅ 엔티티가 없거나 죽었으면 실행 중단
+            return;
         }
 
         $path = $this->getResult();
 
-        if (empty($path)) {
-            // ✅ 경로를 찾지 못한 경우 랜덤 이동 실행
-            if ($entity instanceof Creature) {
-                $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
-                if ($plugin instanceof Main) {
-                    $mobAITask = $plugin->getMobAITask();
-                    if ($mobAITask !== null) {
-                        $mobAITask->moveRandomly($entity);
-                    }
+        if ($path === null) { // ✅ 경로를 찾지 못한 경우 기본 AI 이동 실행
+            $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
+            if ($plugin instanceof Main) {
+                $mobAITask = $plugin->getMobAITask();
+                if ($mobAITask !== null) {
+                    $mobAITask->moveToPlayer($entity, $this->findNearestPlayer($entity));
                 }
             }
         } else {
@@ -85,5 +76,20 @@ class PathfinderTask extends AsyncTask {
                 }
             }
         }
+    }
+
+    private function findNearestPlayer(Creature $mob): ?Player {
+        $closestDistance = PHP_FLOAT_MAX;
+        $nearestPlayer = null;
+
+        foreach ($mob->getWorld()->getPlayers() as $player) {
+            $distance = $mob->getPosition()->distance($player->getPosition());
+            if ($distance < $closestDistance) {
+                $closestDistance = $distance;
+                $nearestPlayer = $player;
+            }
+        }
+
+        return $nearestPlayer;
     }
 }
