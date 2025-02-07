@@ -16,6 +16,7 @@ class MobAITask extends Task {
     private array $hasLanded = [];
     private array $landedTick = [];
     private string $algorithm;
+    private array $lastPathUpdate = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
