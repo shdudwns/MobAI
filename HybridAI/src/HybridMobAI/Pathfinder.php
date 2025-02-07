@@ -193,6 +193,7 @@ class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
     private float $goalX, $goalY, $goalZ;
     private string $algorithm;
+    public $callback;
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
@@ -221,4 +222,14 @@ class PathfinderTask extends AsyncTask {
 
         $this->setResult($path);
     }
+    public function onCompletion(Server $server): void {
+    $result = $this->getResult();
+    $callback = $this->callback;
+
+    if ($result !== null) {
+        $callback($result);
+    } else {
+        $callback(null);
+    }
+}
 }
