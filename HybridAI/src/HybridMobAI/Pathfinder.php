@@ -190,20 +190,24 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
 
 class PathfinderTask extends AsyncTask {
     private string $worldName;
-    private string $startPos;
-    private string $goalPos;
+    private float $startX, $startY, $startZ;
+    private float $goalX, $goalY, $goalZ;
     private string $algorithm;
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
-        $this->startPos = "{$start->x}:{$start->y}:{$start->z}";
-        $this->goalPos = "{$goal->x}:{$goal->y}:{$goal->z}";
+        $this->startX = $start->x;
+        $this->startY = $start->y;
+        $this->startZ = $start->z;
+        $this->goalX = $goal->x;
+        $this->goalY = $goal->y;
+        $this->goalZ = $goal->z;
         $this->algorithm = $algorithm;
     }
 
     public function onRun(): void {
-        $start = $this->parseVector($this->startPos);
-        $goal = $this->parseVector($this->goalPos);
+        $start = new Vector3($this->startX, $this->startY, $this->startZ);
+        $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
         $pathfinder = new Pathfinder();
         $path = match ($this->algorithm) {
@@ -216,10 +220,5 @@ class PathfinderTask extends AsyncTask {
         };
 
         $this->setResult($path);
-    }
-
-    private function parseVector(string $str): Vector3 {
-        [$x, $y, $z] = explode(":", $str);
-        return new Vector3((float)$x, (float)$y, (float)$z);
     }
 }
