@@ -21,7 +21,6 @@ class MobAITask extends Task {
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
-        $this->lastPathUpdate = $lastPathUpdate;
         $this->algorithm = $this->selectAlgorithm();
         $this->plugin->getLogger()->info("🔹 사용 알고리즘: " . $this->algorithm);
     }
