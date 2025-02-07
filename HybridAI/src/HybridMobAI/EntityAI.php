@@ -39,16 +39,6 @@ class EntityAI {
             return null;
     }
 }
-
-public function moveAlongPath(Living $mob, array $path): void {
-    if (empty($path)) return;
-
-    $nextPosition = array_shift($path);
-    if ($nextPosition instanceof Vector3) {
-        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply(0.2));
-        $mob->lookAt($nextPosition);
-    }
-}
     public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, callable $callback): void {
     $task = new PathfinderTask($world->getFolderName(), $start, $goal, "A*");
     Server::getInstance()->getAsyncPool()->submitTask($task);
