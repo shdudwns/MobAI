@@ -41,7 +41,7 @@ class MobAITask extends Task {
     $nearestPlayer = $this->findNearestPlayer($mob);
 
     if ($nearestPlayer !== null) {
-        $this->plugin->getScheduler()->scheduleAsyncTask(
+        $this->plugin->getServer()->getAsyncPool()->submitTask(
             new PathfinderTask(
                 $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                 $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
