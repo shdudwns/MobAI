@@ -42,29 +42,22 @@ class PathfindingTask extends AsyncTask {
 
     public function onCompletion(): void {
         $server = Server::getInstance();
-        $world = $server->getWorldManager()->getWorldByName($this->worldName); // 월드 이름으로 월드 객체 가져오기
-
-        if (!$world) {
-            $server->getLogger()->warning("World not found: " . $this->worldName);
-            return;
-        }
+        // ... (world and entity retrieval)
 
         $path = $this->getResult();
-        $entity = $world->getEntity($this->mobId);
-
-        if (!($entity instanceof Creature)) { // Creature instance 확인
-            return;
-        }
 
         if ($path === null) {
-            $callback = $this->callback;
+            $callback = $this->callback; // 복사!
+            $entity = $entity;          // 복사!
             $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($callback, $entity) {
                 if (is_callable($callback)) {
                     call_user_func($callback, $entity, null);
                 }
             }, 0, false));
         } else {
-            $callback = $this->callback;
+            $callback = $this->callback; // 복사!
+            $entity = $entity;          // 복사!
+            $path = $path;              // 복사!
             $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($callback, $entity, $path) {
                 if (is_callable($callback)) {
                     call_user_func($callback, $entity, $path);
