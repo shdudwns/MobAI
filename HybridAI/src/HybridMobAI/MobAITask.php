@@ -152,8 +152,8 @@ class MobAITask extends Task {
             }
         }
 
-        // 계단 로직 추가
-        if ($frontBlock->getTypeId() === Block::STEPS || $frontBlock->getTypeId() === Block::DOUBLE_STEPS) {
+        // 계단 로직 추가 (ID 직접 사용)
+        if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
             if ($heightDiff <= 1.2) {
                 $this->stepUp($mob);
                 return;
