@@ -23,8 +23,9 @@ class Main extends PluginBase implements Listener {
     private ?MobAITask $mobAITask = null;
     
     public function onEnable(): void {
+    $this->saveDefaultConfig(); // config.yml 자동 생성
+    $this->reloadAISettings();
     $this->getLogger()->info("HybridMobAI 플러그인 활성화");
-
     EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
         return new Zombie(EntityDataHelper::parseLocation($nbt, $world), $nbt, $this);
     }, ['Zombie', 'minecraft:zombie']);
@@ -32,13 +33,18 @@ class Main extends PluginBase implements Listener {
     $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
     // ✅ MobAITask 실행 로그 추가
-    $this->getLogger()->info("MobAITask 실행 중...");
-    $this->mobAITask = new MobAITask($this);
-    $this->getScheduler()->scheduleRepeatingTask($this->mobAITask, 1);
-    // ✅ 일정 시간마다 랜덤 좀비 스폰
+    $this->getLogger()->info("MobAITask 실행 중...");    
     $spawnInterval = 600; // 600 ticks (30초)
     //$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
     }
+    public function reloadAISettings(): void {
+    $config = $this->getConfig()->get("AI");
+    $aiEnabled = $config["enabled"];
+    $algorithm = $config["pathfinding"];
+
+    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled, $algorithm), 20);
+}
+    
     public function getMobAITask(): ?MobAITask {
         return $this->mobAITask;
     }
