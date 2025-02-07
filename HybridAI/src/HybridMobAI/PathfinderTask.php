@@ -45,25 +45,31 @@ class PathfinderTask extends AsyncTask {
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
 
         if ($world === null) {
-            $server->getLogger()->warning("World {$this->worldName} not found!"); // 월드 경고 메시지 추가
+            $server->getLogger()->warning("World {$this->worldName} not found!");
             return;
         }
 
         $entity = $world->getEntity($this->mobId);
         if ($entity === null || !$entity->isAlive()) {
-            $server->getLogger()->warning("Entity {$this->mobId} not found or dead!"); // 엔티티 경고 메시지 추가
+            $server->getLogger()->warning("Entity {$this->mobId} not found or dead!");
             return;
         }
 
         $path = $this->getResult();
 
-        // 콜백 함수가 설정되었는지 확인 후 호출
-        if (is_callable($this->callback)) {
-            $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($entity, $path, $this->callback) {
-                call_user_func($this->callback, $entity, $path);
+        // Correct way to handle callback:
+        $callback = $this->callback; // Copy the callback
+        $entityId = $this->mobId;     // Copy the entity ID
+
+        if (is_callable($callback)) {
+            $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($entityId, $path, $callback, $world) {
+                $entity = $world->getEntity($entityId); // Get the entity on the main thread!
+                if ($entity instanceof Creature) { // Check if the entity is valid
+                    call_user_func($callback, $entity, $path);
+                }
             }, 0, false));
         } else {
-            $server->getLogger()->warning("Callback function is not set for entity {$this->mobId}!"); // 콜백 경고 메시지 추가
+            $server->getLogger()->warning("Callback function is not set for entity {$this->mobId}!");
         }
     }
 }
