@@ -38,16 +38,20 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-        $nearestPlayer = $this->findNearestPlayer($mob);
-        if ($nearestPlayer !== null) {
-            $this->usePathfinder($mob, $nearestPlayer);
-        } else {
-            $this->moveRandomly($mob);
-        }
+    $nearestPlayer = $this->findNearestPlayer($mob);
 
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
+    if ($nearestPlayer !== null) {
+        $this->plugin->getScheduler()->scheduleAsyncTask(
+            new PathfinderTask(
+                $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
+                $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
+                $mob->getId(), "AStar", $mob->getWorld()->getFolderName()
+            )
+        );
+    } else {
+        $this->moveRandomly($mob);
     }
+}
 
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
