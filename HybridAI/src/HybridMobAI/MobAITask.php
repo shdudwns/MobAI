@@ -113,15 +113,19 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    if ($this->isStairOrSlab($frontBlock)) {
-        // ✅ 계단일 경우, stepUp() 실행
-        $this->stepUp($mob, $heightDiff);
-        return;
+    // ✅ 1칸 블록 점프 복구 (먼저 실행)
+    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+        if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            $this->jump($mob, $heightDiff);
+            return;
+        }
     }
 
-    if ($heightDiff > 0.5 && $heightDiff <= 1.5) {
-        // ✅ 일반 블록(1칸) 점프 실행
-        $this->jump($mob, $heightDiff);
+    // ✅ 계단 점프 실행 (1칸 블록 점프 이후)
+    if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+        if ($heightDiff <= 1.2) {
+            $this->stepUp($mob, $heightDiff);
+        }
     }
 }
     private function checkFrontBlock(Living $mob): ?Block {
