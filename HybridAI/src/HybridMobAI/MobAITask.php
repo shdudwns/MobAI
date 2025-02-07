@@ -56,30 +56,30 @@ class MobAITask extends Task {
 
     // AI 활성화 시 EntityAI 실행
     if (($player = $this->findNearestPlayer($mob)) !== null) {
-        switch ($this->algorithm) {
-            case "A*":
-                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "A*");
-                break;
-            case "Dijkstra":
-                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "Dijkstra");
-                break;
-            case "Greedy":
-                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "Greedy");
-                break;
-            default:
-                $path = null;
-        }
-
+        $path = $this->findBestPath($mob, $player->getPosition());
         if ($path !== null) {
-            $this->entityAI->moveAlongPath($mob);
+            $this->entityAI->moveAlongPath($mob, $path);
+        } else {
+            $this->moveRandomly($mob);
         }
     } else {
         $this->moveRandomly($mob);
     }
 }
+    private function findBestPath(Zombie $mob, Vector3 $target): ?array {
+    $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "A*");
+    
+    if ($path === null) {
+        $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "Greedy");
+    }
+    
+    if ($path === null) {
+        $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $target, "Dijkstra");
+    }
 
-
-
+    return $path;
+}
+    
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
         $isOnGround = $mob->isOnGround();
