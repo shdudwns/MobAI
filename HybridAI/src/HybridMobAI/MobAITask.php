@@ -50,6 +50,8 @@ class MobAITask extends Task {
         } else {
             $this->moveRandomly($mob);
         }
+        $this->detectLanding($mob);
+        $this->checkForObstaclesAndJump($mob);
         return;
     }
 
@@ -72,6 +74,8 @@ class MobAITask extends Task {
     } else {
         $this->moveRandomly($mob);
     }
+        $this->detectLanding($mob);
+        $this->checkForObstaclesAndJump($mob);
 }
 
 private function findBestPath(Zombie $mob, Vector3 $target): ?array {
