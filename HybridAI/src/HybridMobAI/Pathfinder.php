@@ -196,10 +196,9 @@ class PathfinderTask extends AsyncTask {
     public $callback;
     private Main $plugin; // Main 플러그인 인스턴스 추가
 
-    public function __construct(Main $plugin, string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
-        $this->plugin = $plugin; // Main 플러그인 인스턴스 저장
+    public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
-        $this->startX = (float)$start->x;
+        $this->startX = (float)$start->x; // float로 형변환
         $this->startY = (float)$start->y;
         $this->startZ = (float)$start->z;
         $this->goalX = (float)$goal->x;
@@ -207,7 +206,6 @@ class PathfinderTask extends AsyncTask {
         $this->goalZ = (float)$goal->z;
         $this->algorithm = $algorithm;
     }
-
     public function onRun(): void {
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
