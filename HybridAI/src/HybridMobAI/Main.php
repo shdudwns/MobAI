@@ -17,6 +17,7 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\player\Player;
 use pocketmine\entity\Zombie as PmmpZombie;
+use pocketmine\Server;
 
 class Main extends PluginBase implements Listener {
 
