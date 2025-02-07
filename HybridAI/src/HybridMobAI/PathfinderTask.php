@@ -60,7 +60,7 @@ class PathfinderTask extends AsyncTask {
             } else {
                 // ✅ 정상적으로 경로를 찾았을 경우 이동
                 if ($entity instanceof Creature) {
-                    $nextStep = $path[1] ?? null;
+                    $nextStep = $path[0] ?? null;
                     if ($nextStep !== null) {
                         $entity->lookAt($nextStep);
                         $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.15);
