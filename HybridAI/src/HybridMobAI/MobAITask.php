@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
+use pocketmine\entity\Zombie;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
@@ -46,7 +47,6 @@ class MobAITask extends Task {
         $this->checkForObstaclesAndJump($mob);
     }
 
-    // 착지 상태 감지
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
         $isOnGround = $mob->isOnGround();
@@ -139,10 +139,19 @@ class MobAITask extends Task {
 
             $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent() && $heightDiff <= 1.5) {
-                $this->jump($mob, $heightDiff);
-                $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
-                return;
+            // 블록 아래가 투명한지 확인하여 점프 방지
+            if ($frontBlockBelow->isTransparent() && $heightDiff <= 0) {
+                return; // 블록 아래가 투명하면 점프하지 않음
+            }
+
+            // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
+            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+                if ($heightDiff <= 1.5) {
+                    // 점프할 때의 수평 속도를 유지
+                    $this->jump($mob, $heightDiff);
+                    $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
+                    return;
+                }
             }
         }
     }
@@ -164,10 +173,12 @@ class MobAITask extends Task {
         if (($mob->isOnGround() || $mob->getMotion()->y <= 0.1)) {
             $direction = $mob->getDirectionVector();
             $jumpBoost = 0.08;
+
+            // 점프 시 수평 속도 유지
             $mob->setMotion(new Vector3(
-                $mob->getMotion()->x + ($direction->x * $jumpBoost),
+                $mob->getMotion()->x * 0.5 + ($direction->x * $jumpBoost),
                 $jumpForce,
-                $mob->getMotion()->z + ($direction->z * $jumpBoost)
+                $mob->getMotion()->z * 0.5 + ($direction->z * $jumpBoost)
             ));
         }
     }
