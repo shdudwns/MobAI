@@ -155,6 +155,14 @@ class MobAITask extends Task {
             }
         }
 
+        // 계단 로직 추가
+        if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
+            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
+                $this->stepUp($mob); // 계단에 올라가는 로직
+                return;
+            }
+        }
+
         // 벽 감지 후 방향 변경
         if ($frontBlock->isSolid() && $heightDiff > 1.5) {
             $this->changeDirection($mob);
@@ -162,7 +170,6 @@ class MobAITask extends Task {
         }
     }
 }
-
     private function avoidFalling(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
@@ -176,7 +183,8 @@ class MobAITask extends Task {
 private function changeDirection(Living $mob): void {
     $randomYaw = mt_rand(0, 360); // 무작위 회전
     $mob->teleport($mob->getLocation()->setYaw($randomYaw));
-}    public function jump(Living $mob, float $heightDiff = 1.0): void {
+}    
+    public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
     if ($mob->getMotion()->y < -0.08) {
         $mob->setMotion(new Vector3(
@@ -187,7 +195,7 @@ private function changeDirection(Living $mob): void {
     }
 
     // 기본 점프 힘 설정
-    $baseJumpForce = 0.42; // 기본 점프력 (마인크래프트 기본 점프는 0.42)
+    $baseJumpForce = 0.42; // 기본 점프력
     $extraJumpBoost = min(0.1 * $heightDiff, 0.3); // 높이에 따라 추가 점프력 조정
 
     $jumpForce = $baseJumpForce + $extraJumpBoost;
