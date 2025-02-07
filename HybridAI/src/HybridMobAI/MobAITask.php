@@ -57,6 +57,24 @@ class MobAITask extends Task {
         $this->hasLanded[$mobId] = $isOnGround;
     }
 
+    private function checkFrontBlock(Living $mob): ?Block {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = $mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+    $frontBlockX = (int)floor($position->x + $directionVector->x);
+    $frontBlockY = (int)$position->y;
+    $frontBlockZ = (int)floor($position->z + $directionVector->z);
+
+    return $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+}
+
+private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
+    return $frontBlock->getPosition()->y + 0.5 - $mob->getPosition()->y;
+}
+    
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // 1블록 이하 높이면 계단처럼 이동
         $mob->setMotion(new Vector3(
@@ -101,7 +119,11 @@ class MobAITask extends Task {
     $mob->lookAt($playerPos);
 
     // 계단 오르기 로직 추가
-    $this->stepUp($mob);
+    $frontBlock = $this->checkFrontBlock($mob);
+    if ($frontBlock !== null) {
+        $heightDiff = $this->calculateHeightDiff($mob, $frontBlock);
+        $this->stepUp($mob, $heightDiff);
+    }
 
     // 낙하 방지 로직 추가
     $this->avoidFalling($mob);
