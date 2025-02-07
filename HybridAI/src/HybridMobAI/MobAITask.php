@@ -41,13 +41,18 @@ class MobAITask extends Task {
     $nearestPlayer = $this->findNearestPlayer($mob);
 
     if ($nearestPlayer !== null) {
-        $this->plugin->getServer()->getAsyncPool()->submitTask(
-            new PathfinderTask(
-                $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
-                $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
-                $mob->getId(), "AStar", $mob->getWorld()->getFolderName()
-            )
-        );
+        // ✅ PathfinderTask를 20틱(1초)에 한 번만 실행
+        if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
+            $this->lastPathUpdate[$mob->getId()] = microtime(true);
+            
+            $this->plugin->getServer()->getAsyncPool()->submitTask(
+                new PathfinderTask(
+                    $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
+                    $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
+                    $mob->getId(), "AStar", $mob->getWorld()->getFolderName()
+                )
+            );
+        }
     } else {
         $this->moveRandomly($mob);
     }
