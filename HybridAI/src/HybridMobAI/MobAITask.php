@@ -213,7 +213,6 @@ private function changeDirection(Living $mob): void {
         ));
     }
 }
-}
     private function isClimbable(Block $block): bool {
     $climbableBlocks = [
         "pocketmine:block:snow_layer",
