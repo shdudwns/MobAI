@@ -25,7 +25,7 @@ class MobAITask extends Task {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
     $this->algorithmPriority = $algorithmPriority;
-    $this->entityAI = new EntityAI($this->plugin);
+    $this->entityAI = new EntityAI();
     }
 
     public function onRun(): void {
@@ -43,40 +43,38 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-    if (!$this->aiEnabled) {
-        $nearestPlayer = $this->findNearestPlayer($mob);
-        if ($nearestPlayer !== null) {
-            $this->moveToPlayer($mob, $nearestPlayer);
-        } else {
-            $this->moveRandomly($mob);
-        }
-    } else {
-        if (($player = $this->findNearestPlayer($mob)) !== null) {
-            if ($this->entityAI->hasPath($mob)) {
-                $this->entityAI->moveAlongPath($mob);
+        if (!$this->aiEnabled) {
+            $nearestPlayer = $this->findNearestPlayer($mob);
+            if ($nearestPlayer !== null) {
+                $this->moveToPlayer($mob, $nearestPlayer);
             } else {
-                // ✅ 인자 순서 수정 (올바른 순서: world, start, goal, algorithm, callback)
-                $this->entityAI->findPathAsync(
-                    $mob->getWorld(),
-                    $mob->getPosition(),
-                    $player->getPosition(),
-                    "A*", // ✅ 알고리즘을 올바르게 전달
-                    function (?array $path) use ($mob) {
-                        if ($path !== null) {
-                            $this->entityAI->setPath($mob, $path);
-                        } else {
-                            $this->moveRandomly($mob);
-                        }
-                    }
-                );
+                $this->moveRandomly($mob);
             }
         } else {
-            $this->moveRandomly($mob);
+            if (($player = $this->findNearestPlayer($mob)) !== null) {
+                if ($this->entityAI->hasPath($mob)) {
+                    $this->entityAI->moveAlongPath($mob);
+                } else {
+                    // ✅ EntityAI의 findPathAsync 호출
+                    $this->entityAI->findPathAsync(
+                        $mob->getWorld(),       // 월드
+                        $mob->getPosition(),    // 시작 좌표
+                        $player->getPosition(), // 목표 좌표
+                        "A*",                   // 알고리즘
+                        function (?array $path) use ($mob) {
+                            if ($path !== null) {
+                                $this->entityAI->setPath($mob, $path);
+                            } else {
+                                $this->moveRandomly($mob);
+                            }
+                        }
+                    );
+                }
+            } else {
+                $this->moveRandomly($mob);
+            }
         }
     }
-
-    $this->detectLanding($mob);
-    $this->checkForObstaclesAndJump($mob);
 }
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
