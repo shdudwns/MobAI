@@ -114,14 +114,43 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    private function detectLanding(Living $mob): void {
-    $mobId = $mob->getId();
-    $isOnGround = $mob->isOnGround();
+    private function checkForObstaclesAndJump(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
     $currentTick = Server::getInstance()->getTick();
+    $mobId = $mob->getId();
 
-    if ($isOnGround) {
-        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 3) {
-            $this->landedTick[$mobId] = $currentTick;
+    // ✅ 착지 후 2틱 이상 경과해야 점프 가능
+    if (isset($this->landedTick[$mobId]) && ($currentTick - $this->landedTick[$mobId] < 2)) {
+        return;
+    }
+
+    // ✅ 이동 방향 계산 (Yaw 값 기반)
+    $yaw = $mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+    // ✅ 앞으로 이동할 블록 위치 계산 (앞쪽 1~2칸 감지)
+    for ($i = 1; $i <= 2; $i++) {
+        $frontPosition = new Vector3(
+            $position->getX() + ($directionVector->getX() * $i),
+            $position->getY(),
+            $position->getZ() + ($directionVector->getZ() * $i)
+        );
+
+        $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
+        $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
+
+        // ✅ 장애물 높이 차이 계산
+        $currentHeight = (int)floor($position->getY());
+        $blockHeight = (int)floor($blockInFront->getPosition()->getY());
+        $heightDiff = $blockHeight - $currentHeight;
+
+        // ✅ 높이 차이가 `0.5 이상`일 때 점프 수행
+        if ($heightDiff >= 0.5 && ($this->isClimbable($blockInFront) || $blockAboveInFront->isTransparent())) {
+            $this->jump($mob, $heightDiff);
+            $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
+            return;
         }
     }
 }
