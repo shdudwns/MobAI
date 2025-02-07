@@ -196,12 +196,12 @@ class PathfinderTask extends AsyncTask {
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
-        $this->startX = (float)$start->x;
-        $this->startY = (float)$start->y;
-        $this->startZ = (float)$start->z;
-        $this->goalX = (float)$goal->x;
-        $this->goalY = (float)$goal->y;
-        $this->goalZ = (float)$goal->z;
+        $this->startX = (float) $start->x;
+        $this->startY = (float) $start->y;
+        $this->startZ = (float) $start->z;
+        $this->goalX = (float) $goal->x;
+        $this->goalY = (float) $goal->y;
+        $this->goalZ = (float) $goal->z;
         $this->algorithm = $algorithm;
     }
 
