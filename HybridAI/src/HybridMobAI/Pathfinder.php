@@ -10,7 +10,12 @@ use SplStack;
 class Pathfinder {
     private const MAX_ITERATIONS = 5000; // ✅ 탐색 최대 반복 횟수 제한
     private const MAX_PATH_LENGTH = 20; // ✅ 경로 최대 길이 제한
+    private World $world;
 
+    public function __construct(World $world) { // 생성자에서 World 객체 주입
+        $this->world = $world;
+    }
+    
     public function findPath(Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         switch ($algorithm) {
             case "AStar":
@@ -145,7 +150,9 @@ class Pathfinder {
 
     /** ✅ 특정 블록이 이동 가능한지 확인 */
     private function isWalkable(Vector3 $position): bool {
-        return true; // TODO: 월드에서 블록 이동 가능 여부 검사 추가
+        $block = $this->world->getBlock($position); // World 객체 사용
+        // 투명 블록이거나 특정 블록 ID (예: 눈 층)인 경우 이동 가능
+        return $block->isTransparent() || $block->getId() === 78; // 78은 눈 층 ID, 필요에 따라 수정
     }
 
     /** ✅ 두 노드 간 거리 계산 */
