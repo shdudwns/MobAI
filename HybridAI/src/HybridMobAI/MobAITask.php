@@ -52,7 +52,7 @@ class MobAITask extends Task {
     $currentTick = Server::getInstance()->getTick();
 
     if ($isOnGround) {
-        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 3) {
+        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 2) {
             $this->landedTick[$mobId] = $currentTick;
         }
     }
@@ -114,43 +114,14 @@ class MobAITask extends Task {
         $mob->setMotion($blendedMotion);
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $currentTick = Server::getInstance()->getTick();
+    private function detectLanding(Living $mob): void {
     $mobId = $mob->getId();
+    $isOnGround = $mob->isOnGround();
+    $currentTick = Server::getInstance()->getTick();
 
-    // ✅ 착지 후 3틱 이상 경과해야 점프 가능
-    if (isset($this->landedTick[$mobId]) && ($currentTick - $this->landedTick[$mobId] < 3)) {
-        return;
-    }
-
-    // ✅ 이동 방향 계산 (Yaw 값 기반)
-    $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-
-    // ✅ 앞으로 이동할 블록 위치 계산 (앞쪽 1~2칸 감지)
-    for ($i = 1; $i <= 2; $i++) {
-        $frontPosition = new Vector3(
-            $position->getX() + ($directionVector->getX() * $i),
-            $position->getY(),
-            $position->getZ() + ($directionVector->getZ() * $i)
-        );
-
-        $blockInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY(), (int)$frontPosition->getZ());
-        $blockAboveInFront = $world->getBlockAt((int)$frontPosition->getX(), (int)$frontPosition->getY() + 1, (int)$frontPosition->getZ());
-
-        // ✅ 장애물 높이 차이 계산
-        $currentHeight = (int)floor($position->getY());
-        $blockHeight = (int)floor($blockInFront->getPosition()->getY());
-        $heightDiff = $blockHeight - $currentHeight;
-
-        // ✅ 높이 차이가 `0.25 이상`일 때 점프 수행 (더 민감하게 반응)
-        if ($heightDiff >= 0.25 && ($this->isClimbable($blockInFront) || $blockAboveInFront->isTransparent())) {
-            $this->jump($mob, $heightDiff);
-            $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
-            return;
+    if ($isOnGround) {
+        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 3) {
+            $this->landedTick[$mobId] = $currentTick;
         }
     }
 }
@@ -160,7 +131,7 @@ class MobAITask extends Task {
         return;
     }
 
-    $baseForce = 0.55;
+    $baseForce = 0.52;
     $jumpForce = $baseForce + ($heightDiff * 0.2);
     $jumpForce = min($jumpForce, 0.75); // ✅ 최대 점프 높이 증가
 
@@ -179,7 +150,9 @@ class MobAITask extends Task {
         "pocketmine:block:snow_layer",
         "pocketmine:block:fence",
         "pocketmine:block:glass",
-        "pocketmine:block:frame"
+        "pocketmine:block:frame",
+        "pocketmine:block:slab",
+        "pocketmine:block:stairs"
     ];
     
     // ✅ 계단, 반블록, 눈 등 낮은 블록도 고려
