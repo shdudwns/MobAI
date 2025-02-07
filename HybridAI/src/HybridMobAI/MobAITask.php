@@ -15,13 +15,15 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
+    private array $path = []; // 경로 저장 배열 추가
+    private array $pathfindingTasks = []; // PathfindingTask 저장 배열 추가
     private string $algorithm;
     private array $lastPathUpdate = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->algorithm = $this->selectAlgorithm();
-        $this->plugin->getLogger()->info("🔹 사용 알고리즘: " . $this->algorithm);
+        $this->plugin->getLogger()->info(" 사용 알고리즘: " . $this->algorithm);
     }
 
     public function onRun(): void {
@@ -39,25 +41,74 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-    $nearestPlayer = $this->findNearestPlayer($mob);
+        $nearestPlayer = $this->findNearestPlayer($mob);
 
-    if ($nearestPlayer !== null) {
-        // ✅ PathfinderTask를 20틱(1초)에 한 번만 실행
-        if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
-            $this->lastPathUpdate[$mob->getId()] = microtime(true);
-            
-            $this->plugin->getServer()->getAsyncPool()->submitTask(
-                new PathfinderTask(
+        if ($nearestPlayer !== null) {
+            // 1초마다 경로 탐색 실행
+            if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
+                $this->lastPathUpdate[$mob->getId()] = microtime(true);
+
+                // 콜백 함수 정의
+                $callback = function (Creature $entity, ?array $path) use ($mob) {
+                    if ($path === null) {
+                        $this->moveRandomly($entity); // 경로 없으면 랜덤 이동
+                    } else {
+                        $this->path[$mob->getId()] = $path; // 경로 저장
+                    }
+                };
+
+                // PathfindingTask 실행
+                $task = new PathfinderTask(
                     $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                     $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
-                    $mob->getId(), "AStar", $mob->getWorld()->getFolderName()
-                )
-            );
+                    $mob->getId(), $this->algorithm, $mob->getWorld()->getFolderName(), $callback
+                );
+
+                $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+                $this->pathfindingTasks[$mob->getId()] = $task; // 작업 저장
+
+            }
+
+            // 경로가 존재하면 따라가기
+            if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
+                $this->followPath($mob);
+            }
+
+        } else {
+            $this->moveRandomly($mob);
         }
-    } else {
-        $this->moveRandomly($mob);
+
+        $this->detectLanding($mob);
+        $this->checkForObstaclesAndJump($mob);
     }
-}
+
+
+
+    private function followPath(Zombie $mob): void {
+        if (!isset($this->path[$mob->getId()]) || empty($this->path[$mob->getId()])) {
+            return; // 경로 없거나 비어있으면 종료
+        }
+
+        $path = $this->path[$mob->getId()];
+        $nextStep = array_shift($path); // 다음 좌표 가져오기
+
+        if ($nextStep instanceof Vector3) {
+            $mob->lookAt($nextStep);
+            $motion = $nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.15); // 이동 벡터 계산
+
+            // NaN 값 체크 후 이동
+            if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
+                $mob->setMotion($motion);
+            }
+        }
+
+        if (empty($path)) {
+            unset($this->path[$mob->getId()]); // 경로 완료 시 삭제
+            unset($this->pathfindingTasks[$mob->getId()]); // 작업 완료 시 삭제
+        } else {
+            $this->path[$mob->getId()] = $path; // 남은 경로 업데이트
+        }
+    }
 
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
