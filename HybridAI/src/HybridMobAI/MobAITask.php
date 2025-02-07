@@ -18,10 +18,12 @@ class MobAITask extends Task {
     private int $changeDirectionTick = 0;
     private bool $aiEnabled;
     private EntityAI $entityAI;
+    private array $algorithmPriority;
 
-    public function __construct(Main $plugin, bool $aiEnabled) {
+    public function __construct(Main $plugin, bool $aiEnabled, array $algorithmPriority) {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
+    $this->algorithmPriority = $algorithmPriority;
     $this->entityAI = new EntityAI();
     }
 
