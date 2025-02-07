@@ -15,7 +15,8 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $activePathfinding = [];
     private array $landedTick = [];
-    private array $path = []; // Add this line
+    private array $path = [];
+    private array $pathfindingTasks = []; // Task 객체 저장
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -42,10 +43,9 @@ class MobAITask extends Task {
             if (!isset($this->activePathfinding[$mobId])) {
                 $this->startPathfinding($mob, $nearestPlayer);
             } else {
-                // Check if pathfinding is still active. If not, re-pathfind.
                 if (!Server::getInstance()->getAsyncPool()->isTaskRunning($this->activePathfinding[$mobId])) {
-                    unset($this->activePathfinding[$mobId]); // Clean up.
-                    $this->startPathfinding($mob, $nearestPlayer); // Start again.
+                    unset($this->activePathfinding[$mobId]);
+                    $this->startPathfinding($mob, $nearestPlayer);
                 }
             }
         } else {
@@ -67,38 +67,44 @@ class MobAITask extends Task {
             $mobId, "AStar", $worldName
         );
 
-        $this->activePathfinding[$mobId] = $task->getTaskId(); // Store the task ID.
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+
+        $taskId = $task->getTaskId();
+        if ($taskId !== -1) {
+            $this->pathfindingTasks[$taskId] = $task; // Task 객체 저장
+            $this->activePathfinding[$mob->getId()] = $taskId;
+        } else {
+            Server::getInstance()->getLogger()->warning("Task ID not assigned to pathfinding task.");
+        }
     }
 
-    public function applyPathResult(int $mobId, ?array $path): void {
-        unset($this->activePathfinding[$mobId]); // Remove the pathfinding flag.
-        $server = Server::getInstance();
-        $mob = null;
-
-        foreach ($server->getWorldManager()->getWorlds() as $world) {
-            $mob = $world->getEntity($mobId);
-            if ($mob instanceof Zombie && $mob->isAlive()) break; // Check if the mob is still valid.
+    public function applyPathResult(int $mobId, ?array $path, int $taskId): void {
+        if (isset($this->pathfindingTasks[$taskId])) {
+            unset($this->pathfindingTasks[$taskId]); // Task 객체 제거
         }
+        unset($this->activePathfinding[$mobId]);
 
-        if ($mob === null) return;
+        $server = Server::getInstance();
+        $mob = $server->getWorldManager()->getWorlds()[0]->getEntity($mobId); // Get the mob
+
+        if ($mob === null || !$mob instanceof Zombie || !$mob->isAlive()) return; // Check mob validity
 
         if ($path === null || empty($path)) {
             $this->moveRandomly($mob);
             return;
         }
 
-        $this->path[$mobId] = $path; // Store the path.
-        $this->moveAlongPath($mob, $mobId); // Call moveAlongPath.
+        $this->path[$mobId] = $path;
+        $this->moveAlongPath($mob, $mobId);
     }
 
     private function moveAlongPath(Zombie $mob, int $mobId): void {
         if (!isset($this->path[$mobId]) || empty($this->path[$mobId])) {
-            return; // No path to follow.
+            return;
         }
 
         $path = $this->path[$mobId];
-        $nextStep = array_shift($path); // Get the first step and remove it.
+        $nextStep = array_shift($path);
 
         if ($nextStep instanceof Vector3) {
             $mob->lookAt($nextStep);
@@ -111,13 +117,12 @@ class MobAITask extends Task {
             }
 
             if (empty($path)) {
-                unset($this->path[$mobId]); // Path finished.
+                unset($this->path[$mobId]);
             } else {
-                $this->path[$mobId] = $path; // Update the path.
+                $this->path[$mobId] = $path;
             }
         }
     }
-
 
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
