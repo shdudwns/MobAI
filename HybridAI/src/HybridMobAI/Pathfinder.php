@@ -52,6 +52,50 @@ class Pathfinder {
     return null; // 최적 경로를 찾지 못한 경우
 }
 
+public function findPathDijkstra(Vector3 $start, Vector3 $goal): ?array {
+    $openSet = [$start];
+    $cameFrom = [];
+    $cost = [self::vectorToStr($start) => 0];
+
+    while (!empty($openSet)) {
+        usort($openSet, fn($a, $b) => $cost[self::vectorToStr($a)] <=> $cost[self::vectorToStr($b)]);
+        $current = array_shift($openSet);
+        $currentKey = self::vectorToStr($current);
+
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
+        }
+
+        foreach ($this->getNeighbors($current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $newCost = $cost[$currentKey] + 1;
+
+            if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $cost[$neighborKey] = $newCost;
+                $openSet[] = $neighbor;
+            }
+        }
+    }
+    return null;
+}
+
+public function findPathGreedy(Vector3 $start, Vector3 $goal): ?array {
+    $current = $start;
+    $path = [];
+
+    while (!$current->equals($goal)) {
+        $neighbors = $this->getNeighbors($current);
+        usort($neighbors, fn($a, $b) => $this->heuristic($a, $goal) <=> $this->heuristic($b, $goal));
+
+        if (empty($neighbors)) return null;
+
+        $current = array_shift($neighbors);
+        $path[] = $current;
+    }
+
+    return $path;
+}
 private static function vectorToStr(Vector3 $vector): string {
     return "{$vector->x}:{$vector->y}:{$vector->z}";
 }
