@@ -68,7 +68,6 @@ class EntityAI {
         $task->callback = $callback;
         Server::getInstance()->getAsyncPool()->submitTask($task);
     }
-}
 
 
 public function setPath(Living $mob, array $path): void {
