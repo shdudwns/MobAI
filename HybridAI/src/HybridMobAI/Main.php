@@ -63,7 +63,7 @@ class Main extends PluginBase implements Listener {
 public function reloadAISettings(): void {
     $config = $this->getConfig()->get("AI");
     $aiEnabled = $config["enabled"];
-    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled), 20);
+    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled), 1);
 }
     
     public function getMobAITask(): ?MobAITask {
