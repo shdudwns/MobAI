@@ -39,6 +39,7 @@ class MobAITask extends Task {
 
     private function handleMobAI(Zombie $mob): void {
     if ($this->entityAI->isEnabled()) {
+        // EntityAI가 활성화되었을 때
         if (($player = $this->findNearestPlayer($mob)) !== null) {
             $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition());
             if ($path !== null) {
@@ -46,12 +47,19 @@ class MobAITask extends Task {
             }
         }
     } else {
-        // 기존 랜덤 이동 유지
-        $this->moveRandomly($mob);
-    }
+        // EntityAI가 비활성화되었을 때
+        $nearestPlayer = $this->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $this->moveToPlayer($mob, $nearestPlayer);
+        } else {
+            $this->moveRandomly($mob);
+        }
+
         $this->detectLanding($mob);
         $this->checkForObstaclesAndJump($mob);
     }
+}
+
 
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
