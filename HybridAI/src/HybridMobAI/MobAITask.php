@@ -44,7 +44,6 @@ class MobAITask extends Task {
 
     private function handleMobAI(Zombie $mob): void {
     if (!$this->aiEnabled) {
-        // ✅ AI 비활성화 시 기본 AI 사용
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $this->moveToPlayer($mob, $nearestPlayer);
@@ -52,27 +51,30 @@ class MobAITask extends Task {
             $this->moveRandomly($mob);
         }
     } else {
-        // ✅ AI 활성화 시 경로를 따라 이동
         if (($player = $this->findNearestPlayer($mob)) !== null) {
             if ($this->entityAI->hasPath($mob)) {
                 $this->entityAI->moveAlongPath($mob);
             } else {
-                // 비동기적으로 경로 탐색
-                $this->entityAI->findPathAsync($mob->getWorld(), $mob->getPosition(), $player->getPosition(), function(?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->entityAI->setPath($mob, $path);
-                    } else {
-                        // 경로가 없으면 랜덤 이동
-                        $this->moveRandomly($mob);
+                // ✅ 인자 순서 수정 (올바른 순서: world, start, goal, algorithm, callback)
+                $this->entityAI->findPathAsync(
+                    $mob->getWorld(),
+                    $mob->getPosition(),
+                    $player->getPosition(),
+                    "A*", // ✅ 알고리즘을 올바르게 전달
+                    function (?array $path) use ($mob) {
+                        if ($path !== null) {
+                            $this->entityAI->setPath($mob, $path);
+                        } else {
+                            $this->moveRandomly($mob);
+                        }
                     }
-                });
+                );
             }
         } else {
             $this->moveRandomly($mob);
         }
     }
 
-    // ✅ 항상 점프 및 장애물 감지 적용
     $this->detectLanding($mob);
     $this->checkForObstaclesAndJump($mob);
 }
@@ -119,22 +121,22 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
     $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-    $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
 
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    // ✅ 연속된 계단 감지 후 stepUp() 실행
-    if ($this->isStairOrSlab($frontBlock) || $this->isStairOrSlab($frontBlockBelow)) {
-        if ($frontBlockAbove->isTransparent()) {
-            $this->stepUp($mob, $heightDiff);
+    // ✅ AABB를 활용한 충돌 감지 (조기 감지)
+    if ($this->isCollidingWithBlock($mob, $frontBlock)) {
+        if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            $this->jump($mob, $heightDiff);
             return;
         }
     }
 
-    // ✅ 1칸 블록 점프 실행
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1.5 && $heightDiff > 0) {
-            $this->jump($mob, $heightDiff);
+    // ✅ 계단 감지 및 점프 (연속된 계단에서도 가능하도록 개선)
+    if ($this->isStairOrSlab($frontBlock) || $this->isStairOrSlab($world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ))) {
+        if ($frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
+            return;
         }
     }
 }
@@ -159,12 +161,14 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
         $direction = $mob->getDirectionVector()->normalize()->multiply(0.15);
 
-        // ✅ 계단 오를 때 XZ 방향 이동 속도도 적용
         $mob->setMotion(new Vector3(
             $direction->x,
-            0.6, // 계단을 오를 때 좀 더 자연스럽게 상승
+            0.6, // 계단을 오를 때 점프 강도를 높임
             $direction->z
         ));
+
+        // ✅ 연속된 계단 감지 시 추가 점프 수행
+        $this->checkForObstaclesAndJump($mob);
     }
 }
 
@@ -260,32 +264,11 @@ private function changeDirection(Living $mob): void {
     $direction2D = VectorMath::getDirection2D($yaw);
     $frontVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    $frontBlockX = (int)floor($position->x + $frontVector->x);
-    $frontBlockY = (int)$position->y;
-    $frontBlockZ = (int)floor($position->z + $frontVector->z);
+    $frontBlock = $world->getBlockAt((int)floor($position->x + $frontVector->x), (int)$position->y, (int)floor($position->z + $frontVector->z));
 
-    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-
-    // ✅ 계단이면 방향을 바꾸지 않고 그대로 진행
+    // ✅ 계단 위에서는 방향을 바꾸지 않음
     if ($this->isStairOrSlab($frontBlock)) {
         return;
-    }
-
-    if ($frontBlock->isSolid()) {
-        $attempts = 0;
-        do {
-            $randomYaw = mt_rand(0, 360);
-            $direction2D = VectorMath::getDirection2D($randomYaw);
-            $newDirection = new Vector3($direction2D->x, 0, $direction2D->y);
-
-            $newBlockX = (int)floor($position->x + $newDirection->x);
-            $newBlockZ = (int)floor($position->z + $newDirection->z);
-            $newBlock = $world->getBlockAt($newBlockX, $frontBlockY, $newBlockZ);
-
-            $attempts++;
-        } while ($newBlock->isSolid() && $attempts < 10);
-
-        $mob->setRotation($randomYaw, 0);
     }
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
