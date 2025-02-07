@@ -124,7 +124,7 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontPosition = $position->addVevtor($directionVector->multiply(1.5));
+        $frontPosition = $position->addVector($directionVector->multiply(1.5));
 
         $blockInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y, (int) $frontPosition->z);
         $blockAboveInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y + 1, (int) $frontPosition->z);
