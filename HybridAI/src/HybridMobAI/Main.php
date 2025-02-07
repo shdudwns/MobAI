@@ -31,6 +31,8 @@ class Main extends PluginBase implements Listener {
 
     $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
+    $world = Server::getInstance()->getWorldManager()->getWorldByName("World"); // 월드 이름 수정
+        $pathfinder = new Pathfinder($world); // Pathfinder 객체 생성
     // ✅ MobAITask 실행 로그 추가
     $this->getLogger()->info("MobAITask 실행 중...");
     $this->mobAITask = new MobAITask($this);
