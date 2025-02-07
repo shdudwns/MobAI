@@ -179,3 +179,19 @@ class Pathfinder {
         return floor($pos->x) . ":" . floor($pos->z);
     }
 }
+
+class Node {
+    public Vector3 $position;
+    public ?Node $cameFrom;
+    public float $gCost;
+    public float $hCost;
+    public function __construct(Vector3 $position, ?Node $cameFrom = null, float $gCost = 0, float $hCost = 0) {
+        $this->position = clone $position;
+        $this->cameFrom = $cameFrom;
+        $this->gCost = $gCost;
+        $this->hCost = $hCost;
+    }
+    public function fCost(): float {
+        return $this->gCost + $this->hCost;
+    }
+}
