@@ -5,7 +5,6 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
-use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
@@ -16,10 +15,12 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
-    private array $isJumping = [];
+    private string $algorithm;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
+        $this->algorithm = $this->selectAlgorithm();
+        $this->plugin->getLogger()->info("🔹 사용 알고리즘: " . $this->algorithm);
     }
 
     public function onRun(): void {
@@ -124,7 +125,7 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontPosition = $position->addVector($directionVector->multiply(1.5));
+        $frontPosition = $position->addVector($directionVector->multiply(1.1)); // 🔹 블록에 더 가까이 접근 후 점프
 
         $blockInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y, (int) $frontPosition->z);
         $blockAboveInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y + 1, (int) $frontPosition->z);
@@ -152,6 +153,11 @@ class MobAITask extends Task {
                 $mob->getMotion()->z + ($direction->z * $jumpBoost)
             ));
         }
+    }
+
+    private function selectAlgorithm(): string {
+        $algorithms = ["AStar", "BFS", "DFS"];
+        return $algorithms[array_rand($algorithms)];
     }
 
     private function isClimbable(Block $block): bool {
