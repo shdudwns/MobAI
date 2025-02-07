@@ -48,3 +48,4 @@ public function moveAlongPath(Living $mob, array $path): void {
         $mob->lookAt($nextPosition);
     }
 }
+}
