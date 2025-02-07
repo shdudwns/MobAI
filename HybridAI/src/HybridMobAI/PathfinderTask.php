@@ -66,7 +66,7 @@ class PathfinderTask extends AsyncTask {
                 $nextStep = $path[1] ?? null;
                 if ($nextStep !== null) {
                     $entity->lookAt($nextStep);
-                    $motion = $nextStep->subtract($entity->getPosition())->normalize()->multiply(0.2);
+                    $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.2);
 
                     if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
                         $entity->setMotion($motion);
