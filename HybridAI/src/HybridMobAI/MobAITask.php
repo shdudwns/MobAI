@@ -52,7 +52,7 @@ class MobAITask extends Task {
     $currentTick = Server::getInstance()->getTick();
 
     if ($isOnGround) {
-        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 2) {
+        if (!isset($this->landedTick[$mobId]) || ($currentTick - $this->landedTick[$mobId]) > 3) {
             $this->landedTick[$mobId] = $currentTick;
         }
     }
@@ -120,18 +120,15 @@ class MobAITask extends Task {
     $currentTick = Server::getInstance()->getTick();
     $mobId = $mob->getId();
 
-    // ✅ 착지 후 3틱 이내면 점프 우선 감지
-    $recentlyLanded = isset($this->landedTick[$mobId]) && ($currentTick - $this->landedTick[$mobId] <= 3);
+    // ✅ 착지 후 3틱 이상 경과해야 점프 가능
+    if (isset($this->landedTick[$mobId]) && ($currentTick - $this->landedTick[$mobId] < 3)) {
+        return;
+    }
 
     // ✅ 이동 방향 계산 (Yaw 값 기반)
     $yaw = $mob->getLocation()->yaw;
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-
-    // ✅ 대각선 이동 중이면 점프하지 않음
-    if (abs($directionVector->getX()) === abs($directionVector->getZ())) {
-        return;
-    }
 
     // ✅ 앞으로 이동할 블록 위치 계산 (앞쪽 1~2칸 감지)
     for ($i = 1; $i <= 2; $i++) {
@@ -149,8 +146,8 @@ class MobAITask extends Task {
         $blockHeight = (int)floor($blockInFront->getPosition()->getY());
         $heightDiff = $blockHeight - $currentHeight;
 
-        // ✅ 높이 차이가 0.5 이상일 때만 점프 수행 (불필요한 점프 방지)
-        if ($heightDiff >= 0.5 && ($recentlyLanded || $this->isClimbable($blockInFront)) && $blockAboveInFront->isTransparent()) {
+        // ✅ 높이 차이가 `0.25 이상`일 때 점프 수행 (더 민감하게 반응)
+        if ($heightDiff >= 0.25 && ($this->isClimbable($blockInFront) || $blockAboveInFront->isTransparent())) {
             $this->jump($mob, $heightDiff);
             $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
             return;
@@ -163,12 +160,12 @@ class MobAITask extends Task {
         return;
     }
 
-    $baseForce = 0.52;
+    $baseForce = 0.55;
     $jumpForce = $baseForce + ($heightDiff * 0.2);
-    $jumpForce = min($jumpForce, 0.65); // ✅ 최대 점프 높이 제한
+    $jumpForce = min($jumpForce, 0.75); // ✅ 최대 점프 높이 증가
 
     $direction = $mob->getDirectionVector();
-    $jumpBoost = 0.04; // ✅ 이동이 너무 튀지 않도록 조정
+    $jumpBoost = 0.06; // ✅ X/Z 이동을 더 부드럽게 만듦
 
     $mob->setMotion(new Vector3(
         $mob->getMotion()->x + ($direction->x * $jumpBoost),
@@ -186,6 +183,6 @@ class MobAITask extends Task {
     ];
     
     // ✅ 계단, 반블록, 눈 등 낮은 블록도 고려
-    return in_array($block->getName(), $climbableBlocks);
+    return in_array($block->getName(), $climbableBlocks) || !$block->isTransparent();
 }
 }
