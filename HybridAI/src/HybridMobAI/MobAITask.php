@@ -40,7 +40,7 @@ class MobAITask extends Task {
     private function handleMobAI(Zombie $mob): void {
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
-            $this->moveToPlayer($mob, $nearestPlayer);
+            $this->usePathfinder($mob, $nearestPlayer);
         } else {
             $this->moveRandomly($mob);
         }
@@ -74,29 +74,15 @@ class MobAITask extends Task {
         return $nearestPlayer;
     }
 
-    private function moveToPlayer(Zombie $mob, Player $player): void {
-        $mobPos = $mob->getPosition();
-        $playerPos = $player->getPosition();
+    private function usePathfinder(Zombie $mob, Player $player): void {
+        $start = $mob->getPosition();
+        $goal = $player->getPosition();
+        $pathfinderTask = new PathfinderTask($start->x, $start->y, $start->z, $goal->x, $goal->y, $goal->z, $mob->getId(), $this->algorithm, $mob->getWorld()->getFolderName());
 
-        $distance = $mobPos->distance($playerPos);
-        $speed = 0.23;
-        if ($distance < 5) $speed *= $distance / 5;
-
-        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
-        $currentMotion = $mob->getMotion();
-
-        $inertiaFactor = ($distance < 3) ? 0.1 : 0.2;
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
-            $currentMotion->y,
-            ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
-        );
-
-        $mob->setMotion($blendedMotion);
-        $mob->lookAt($playerPos);
+        $this->plugin->getServer()->getAsyncPool()->submitTask($pathfinderTask);
     }
 
-    private function moveRandomly(Living $mob): void {
+    public function moveRandomly(Living $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
             new Vector3(0, 0, 1), new Vector3(0, 0, -1)
@@ -133,12 +119,6 @@ class MobAITask extends Task {
         if ($this->isClimbable($blockInFront) && $blockAboveInFront->isTransparent()) {
             $this->jump($mob, 1.0);
         }
-
-        // ✅ 계단 감지 및 자동 등반 추가
-        $stairBlock = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
-        if ($this->isStair($stairBlock)) {
-            $this->jump($mob, 0.5);
-        }
     }
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
@@ -168,14 +148,5 @@ class MobAITask extends Task {
 
     private function isClimbable(Block $block): bool {
         return $block->isSolid();
-    }
-
-    private function isStair(Block $block): bool {
-        $stairBlocks = [
-            "pocketmine:block:stairs",
-            "pocketmine:block:stone_stairs",
-            "pocketmine:block:wooden_stairs"
-        ];
-        return in_array($block->getName(), $stairBlocks);
     }
 }
