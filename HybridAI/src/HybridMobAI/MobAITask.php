@@ -41,59 +41,59 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-        $nearestPlayer = $this->findNearestPlayer($mob);
+    $nearestPlayer = $this->findNearestPlayer($mob);
 
-        if ($nearestPlayer !== null) {
-            if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
-                $this->lastPathUpdate[$mob->getId()] = microtime(true);
+    if ($nearestPlayer !== null) {
+        if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
+            $this->lastPathUpdate[$mob->getId()] = microtime(true);
 
-                // *** 핵심: 콜백 함수 정의 및 $this 복사 ***
-                $plugin = $this->plugin; // $this->plugin 복사
-                $mobAITaskInstance = $this; // $this 복사 (전체 인스턴스)
-                $mobId = $mob->getId();
-                $worldName = $mob->getWorld()->getFolderName();
+            // *** 핵심: 콜백 함수 정의 및 $this 복사 ***
+            $plugin = $this->plugin;
+            $mobAITaskInstance = $this;
+            $mobId = $mob->getId();
+            $worldName = $mob->getWorld()->getFolderName();
+            $algorithm = $this->algorithm; // 알고리즘 복사
 
+            $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName, $algorithm) {
+                $server = Server::getInstance();
+                $world = $server->getWorldManager()->getWorldByName($worldName);
 
-                $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName) {
-                    $server = Server::getInstance();
-                    $world = $server->getWorldManager()->getWorldByName($worldName);
+                if ($world === null) {
+                    $plugin->getLogger()->warning("World {$worldName} not found in callback!");
+                    return;
+                }
 
-                    if ($world === null) {
-                        $plugin->getLogger()->warning("World {$worldName} not found in callback!");
-                        return; // 중요: 월드가 없으면 리턴 필수!
+                $entity = $world->getEntity($mobId);
+
+                if ($entity instanceof Creature) {
+                    if ($path === null) {
+                        $mobAITaskInstance->moveRandomly($entity);
+                    } else {
+                        $mobAITaskInstance->path[$entity->getId()] = $path;
                     }
+                }
+            };
 
-                    $entity = $world->getEntity($mobId); // 메인 스레드에서 엔티티 가져오기
+            $task = new PathfinderTask(
+                $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
+                $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
+                $mob->getId(), $algorithm, $worldName, $callback // 복사된 알고리즘과 월드 이름 전달
+            );
 
-                    if ($entity instanceof Creature) { // 엔티티가 유효한지 확인
-                        if ($path === null) {
-                            $mobAITaskInstance->moveRandomly($entity); // 복사된 $this 사용
-                        } else {
-                            $mobAITaskInstance->path[$entity->getId()] = $path; // 복사된 $this 사용
-                        }
-                    }
-                };
-
-                $task = new PathfinderTask(
-                    $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
-                    $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
-                    $mob->getId(), $this->algorithm, $mob->getWorld()->getFolderName(), $callback
-                );
-
-                $this->plugin->getServer()->getAsyncPool()->submitTask($task);
-                $this->pathfindingTasks[$mob->getId()] = $task;
-            }
-
-            if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
-                $this->followPath($mob);
-            }
-        } else {
-            $this->moveRandomly($mob);
+            $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+            $this->pathfindingTasks[$mob->getId()] = $task;
         }
 
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
+        if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
+            $this->followPath($mob);
+        }
+    } else {
+        $this->moveRandomly($mob);
     }
+
+    $this->detectLanding($mob);
+    $this->checkForObstaclesAndJump($mob);
+}
 
 
 
