@@ -26,40 +26,40 @@ class Pathfinder {
 
     /** ✅ A* 알고리즘 최적화 */
     private function findPathAStar(Vector3 $start, Vector3 $goal): ?array {
-        $openList = new SplPriorityQueue();
-        $closedList = [];
-        $startNode = new Node($start, null, 0, $this->heuristic($start, $goal));
-        $openList->insert($startNode, -$startNode->fCost());
+    $openList = new SplPriorityQueue();
+    $closedList = [];
+    $startNode = new Node($start, null, 0, $this->heuristic($start, $goal));
+    $openList->insert($startNode, -$startNode->fCost());
+    
+    $maxNodes = 1000; // ✅ 최대 노드 탐색 제한 (서버 과부하 방지)
+    $nodeCount = 0;
 
-        $iterations = 0;
-        while (!$openList->isEmpty()) {
-            if (++$iterations > self::MAX_ITERATIONS) {
-                return null; // ✅ 무한 루프 방지
-            }
-
-            /** @var Node $current */
-            $current = $openList->extract();
-
-            if ($this->isSamePosition($current->position, $goal)) {
-                return $this->reconstructPath($current);
-            }
-
-            $closedList[$this->getPositionHash($current->position)] = true;
-
-            foreach ($this->getNeighbors($current->position) as $neighbor) {
-                $neighborHash = $this->getPositionHash($neighbor);
-                if (isset($closedList[$neighborHash])) {
-                    continue;
-                }
-
-                $gCost = $current->gCost + $this->distance($current->position, $neighbor);
-                $neighborNode = new Node($neighbor, $current, $gCost, $this->heuristic($neighbor, $goal));
-                $openList->insert($neighborNode, -$neighborNode->fCost());
-            }
+    while (!$openList->isEmpty()) {
+        if ($nodeCount++ > $maxNodes) {
+            return null; // ✅ 노드 수 초과하면 경로 찾기 실패
         }
 
-        return null;
+        $current = $openList->extract();
+        if ($this->isSamePosition($current->position, $goal)) {
+            return $this->reconstructPath($current);
+        }
+
+        $closedList[$this->getPositionHash($current->position)] = true;
+
+        foreach ($this->getNeighbors($current->position) as $neighbor) {
+            $neighborHash = $this->getPositionHash($neighbor);
+            if (isset($closedList[$neighborHash])) {
+                continue;
+            }
+
+            $gCost = $current->gCost + $this->distance($current->position, $neighbor);
+            $neighborNode = new Node($neighbor, $current, $gCost, $this->heuristic($neighbor, $goal));
+            $openList->insert($neighborNode, -$neighborNode->fCost());
+        }
     }
+
+    return null;
+}
 
     /** ✅ BFS 최적화 */
     private function findPathBFS(Vector3 $start, Vector3 $goal): ?array {
