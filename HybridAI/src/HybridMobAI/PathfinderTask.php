@@ -54,24 +54,27 @@ class PathfinderTask extends AsyncTask {
         }
 
         $path = $this->getResult();
+        $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
 
-        if ($path === null) { // ✅ 경로를 찾지 못한 경우 기본 AI 이동 실행
-            $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
-            if ($plugin instanceof Main) {
-                $mobAITask = $plugin->getMobAITask();
-                if ($mobAITask !== null) {
-                    $mobAITask->moveToPlayer($entity, $this->findNearestPlayer($entity));
+        if ($plugin instanceof Main) {
+            $mobAITask = $plugin->getMobAITask();
+
+            if ($path === null) { // ✅ 경로를 찾지 못하면 기본 AI 이동 실행
+                $nearestPlayer = $this->findNearestPlayer($entity);
+                if ($nearestPlayer !== null) {
+                    $mobAITask->moveToPlayer($entity, $nearestPlayer);
+                } else {
+                    $mobAITask->moveRandomly($entity);
                 }
-            }
-        } else {
-            if ($entity instanceof Creature) {
-                $nextStep = $path[1] ?? null;
-                if ($nextStep !== null) {
-                    $entity->lookAt($nextStep);
-                    $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.2);
-
-                    if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
-                        $entity->setMotion($motion);
+            } else { // ✅ 정상적으로 경로를 찾았을 경우 이동
+                if ($entity instanceof Creature) {
+                    $nextStep = $path[1] ?? null;
+                    if ($nextStep !== null) {
+                        $entity->lookAt($nextStep);
+                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.2);
+                        if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
+                            $entity->setMotion($motion);
+                        }
                     }
                 }
             }
