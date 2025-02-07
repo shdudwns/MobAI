@@ -65,8 +65,10 @@ class MobAITask extends Task {
         $task = new PathfinderTask(
             $start->getX(), $start->getY(), $start->getZ(),
             $goal->getX(), $goal->getY(), $goal->getZ(),
-            $mobId, "AStar", $worldName
-        );
+            $mobId, "AStar", $worldName,  // Existing arguments
+            $callback // The crucial addition: pass the callback!
+            );
+
 
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
 
