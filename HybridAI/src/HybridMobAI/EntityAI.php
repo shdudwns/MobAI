@@ -48,4 +48,14 @@ public function moveAlongPath(Living $mob, array $path): void {
         $mob->lookAt($nextPosition);
     }
 }
+    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
+    $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
+    Server::getInstance()->getAsyncPool()->submitTask($task);
+
+    Server::getInstance()->getAsyncPool()->addWorkerStartHook(function() use ($task, $callback) {
+        if (($path = $task->getResult()) !== null) {
+            $callback($path);
+        }
+    });
+}
 }
