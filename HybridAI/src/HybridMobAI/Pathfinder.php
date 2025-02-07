@@ -14,40 +14,47 @@ class Pathfinder {
     }
 
     public function findPath(Vector3 $start, Vector3 $goal): ?array {
-        $openSet = [$start];
-        $cameFrom = [];
-        $gScore = [spl_object_hash($start) => 0];
-        $fScore = [spl_object_hash($start) => $this->heuristic($start, $goal)];
+    $openSet = [$start];
+    $cameFrom = [];
+    $gScore = [self::vectorToStr($start) => 0];
+    $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
 
-        while (!empty($openSet)) {
-            usort($openSet, function($a, $b) use ($fScore) {
-                return $fScore[spl_object_hash($a)] <=> $fScore[spl_object_hash($b)];
-            });
+    $maxDepth = 500; // 탐색 깊이 제한
+    $depth = 0;
 
-            $current = array_shift($openSet);
+    while (!empty($openSet) && $depth < $maxDepth) {
+        usort($openSet, fn($a, $b) => $fScore[self::vectorToStr($a)] <=> $fScore[self::vectorToStr($b)]);
+        $current = array_shift($openSet);
+        $currentKey = self::vectorToStr($current);
 
-            if ($current->equals($goal)) {
-                return $this->reconstructPath($cameFrom, $current);
-            }
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
+        }
 
-            foreach ($this->getNeighbors($current) as $neighbor) {
-                $tentativeGScore = $gScore[spl_object_hash($current)] + 1;
-                $neighborHash = spl_object_hash($neighbor);
+        foreach ($this->getNeighbors($current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $tentativeGScore = $gScore[$currentKey] + 1;
 
-                if (!isset($gScore[$neighborHash]) || $tentativeGScore < $gScore[$neighborHash]) {
-                    $cameFrom[$neighborHash] = $current;
-                    $gScore[$neighborHash] = $tentativeGScore;
-                    $fScore[$neighborHash] = $gScore[$neighborHash] + $this->heuristic($neighbor, $goal);
+            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $gScore[$neighborKey] = $tentativeGScore;
+                $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
 
-                    if (!in_array($neighbor, $openSet, true)) {
-                        $openSet[] = $neighbor;
-                    }
+                if (!in_array($neighbor, $openSet, true)) {
+                    $openSet[] = $neighbor;
                 }
             }
         }
 
-        return null;
+        $depth++;
     }
+
+    return null; // 최적 경로를 찾지 못한 경우
+}
+
+private static function vectorToStr(Vector3 $vector): string {
+    return "{$vector->x}:{$vector->y}:{$vector->z}";
+}
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
         return abs($a->x - $b->x) + abs($a->y - $b->y) + abs($a->z - $b->z);
