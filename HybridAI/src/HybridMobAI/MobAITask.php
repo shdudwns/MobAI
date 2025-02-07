@@ -16,11 +16,13 @@ class MobAITask extends Task {
     private array $hasLanded = [];
     private array $landedTick = [];
     private int $changeDirectionTick = 0;
-    private EntityAI $entityAI;
+    private bool $aiEnabled;
+    private string $algorithm;
 
     public function __construct(Main $plugin) {
     $this->plugin = $plugin;
-    $this->entityAI = new EntityAI();
+    $this->aiEnabled = $aiEnabled;
+    $this->algorithm = $algorithm;
     }
 
     public function onRun(): void {
@@ -38,16 +40,8 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-    if ($this->entityAI->isEnabled()) {
-        // EntityAI가 활성화되었을 때
-        if (($player = $this->findNearestPlayer($mob)) !== null) {
-            $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition());
-            if ($path !== null) {
-                $this->entityAI->moveAlongPath($mob);
-            }
-        }
-    } else {
-        // EntityAI가 비활성화되었을 때
+    if (!$this->aiEnabled) {
+        // AI 비활성화 시 기본 AI 실행
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $this->moveToPlayer($mob, $nearestPlayer);
@@ -55,10 +49,35 @@ class MobAITask extends Task {
             $this->moveRandomly($mob);
         }
 
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
+        $this->detectLanding($mob); // 필요하다면
+        $this->checkForObstaclesAndJump($mob); // 필요하다면
+        return; // 기본 AI 실행 후 함수 종료
+    }
+
+    // AI 활성화 시 EntityAI 실행
+    if (($player = $this->findNearestPlayer($mob)) !== null) {
+        switch ($this->algorithm) {
+            case "A*":
+                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "A*");
+                break;
+            case "Dijkstra":
+                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "Dijkstra");
+                break;
+            case "Greedy":
+                $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "Greedy");
+                break;
+            default:
+                $path = null;
+        }
+
+        if ($path !== null) {
+            $this->entityAI->moveAlongPath($mob);
+        }
+    } else {
+        $this->moveRandomly($mob);
     }
 }
+
 
 
     private function detectLanding(Living $mob): void {
