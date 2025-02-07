@@ -57,6 +57,15 @@ class MobAITask extends Task {
         $this->hasLanded[$mobId] = $isOnGround;
     }
 
+    private function stepUp(Living $mob, float $heightDiff): void {
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // 1블록 이하 높이면 계단처럼 이동
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x,
+            0.35, // 계단을 오를 때 자연스럽게 상승
+            $mob->getMotion()->z
+        ));
+    }
+}
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
         $nearestPlayer = null;
@@ -198,16 +207,6 @@ private function changeDirection(Living $mob): void {
             $mob->getMotion()->x * 0.5 + ($direction->x * $horizontalSpeed),
             $jumpForce,
             $mob->getMotion()->z * 0.5 + ($direction->z * $horizontalSpeed)
-        ));
-    }
-}
-
-    private function stepUp(Living $mob, float $heightDiff): void {
-    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // 1블록 이하 높이면 계단처럼 이동
-        $mob->setMotion(new Vector3(
-            $mob->getMotion()->x,
-            0.35, // 계단을 오를 때 자연스럽게 상승
-            $mob->getMotion()->z
         ));
     }
 }
