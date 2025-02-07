@@ -13,7 +13,7 @@ class Pathfinder {
         $this->world = $world;
     }
 
-    public function findPath(Vector3 $start, Vector3 $goal): ?array {
+    public function findPathAStar(Vector3 $start, Vector3 $goal): ?array {
     $openSet = [$start];
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
