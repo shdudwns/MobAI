@@ -75,12 +75,18 @@ class MobAITask extends Task {
     }
 
     private function usePathfinder(Zombie $mob, Player $player): void {
-        $start = $mob->getPosition();
-        $goal = $player->getPosition();
-        $pathfinderTask = new PathfinderTask($start->x, $start->y, $start->z, $goal->x, $goal->y, $goal->z, $mob->getId(), $this->algorithm, $mob->getWorld()->getFolderName());
+    $start = $mob->getPosition();
+    $goal = $player->getPosition();
+    $worldName = $mob->getWorld()->getFolderName();
 
-        $this->plugin->getServer()->getAsyncPool()->submitTask($pathfinderTask);
-    }
+    $pathfinderTask = new PathfinderTask(
+        $start->x, $start->y, $start->z,
+        $goal->x, $goal->y, $goal->z,
+        $mob->getId(), $this->algorithm, $worldName
+    );
+
+    $this->plugin->getServer()->getAsyncPool()->submitTask($pathfinderTask);
+}
 
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
