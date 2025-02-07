@@ -202,10 +202,9 @@ class PathfinderTask extends AsyncTask {
     }
 
     public function onRun(): void {
-        // ✅ 비동기 경로 탐색 로직 수행
         $start = $this->parseVector($this->startPos);
         $goal = $this->parseVector($this->goalPos);
-        
+
         $pathfinder = new Pathfinder();
         $path = match ($this->algorithm) {
             "A*" => $pathfinder->findPathAStar($start, $goal),
