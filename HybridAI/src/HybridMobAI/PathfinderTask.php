@@ -51,7 +51,7 @@ class PathfinderTask extends AsyncTask {
         $path = $this->getResult();
 
         if (empty($path)) {
-            if ($entity instanceof Creature) {
+            if ($entity instanceof Zombie) {
                 /** ✅ Main 클래스에서 MobAITask 가져오기 */
                 $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
                 if ($plugin instanceof Main) {
@@ -62,7 +62,7 @@ class PathfinderTask extends AsyncTask {
                 }
             }
         } else {
-            if ($entity instanceof Creature) {
+            if ($entity instanceof Zombie) {
                 $nextStep = $path[1] ?? null;
                 if ($nextStep !== null) {
                     $entity->lookAt($nextStep);
