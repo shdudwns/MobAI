@@ -13,6 +13,7 @@ class PathfinderTask extends AsyncTask {
     private int $mobId;
     private string $algorithm, $worldName;
     private $callback; // 콜백 함수 저장
+    private Pathfinder $pathfinder;
 
     public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName, callable $callback) {
         $this->startX = $startX;
@@ -25,14 +26,13 @@ class PathfinderTask extends AsyncTask {
         $this->algorithm = $algorithm;
         $this->worldName = $worldName;
         $this->callback = $callback; // 콜백 함수 초기화
+        $this->pathfinder = $pathfinder;
     }
 
     public function onRun(): void {
-        $pathfinder = new Pathfinder();
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
-
+        $path = $this->pathfinder->findPath($start, $goal, $this->algorithm);
         if (empty($path)) {
             $this->setResult(null);
         } else {
