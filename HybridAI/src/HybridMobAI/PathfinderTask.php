@@ -55,19 +55,10 @@ class PathfinderTask extends AsyncTask {
             $mobAITask = $plugin->getMobAITask();
 
             if ($path === null) {
-                // ✅ 경로를 찾지 못하면 랜덤 이동 실행
                 $mobAITask->moveRandomly($entity);
             } else {
-                // ✅ 정상적으로 경로를 찾았을 경우 이동
                 if ($entity instanceof Creature) {
-                    $nextStep = $path[1] ?? null;
-                    if ($nextStep !== null) {
-                        $entity->lookAt($nextStep);
-                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.15);
-                        if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
-                            $entity->setMotion($motion);
-                        }
-                    }
+                    $mobAITask->setPath($this->mobId, $path); // MobAITask에 경로 설정
                 }
             }
         }
