@@ -12,14 +12,9 @@ class EntityAI {
     private array $path = []; // A* 경로
     private ?Vector3 $target = null; // 목표 위치
     private array $entityPaths = [];
-    private Main $plugin;
     
     public function setEnabled(bool $enabled): void {
         $this->enabled = $enabled;
-    }
-
-    public function __construct(Main $plugin) { // 생성자에 Main 플러그인 인스턴스 인자로 추가
-        $this->plugin = $plugin; 
     }
 
     public function isEnabled(): bool {
@@ -60,10 +55,10 @@ class EntityAI {
 
         // ✅ PathfinderTask 생성자에 올바른 인자 전달
         $task = new PathfinderTask(
-            $world->getFolderName(), // 월드 이름
+            $world->getFolderName(), // 월드 이름 (string)
             $start,                 // 시작 좌표 (Vector3)
             $goal,                  // 목표 좌표 (Vector3)
-            $algorithm              // 알고리즘
+            $algorithm              // 알고리즘 (string)
         );
         $task->callback = $callback;
         Server::getInstance()->getAsyncPool()->submitTask($task);
