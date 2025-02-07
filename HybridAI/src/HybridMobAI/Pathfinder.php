@@ -19,7 +19,7 @@ class Pathfinder {
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
 
-    $maxDepth = 500; // 탐색 깊이 제한
+    $maxDepth = 500;
     $depth = 0;
 
     while (!empty($openSet) && $depth < $maxDepth) {
@@ -49,9 +49,12 @@ class Pathfinder {
         $depth++;
     }
 
-    return null; // 최적 경로를 찾지 못한 경우
+    return null;
 }
 
+private static function vectorToStr(Vector3 $vector): string {
+    return "{$vector->x}:{$vector->y}:{$vector->z}";
+}
 public function findPathDijkstra(Vector3 $start, Vector3 $goal): ?array {
     $openSet = [$start];
     $cameFrom = [];
@@ -144,9 +147,6 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
         }
     }
     return null;
-}
-private static function vectorToStr(Vector3 $vector): string {
-    return "{$vector->x}:{$vector->y}:{$vector->z}";
 }
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
