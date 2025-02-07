@@ -202,8 +202,37 @@ private function moveRandomly(Living $mob): void {
     }
 }
 private function changeDirection(Living $mob): void {
-    $randomYaw = mt_rand(0, 360); // 무작위 회전
-    $mob->setRotation($randomYaw, 0);
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = $mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $frontVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+    $frontBlockX = (int)floor($position->x + $frontVector->x);
+    $frontBlockY = (int)$position->y;
+    $frontBlockZ = (int)floor($position->z + $frontVector->z);
+
+    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+
+    // ✅ 정면이 막혀있을 때만 방향 변경
+    if ($frontBlock->isSolid()) {
+        $attempts = 0;
+
+        do {
+            $randomYaw = mt_rand(0, 360);
+            $direction2D = VectorMath::getDirection2D($randomYaw);
+            $newDirection = new Vector3($direction2D->x, 0, $direction2D->y);
+
+            $newBlockX = (int)floor($position->x + $newDirection->x);
+            $newBlockZ = (int)floor($position->z + $newDirection->z);
+            $newBlock = $world->getBlockAt($newBlockX, $frontBlockY, $newBlockZ);
+
+            $attempts++;
+        } while ($newBlock->isSolid() && $attempts < 10);
+
+        // ✅ 이동할 수 있는 방향이 발견되면 방향 변경
+        $mob->setRotation($randomYaw, 0);
+    }
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
