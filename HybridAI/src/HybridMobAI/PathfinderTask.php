@@ -33,7 +33,7 @@ class PathfinderTask extends AsyncTask {
         $path = $pathfinder->findPath($start, $goal, $this->algorithm);
 
         if (empty($path)) {
-            $this->setResult(null); // ✅ 실패하면 null 반환
+            $this->setResult(null);
         } else {
             $this->setResult($path);
         }
@@ -43,15 +43,10 @@ class PathfinderTask extends AsyncTask {
         $server = Server::getInstance();
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
 
-        if ($world === null) {
-            return;
-        }
+        if ($world === null) return;
 
         $entity = $world->getEntity($this->mobId);
-
-        if ($entity === null || !$entity->isAlive()) {
-            return;
-        }
+        if ($entity === null || !$entity->isAlive()) return;
 
         $path = $this->getResult();
         $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
@@ -59,19 +54,16 @@ class PathfinderTask extends AsyncTask {
         if ($plugin instanceof Main) {
             $mobAITask = $plugin->getMobAITask();
 
-            if ($path === null) { // ✅ 경로를 찾지 못하면 기본 AI 이동 실행
-                $nearestPlayer = $this->findNearestPlayer($entity);
-                if ($nearestPlayer !== null) {
-                    $mobAITask->moveToPlayer($entity, $nearestPlayer);
-                } else {
-                    $mobAITask->moveRandomly($entity);
-                }
-            } else { // ✅ 정상적으로 경로를 찾았을 경우 이동
+            if ($path === null) {
+                // ✅ 경로를 찾지 못하면 랜덤 이동 실행
+                $mobAITask->moveRandomly($entity);
+            } else {
+                // ✅ 정상적으로 경로를 찾았을 경우 이동
                 if ($entity instanceof Creature) {
                     $nextStep = $path[1] ?? null;
                     if ($nextStep !== null) {
                         $entity->lookAt($nextStep);
-                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.2);
+                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.15);
                         if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
                             $entity->setMotion($motion);
                         }
@@ -79,20 +71,5 @@ class PathfinderTask extends AsyncTask {
                 }
             }
         }
-    }
-
-    private function findNearestPlayer(Creature $mob): ?Player {
-        $closestDistance = PHP_FLOAT_MAX;
-        $nearestPlayer = null;
-
-        foreach ($mob->getWorld()->getPlayers() as $player) {
-            $distance = $mob->getPosition()->distance($player->getPosition());
-            if ($distance < $closestDistance) {
-                $closestDistance = $distance;
-                $nearestPlayer = $player;
-            }
-        }
-
-        return $nearestPlayer;
     }
 }
