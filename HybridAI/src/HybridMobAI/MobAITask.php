@@ -125,13 +125,19 @@ class MobAITask extends Task {
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontPosition = $position->addVector($directionVector->multiply(1.1)); // 🔹 블록에 더 가까이 접근 후 점프
+        $frontPosition = $position->add($directionVector->multiply(1.1));
 
-        $blockInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y, (int) $frontPosition->z);
-        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y + 1, (int) $frontPosition->z);
+        $blockInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y, (int)$frontPosition->z);
+        $blockAboveInFront = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y + 1, (int)$frontPosition->z);
 
-        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent()) {
+        if ($this->isClimbable($blockInFront) && $blockAboveInFront->isTransparent()) {
             $this->jump($mob, 1.0);
+        }
+
+        // ✅ 계단 감지 및 자동 등반 추가
+        $stairBlock = $world->getBlockAt((int)$frontPosition->x, (int)$frontPosition->y - 1, (int)$frontPosition->z);
+        if ($this->isStair($stairBlock)) {
+            $this->jump($mob, 0.5);
         }
     }
 
@@ -161,12 +167,15 @@ class MobAITask extends Task {
     }
 
     private function isClimbable(Block $block): bool {
-        $climbableBlocks = [
-            "pocketmine:block:snow_layer",
-            "pocketmine:block:fence",
-            "pocketmine:block:glass",
-            "pocketmine:block:frame"
+        return $block->isSolid();
+    }
+
+    private function isStair(Block $block): bool {
+        $stairBlocks = [
+            "pocketmine:block:stairs",
+            "pocketmine:block:stone_stairs",
+            "pocketmine:block:wooden_stairs"
         ];
-        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+        return in_array($block->getName(), $stairBlocks);
     }
 }
