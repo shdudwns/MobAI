@@ -211,45 +211,7 @@ private function moveRandomly(Living $mob): void {
     $mob->setMotion($blendedMotion);
 }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $currentTick = Server::getInstance()->getTick();
-    $mobId = $mob->getId();
-
-    if (isset($this->landedTick[$mobId]) && $currentTick - $this->landedTick[$mobId] < 5) return;
-
-    $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-
-    // 바로 앞 블록만 검사 (옆 블록 무시)
-    $frontBlockX = (int)floor($position->x + $directionVector->x);
-    $frontBlockY = (int)$position->y;
-    $frontBlockZ = (int)floor($position->z + $directionVector->z);
-
-    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-    $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
-
-    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
-
-    // 정면 블록만 점프 처리 (옆 블록 무시)
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1.5 && $heightDiff > 0) {
-            $this->jump($mob, $heightDiff);
-            $this->landedTick[$mobId] = $currentTick;
-            return;
-        }
-    }
-        // 계단 감지 추가 (Slab, Stairs)
-        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.2) {
-                $this->stepUp($mob, $heightDiff);
-                return;
-    }
-}
-}
+    
     private function avoidFalling(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
