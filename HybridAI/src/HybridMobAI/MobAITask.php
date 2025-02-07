@@ -252,10 +252,13 @@ private function changeDirection(Living $mob): void {
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
 
-    // ✅ 정면이 막혀있을 때만 방향 변경
+    // ✅ 계단이면 방향을 바꾸지 않고 그대로 진행
+    if ($this->isStairOrSlab($frontBlock)) {
+        return;
+    }
+
     if ($frontBlock->isSolid()) {
         $attempts = 0;
-
         do {
             $randomYaw = mt_rand(0, 360);
             $direction2D = VectorMath::getDirection2D($randomYaw);
@@ -268,7 +271,6 @@ private function changeDirection(Living $mob): void {
             $attempts++;
         } while ($newBlock->isSolid() && $attempts < 10);
 
-        // ✅ 이동할 수 있는 방향이 발견되면 방향 변경
         $mob->setRotation($randomYaw, 0);
     }
 }
