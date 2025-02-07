@@ -125,7 +125,7 @@ class MobAITask extends Task {
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    for ($i = 0; $i <= 1; $i++) {
+    for ($i = 1; $i <= 2; $i++) { // 2블록 거리까지 감지
         $frontBlockX = (int)floor($position->x + $directionVector->x * $i);
         $frontBlockY = (int)$position->y;
         $frontBlockZ = (int)floor($position->z + $directionVector->z * $i);
@@ -136,45 +136,48 @@ class MobAITask extends Task {
 
         $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-        // 블록 아래가 투명한지 확인하여 점프 방지
+        // 블록 아래가 투명하면 점프하지 않음
         if ($frontBlockBelow->isTransparent() && $heightDiff <= 0) {
-            return; // 블록 아래가 투명하면 점프하지 않음
+            return;
         }
 
-        // 모서리 주변 인식 개선
+        // 작은 높이 차이는 무시 (부드러운 이동)
         if (abs($heightDiff) < 0.5) {
-            continue; // 모서리에서 점프하지 않도록
+            continue;
         }
 
-        // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
+        // 점프 가능한 블록인지 확인
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
             if ($heightDiff <= 1.5 && $heightDiff > 0) {
                 $this->jump($mob, $heightDiff);
-                $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
+                $this->landedTick[$mobId] = $currentTick;
                 return;
             }
         }
 
-        // 계단 로직 추가 (ID 직접 사용)
-        if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
-            // 계단 위에 있는지 확인하고 연속 점프
-            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
-                // 계단의 높이를 고려하여 점프
-                $this->stepUp($mob);
-                return;
-            }
-        }
-
-        // 일반 블록의 경우 높이 차가 1.5 이상일 경우 점프
-        if ($heightDiff > 1.5) {
-            return; // 너무 높은 블록은 점프하지 않음
+        // 벽 감지 후 방향 변경
+        if ($frontBlock->isSolid() && $heightDiff > 1.5) {
+            $this->changeDirection($mob);
+            return;
         }
     }
 }
+
+    private function avoidFalling(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    
+    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    
+    if ($blockBelow->isTransparent()) {
+        $this->changeDirection($mob);
+    }
 }
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // 낙하 속도 리셋
+private function changeDirection(Living $mob): void {
+    $randomYaw = mt_rand(0, 360); // 무작위 회전
+    $mob->teleport($mob->getLocation()->setYaw($randomYaw));
+}    public function jump(Living $mob, float $heightDiff = 1.0): void {
+    // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
     if ($mob->getMotion()->y < -0.08) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
@@ -183,32 +186,33 @@ class MobAITask extends Task {
         ));
     }
 
-    $baseForce = 0.52;
-    $jumpForce = $baseForce + ($heightDiff * 0.15);
-    $jumpForce = min($jumpForce, 0.65);
+    // 기본 점프 힘 설정
+    $baseJumpForce = 0.42; // 기본 점프력 (마인크래프트 기본 점프는 0.42)
+    $extraJumpBoost = min(0.1 * $heightDiff, 0.3); // 높이에 따라 추가 점프력 조정
 
-    if (($mob->isOnGround() || $mob->getMotion()->y <= 0.1)) {
+    $jumpForce = $baseJumpForce + $extraJumpBoost;
+    
+    if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
         $direction = $mob->getDirectionVector();
-        $jumpBoost = 0.08;
+        $horizontalSpeed = 0.1; // 수평 이동 속도 추가
 
-        // 점프 시 수평 속도를 줄여서 너무 빠르지 않도록 조정
         $mob->setMotion(new Vector3(
-            $mob->getMotion()->x * 0.3 + ($direction->x * $jumpBoost),
+            $mob->getMotion()->x * 0.5 + ($direction->x * $horizontalSpeed),
             $jumpForce,
-            $mob->getMotion()->z * 0.3 + ($direction->z * $jumpBoost)
+            $mob->getMotion()->z * 0.5 + ($direction->z * $horizontalSpeed)
         ));
     }
 }
 
     private function stepUp(Living $mob): void {
-    // 계단을 올라가는 로직
     if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
-            0.4, // 계단 위로 올라갈 때의 Y 방향 속도
+            0.35, // 계단을 오를 때 자연스럽게 상승
             $mob->getMotion()->z
         ));
     }
+}
 }
     private function isClimbable(Block $block): bool {
     $climbableBlocks = [
