@@ -108,16 +108,20 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $frontBlockZ = (int)floor($position->z + $directionVector->z);
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+    $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
+
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
     if ($this->isStairOrSlab($frontBlock)) {
-        // ✅ 계단이면 방향을 바꾸지 않고 stepUp 실행
+        // ✅ 계단일 경우, stepUp() 실행
         $this->stepUp($mob, $heightDiff);
         return;
     }
 
-    if ($frontBlock->isSolid()) {
-        $this->changeDirection($mob);
+    if ($heightDiff > 0.5 && $heightDiff <= 1.5) {
+        // ✅ 일반 블록(1칸) 점프 실행
+        $this->jump($mob, $heightDiff);
     }
 }
     private function checkFrontBlock(Living $mob): ?Block {
