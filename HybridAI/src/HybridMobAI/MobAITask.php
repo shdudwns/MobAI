@@ -9,6 +9,7 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
+use pocketmine\math\AxisAlignedBB as AABB;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -75,6 +76,15 @@ class MobAITask extends Task {
     $this->detectLanding($mob);
     $this->checkForObstaclesAndJump($mob);
 }
+    private function isCollidingWithBlock(Living $mob, Block $block): bool {
+    $mobAABB = $mob->getBoundingBox();
+    $blockAABB = new AABB(
+        $block->getPosition()->x, $block->getPosition()->y, $block->getPosition()->z,
+        $block->getPosition()->x + 1, $block->getPosition()->y + 1, $block->getPosition()->z + 1
+    );
+
+    return $mobAABB->intersectsWith($blockAABB);
+    }
 
 private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     foreach ($this->algorithmPriority as $algorithm) {
@@ -113,18 +123,18 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    // ✅ 1칸 블록 점프 복구 (먼저 실행)
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1.5 && $heightDiff > 0) {
-            $this->jump($mob, $heightDiff);
+    // ✅ 연속된 계단 감지 후 stepUp() 실행
+    if ($this->isStairOrSlab($frontBlock) || $this->isStairOrSlab($frontBlockBelow)) {
+        if ($frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
             return;
         }
     }
 
-    // ✅ 계단 점프 실행 (1칸 블록 점프 이후)
-    if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1.2) {
-            $this->stepUp($mob, $heightDiff);
+    // ✅ 1칸 블록 점프 실행
+    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+        if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            $this->jump($mob, $heightDiff);
         }
     }
 }
