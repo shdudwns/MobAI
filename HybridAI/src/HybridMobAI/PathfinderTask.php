@@ -42,6 +42,11 @@ class PathfinderTask extends AsyncTask {
     public function onCompletion(): void {
         $server = Server::getInstance();
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
+        // PathfinderTask.php onCompletion() 내부
+        $plugin->getLogger()->info("경로 발견: " . count($path) . "개 스텝");
+        if ($path !== null) {
+            $plugin->getLogger()->debug("첫 번째 스텝: " . $nextStep->__toString());
+        }
 
         if ($world === null) return;
 
