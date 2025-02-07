@@ -15,11 +15,13 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
+    private array $lastPathUpdate = [];
     private string $algorithm;
     
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
+        $this->lastPathUpdate = $lastPathUpdate;
         $this->algorithm = $this->selectAlgorithm();
         $this->plugin->getLogger()->info("🔹 사용 알고리즘: " . $this->algorithm);
     }
@@ -46,7 +48,7 @@ class MobAITask extends Task {
         if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
             $this->lastPathUpdate[$mob->getId()] = microtime(true);
             
-            $plugin->getServer()->getAsyncPool()->submitTask(
+            $this->plugin->getServer()->getAsyncPool()->submitTask(
                 new PathfinderTask(
                     $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                     $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
