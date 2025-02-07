@@ -75,7 +75,6 @@ class MobAITask extends Task {
             }
         }
     }
-}
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
