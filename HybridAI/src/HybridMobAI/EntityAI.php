@@ -20,10 +20,20 @@ class EntityAI {
         return $this->enabled;
     }
 
-    public function findPath(World $world, Vector3 $start, Vector3 $goal): ?array {
-        $pathfinder = new Pathfinder($world);
-        return $pathfinder->findPath($start, $goal);
+    public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
+    $pathfinder = new Pathfinder($world);
+
+    switch ($algorithm) {
+        case "A*":
+            return $pathfinder->findPathAStar($start, $goal);
+        case "Dijkstra":
+            return $pathfinder->findPathDijkstra($start, $goal);
+        case "Greedy":
+            return $pathfinder->findPathGreedy($start, $goal);
+        default:
+            return null;
     }
+}
 
     public function moveAlongPath(Living $mob): void {
         if (!$this->enabled || empty($this->path)) return;
