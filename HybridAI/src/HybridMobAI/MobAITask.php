@@ -17,12 +17,10 @@ class MobAITask extends Task {
     private array $landedTick = [];
     private int $changeDirectionTick = 0;
     private bool $aiEnabled;
-    private string $algorithm;
 
-    public function __construct(Main $plugin) {
+    public function __construct(Main $plugin, bool $aiEnabled) {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
-    $this->algorithm = $algorithm;
     }
 
     public function onRun(): void {
