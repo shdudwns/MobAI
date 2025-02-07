@@ -29,7 +29,18 @@ class PathfinderTask extends AsyncTask {
         $pathfinder = new Pathfinder();
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-        $path = $pathfinder->findPath($start, $goal, $this->algorithm);
+        
+        try {
+            $path = $pathfinder->findPath($start, $goal, $this->algorithm);
+        } catch (\Throwable $e) {
+            $this->setResult([]);
+            return;
+        }
+
+        // ✅ 너무 긴 경로 제한 (최대 10칸)
+        if (is_array($path) && count($path) > 10) {
+            $path = array_slice($path, 0, 10);
+        }
 
         $this->setResult($path);
     }
@@ -39,20 +50,20 @@ class PathfinderTask extends AsyncTask {
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
 
         if ($world === null) {
-            return;
+            return; // ✅ 월드가 없으면 실행 종료
         }
 
         $entity = $world->getEntity($this->mobId);
 
         if ($entity === null || !$entity->isAlive()) {
-            return;
+            return; // ✅ 엔티티가 없거나 죽었으면 실행 중단
         }
 
         $path = $this->getResult();
 
         if (empty($path)) {
+            // ✅ 경로를 찾지 못한 경우 랜덤 이동 실행
             if ($entity instanceof Creature) {
-                /** ✅ Main 클래스에서 MobAITask 가져오기 */
                 $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
                 if ($plugin instanceof Main) {
                     $mobAITask = $plugin->getMobAITask();
