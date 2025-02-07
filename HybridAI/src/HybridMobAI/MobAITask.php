@@ -50,32 +50,30 @@ class MobAITask extends Task {
         } else {
             $this->moveRandomly($mob);
         }
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
-        return;
+    } else {
+        // ✅ AI 활성화 시 경로를 따라 이동
+        if (($player = $this->findNearestPlayer($mob)) !== null) {
+            if ($this->entityAI->hasPath($mob)) {
+                $this->entityAI->moveAlongPath($mob);
+            } else {
+                // 비동기적으로 경로 탐색
+                $this->entityAI->findPathAsync($mob->getWorld(), $mob->getPosition(), $player->getPosition(), function(?array $path) use ($mob) {
+                    if ($path !== null) {
+                        $this->entityAI->setPath($mob, $path);
+                    } else {
+                        // 경로가 없으면 랜덤 이동
+                        $this->moveRandomly($mob);
+                    }
+                });
+            }
+        } else {
+            $this->moveRandomly($mob);
+        }
     }
 
-    // ✅ AI 활성화 시 기존 기본 AI 사용 + 비동기 경로 탐색 적용
-    if (($player = $this->findNearestPlayer($mob)) !== null) {
-        if ($this->entityAI->hasPath($mob)) {
-            // 기존 경로 따라 이동
-            $this->entityAI->moveAlongPath($mob);
-        } else {
-            // 비동기적으로 경로 탐색
-            $this->entityAI->findPathAsync($mob->getWorld(), $mob->getPosition(), $player->getPosition(), function(?array $path) use ($mob) {
-                if ($path !== null) {
-                    $this->entityAI->setPath($mob, $path);
-                } else {
-                    // 경로가 없으면 랜덤 이동
-                    $this->moveRandomly($mob);
-                }
-            });
-        }
-    } else {
-        $this->moveRandomly($mob);
-    }
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
+    // ✅ 항상 점프 및 장애물 감지 적용
+    $this->detectLanding($mob);
+    $this->checkForObstaclesAndJump($mob);
 }
 
 private function findBestPath(Zombie $mob, Vector3 $target): ?array {
@@ -98,7 +96,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $this->hasLanded[$mobId] = $isOnGround;
     }
 
-    private function checkFrontBlock(Living $mob): ?Block {
+    private function checkForObstaclesAndJump(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
@@ -109,20 +107,31 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $frontBlockY = (int)$position->y;
     $frontBlockZ = (int)floor($position->z + $directionVector->z);
 
-    return $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-}
+    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
+    if ($this->isStairOrSlab($frontBlock)) {
+        // ✅ 계단이면 방향을 바꾸지 않고 stepUp 실행
+        $this->stepUp($mob, $heightDiff);
+        return;
+    }
+
+    if ($frontBlock->isSolid()) {
+        $this->changeDirection($mob);
+    }
+}
 private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     return $frontBlock->getPosition()->y + 0.5 - $mob->getPosition()->y;
 }
     
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.15);
 
+        // ✅ 계단 오를 때 XZ 방향 이동 속도도 적용
         $mob->setMotion(new Vector3(
             $direction->x,
-            0.5, // 계단을 오를 때 자연스럽게 상승
+            0.6, // 계단을 오를 때 좀 더 자연스럽게 상승
             $direction->z
         ));
     }
