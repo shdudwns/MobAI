@@ -9,13 +9,14 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
+use pocketmine\entity\Zombie;
 
 class MobAITask extends Task {
     private Main $plugin;
     private int $tickCounter = 0;
-    private array $isJumping = [];
     private array $activePathfinding = [];
     private array $landedTick = [];
+    private array $path = []; // Add this line
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -38,8 +39,15 @@ class MobAITask extends Task {
     private function handleMobAI(Zombie $mob): void {
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
-            if (!isset($this->activePathfinding[$mob->getId()])) {
+            $mobId = $mob->getId();
+            if (!isset($this->activePathfinding[$mobId])) {
                 $this->startPathfinding($mob, $nearestPlayer);
+            } else {
+                // Check if pathfinding is still active. If not, re-pathfind.
+                if (!Server::getInstance()->getAsyncPool()->isTaskRunning($this->activePathfinding[$mobId])) {
+                    unset($this->activePathfinding[$mobId]); // Clean up.
+                    $this->startPathfinding($mob, $nearestPlayer); // Start again.
+                }
             }
         } else {
             $this->moveRandomly($mob);
@@ -53,40 +61,64 @@ class MobAITask extends Task {
         $goal = $player->getPosition();
         $mobId = $mob->getId();
         $worldName = $mob->getWorld()->getFolderName();
-        
-        $this->activePathfinding[$mobId] = true;
+
         $task = new PathfinderTask(
             $start->getX(), $start->getY(), $start->getZ(),
             $goal->getX(), $goal->getY(), $goal->getZ(),
             $mobId, "AStar", $worldName
         );
 
+        $this->activePathfinding[$mobId] = $task->getTaskId(); // Store the task ID.
         $this->plugin->getServer()->getAsyncPool()->submitTask($task);
     }
 
     public function applyPathResult(int $mobId, ?array $path): void {
-        unset($this->activePathfinding[$mobId]);
+        unset($this->activePathfinding[$mobId]); // Remove the pathfinding flag.
         $server = Server::getInstance();
         $mob = null;
 
         foreach ($server->getWorldManager()->getWorlds() as $world) {
             $mob = $world->getEntity($mobId);
-            if ($mob instanceof Zombie) break;
+            if ($mob instanceof Zombie && $mob->isAlive()) break; // Check if the mob is still valid.
         }
 
-        if ($mob === null || !$mob->isAlive()) return;
+        if ($mob === null) return;
 
-        if (!empty($path)) {
-            $nextStep = $path[1] ?? null;
-            if ($nextStep !== null) {
-                $mob->lookAt($nextStep);
-                $motion = $nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.2);
-                $mob->setMotion($motion);
-            }
-        } else {
+        if ($path === null || empty($path)) {
             $this->moveRandomly($mob);
+            return;
+        }
+
+        $this->path[$mobId] = $path; // Store the path.
+        $this->moveAlongPath($mob, $mobId); // Call moveAlongPath.
+    }
+
+    private function moveAlongPath(Zombie $mob, int $mobId): void {
+        if (!isset($this->path[$mobId]) || empty($this->path[$mobId])) {
+            return; // No path to follow.
+        }
+
+        $path = $this->path[$mobId];
+        $nextStep = array_shift($path); // Get the first step and remove it.
+
+        if ($nextStep instanceof Vector3) {
+            $mob->lookAt($nextStep);
+            $motion = $nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.2);
+
+            if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
+                $mob->setMotion($motion);
+            } else {
+                Server::getInstance()->getLogger()->warning("Invalid motion vector (NaN values).");
+            }
+
+            if (empty($path)) {
+                unset($this->path[$mobId]); // Path finished.
+            } else {
+                $this->path[$mobId] = $path; // Update the path.
+            }
         }
     }
+
 
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
@@ -101,19 +133,6 @@ class MobAITask extends Task {
         }
 
         return $nearestPlayer;
-    }
-
-    private function moveToPlayer(Zombie $mob, Player $player): void {
-        $mobPos = $mob->getPosition();
-        $playerPos = $player->getPosition();
-
-        $distance = $mobPos->distance($playerPos);
-        $speed = 0.3;
-        if ($distance < 5) $speed *= $distance / 5;
-
-        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
-        $mob->setMotion($motion);
-        $mob->lookAt($playerPos);
     }
 
     private function moveRandomly(Living $mob): void {
@@ -167,5 +186,17 @@ class MobAITask extends Task {
 
         $jumpForce = 0.52 + ($heightDiff * 0.2);
         $mob->setMotion(new Vector3($mob->getMotion()->x, $jumpForce, $mob->getMotion()->z));
+    }
+
+    private function isClimbable(Block $block): bool {
+        $climbableBlocks = [
+            "pocketmine:block:slab",
+            "pocketmine:block:stairs",
+            "pocketmine:block:snow_layer",
+            "pocketmine:block:fence", // 울타리 추가
+            "pocketmine:block:glass", // 유리 추가
+            "pocketmine:block:frame" // 액자 추가
+        ];
+        return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
     }
 }
