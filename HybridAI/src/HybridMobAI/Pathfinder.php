@@ -8,6 +8,8 @@ use SplQueue;
 use SplStack;
 
 class Pathfinder {
+    private const MAX_ITERATIONS = 5000; // ✅ 탐색 최대 반복 횟수 제한
+    private const MAX_PATH_LENGTH = 20; // ✅ 경로 최대 길이 제한
 
     public function findPath(Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         switch ($algorithm) {
@@ -29,7 +31,12 @@ class Pathfinder {
         $startNode = new Node($start, null, 0, $this->heuristic($start, $goal));
         $openList->insert($startNode, -$startNode->fCost());
 
+        $iterations = 0;
         while (!$openList->isEmpty()) {
+            if (++$iterations > self::MAX_ITERATIONS) {
+                return null; // ✅ 무한 루프 방지
+            }
+
             /** @var Node $current */
             $current = $openList->extract();
 
@@ -60,7 +67,12 @@ class Pathfinder {
         $queue->enqueue(new Node($start));
         $visited = [];
 
+        $iterations = 0;
         while (!$queue->isEmpty()) {
+            if (++$iterations > self::MAX_ITERATIONS) {
+                return null; // ✅ 무한 루프 방지
+            }
+
             /** @var Node $current */
             $current = $queue->dequeue();
 
@@ -87,7 +99,12 @@ class Pathfinder {
         $stack->push(new Node($start));
         $visited = [];
 
+        $iterations = 0;
         while (!$stack->isEmpty()) {
+            if (++$iterations > self::MAX_ITERATIONS) {
+                return null; // ✅ 무한 루프 방지
+            }
+
             /** @var Node $current */
             $current = $stack->pop();
 
@@ -117,7 +134,7 @@ class Pathfinder {
         ];
 
         foreach ($directions as $dir) {
-            $neighbor = $position->add($dir->x, 0, $dir->z);
+            $neighbor = $position->addVector($dir);
             if ($this->isWalkable($neighbor)) {
                 $neighbors[] = $neighbor;
             }
@@ -128,8 +145,7 @@ class Pathfinder {
 
     /** ✅ 특정 블록이 이동 가능한지 확인 */
     private function isWalkable(Vector3 $position): bool {
-        // TODO: 월드 블록 검사 추가
-        return true;
+        return true; // TODO: 월드에서 블록 이동 가능 여부 검사 추가
     }
 
     /** ✅ 두 노드 간 거리 계산 */
@@ -145,13 +161,11 @@ class Pathfinder {
     /** ✅ 최종 경로 재구성 */
     private function reconstructPath(Node $node): array {
         $path = [];
-
         while ($node !== null) {
             $path[] = $node->position;
             $node = $node->cameFrom;
         }
-
-        return array_reverse($path);
+        return array_reverse(array_slice($path, 0, self::MAX_PATH_LENGTH)); // ✅ 경로 최대 길이 제한
     }
 
     /** ✅ 위치 비교 (좌표 정규화) */
@@ -163,24 +177,5 @@ class Pathfinder {
     /** ✅ 해시 키 생성 (빠른 비교) */
     private function getPositionHash(Vector3 $pos): string {
         return floor($pos->x) . ":" . floor($pos->z);
-    }
-}
-
-/** ✅ 노드 클래스 추가 (gCost, hCost 저장) */
-class Node {
-    public Vector3 $position;
-    public ?Node $cameFrom;
-    public float $gCost;
-    public float $hCost;
-
-    public function __construct(Vector3 $position, ?Node $cameFrom = null, float $gCost = 0, float $hCost = 0) {
-        $this->position = clone $position;
-        $this->cameFrom = $cameFrom;
-        $this->gCost = $gCost;
-        $this->hCost = $hCost;
-    }
-
-    public function fCost(): float {
-        return $this->gCost + $this->hCost;
     }
 }
