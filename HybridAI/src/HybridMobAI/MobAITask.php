@@ -88,6 +88,46 @@ class MobAITask extends Task {
         }
     }
 
+    private function findNearestPlayer(Zombie $mob): ?Player {
+        $closestDistance = PHP_FLOAT_MAX;
+        $nearestPlayer = null;
+
+        foreach ($mob->getWorld()->getPlayers() as $player) {
+            $distance = $mob->getPosition()->distance($player->getPosition());
+            if ($distance < $closestDistance) {
+                $closestDistance = $distance;
+                $nearestPlayer = $player;
+            }
+        }
+
+        return $nearestPlayer;
+    }
+
+    private function moveToPlayer(Zombie $mob, Player $player): void {
+        $mobPos = $mob->getPosition();
+        $playerPos = $player->getPosition();
+
+        $distance = $mobPos->distance($playerPos);
+        $speed = 0.3;
+        if ($distance < 5) $speed *= $distance / 5;
+
+        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
+        $mob->setMotion($motion);
+        $mob->lookAt($playerPos);
+    }
+
+    private function moveRandomly(Living $mob): void {
+        $directionVectors = [
+            new Vector3(1, 0, 0),
+            new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(0, 0, -1)
+        ];
+        $randomDirection = $directionVectors[array_rand($directionVectors)];
+
+        $mob->setMotion($randomDirection->multiply(0.15));
+    }
+
     private function checkForObstaclesAndJump(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
@@ -122,36 +162,10 @@ class MobAITask extends Task {
         }
     }
 
-    private function isClimbable(Block $block): bool {
-        $climbableBlocks = [
-            "pocketmine:block:snow_layer",
-            "pocketmine:block:fence",
-            "pocketmine:block:glass",
-            "pocketmine:block:frame",
-            "pocketmine:block:slab",
-            "pocketmine:block:stairs"
-        ];
-        return in_array($block->getName(), $climbableBlocks) || !$block->isTransparent();
-    }
-
-    private function moveRandomly(Living $mob): void {
-        $directionVectors = [
-            new Vector3(1, 0, 0),
-            new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1),
-            new Vector3(0, 0, -1)
-        ];
-        $randomDirection = $directionVectors[array_rand($directionVectors)];
-        $mob->setMotion($randomDirection->multiply(0.15));
-    }
-
     public function jump(Living $mob, float $heightDiff = 1.0): void {
         if (!$mob->isOnGround()) return;
 
-        $baseForce = 0.52;
-        $jumpForce = $baseForce + ($heightDiff * 0.2);
-        $jumpForce = min($jumpForce, 0.75);
-
+        $jumpForce = 0.52 + ($heightDiff * 0.2);
         $mob->setMotion(new Vector3($mob->getMotion()->x, $jumpForce, $mob->getMotion()->z));
     }
 }
