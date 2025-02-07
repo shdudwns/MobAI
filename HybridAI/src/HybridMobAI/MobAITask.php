@@ -159,12 +159,19 @@ class MobAITask extends Task {
         // 계단 로직 추가 (ID 직접 사용)
         if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
             // 계단 위에 있는지 확인하고 연속 점프
-            if ($heightDiff <= 1.2) {
+            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
+                // 계단의 높이를 고려하여 점프
                 $this->stepUp($mob);
                 return;
             }
         }
+
+        // 일반 블록의 경우 높이 차가 1.5 이상일 경우 점프
+        if ($heightDiff > 1.5) {
+            return; // 너무 높은 블록은 점프하지 않음
+        }
     }
+}
 }
     public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋
