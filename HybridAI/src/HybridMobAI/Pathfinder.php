@@ -194,8 +194,10 @@ class PathfinderTask extends AsyncTask {
     private float $goalX, $goalY, $goalZ;
     private string $algorithm;
     public $callback;
+    private Main $plugin; // Main 플러그인 인스턴스 추가
 
-    public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
+    public function __construct(Main $plugin, string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
+        $this->plugin = $plugin; // Main 플러그인 인스턴스 저장
         $this->worldName = $worldName;
         $this->startX = (float)$start->x;
         $this->startY = (float)$start->y;
@@ -210,7 +212,15 @@ class PathfinderTask extends AsyncTask {
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-        $pathfinder = new Pathfinder();
+        // World 객체 가져오기
+        $level = $this->plugin->getServer()->getWorldManager()->getWorldByName($this->worldName);
+        if ($level === null) {
+            $this->setResult(null); // 월드가 없으면 null 반환
+            return;
+        }
+
+        $pathfinder = new Pathfinder($level); // Pathfinder 생성 시 World 객체 전달
+
         $path = match ($this->algorithm) {
             "A*" => $pathfinder->findPathAStar($start, $goal),
             "BFS" => $pathfinder->findPathBFS($start, $goal),
@@ -222,14 +232,15 @@ class PathfinderTask extends AsyncTask {
 
         $this->setResult($path);
     }
-    public function onCompletion(Server $server): void {
-    $result = $this->getResult();
-    $callback = $this->callback;
 
-    if ($result !== null) {
-        $callback($result);
-    } else {
-        $callback(null);
+    public function onCompletion(Server $server): void {
+        $result = $this->getResult();
+        $callback = $this->callback;
+
+        if ($result !== null) {
+            $callback($result);
+        } else {
+            $callback(null);
+        }
     }
-}
 }
