@@ -141,6 +141,11 @@ class MobAITask extends Task {
             return; // 블록 아래가 투명하면 점프하지 않음
         }
 
+        // 모서리 주변 인식 개선
+        if (abs($heightDiff) < 0.5) {
+            continue; // 모서리에서 점프하지 않도록
+        }
+
         // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
@@ -153,7 +158,8 @@ class MobAITask extends Task {
 
         // 계단 로직 추가 (ID 직접 사용)
         if ($frontBlock->getTypeId() === 43 || $frontBlock->getTypeId() === 44) { // 43: 계단, 44: 더블 계단
-            if ($heightDiff <= 1.2 && $mob->isOnGround()) {
+            // 계단 위에 있는지 확인하고 연속 점프
+            if ($heightDiff <= 1.2) {
                 $this->stepUp($mob);
                 return;
             }
@@ -188,15 +194,15 @@ class MobAITask extends Task {
 }
 
     private function stepUp(Living $mob): void {
-        // 계단을 올라가는 로직
-        if ($mob->isOnGround()) {
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x,
-                0.4, // 계단 위로 올라갈 때의 Y 방향 속도
-                $mob->getMotion()->z
-            ));
-        }
+    // 계단을 올라가는 로직
+    if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x,
+            0.4, // 계단 위로 올라갈 때의 Y 방향 속도
+            $mob->getMotion()->z
+        ));
     }
+}
     private function isClimbable(Block $block): bool {
     $climbableBlocks = [
         "pocketmine:block:snow_layer",
