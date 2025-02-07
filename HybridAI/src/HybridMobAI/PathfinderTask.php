@@ -42,34 +42,25 @@ class PathfinderTask extends AsyncTask {
 
     public function onCompletion(): void {
         $server = Server::getInstance();
-        $world = $server->getWorldManager()->getWorldByName($this->worldName);
+        $worldName = $this->worldName; // Copy the world name
 
-        if ($world === null) {
-            $server->getLogger()->warning("World {$this->worldName} not found!");
-            return;
-        }
-
-        $entity = $world->getEntity($this->mobId);
-        if ($entity === null || !$entity->isAlive()) {
-            $server->getLogger()->warning("Entity {$this->mobId} not found or dead!");
-            return;
-        }
-
-        $path = $this->getResult();
-
-        // Correct way to handle callback:
-        $callback = $this->callback; // Copy the callback
         $entityId = $this->mobId;     // Copy the entity ID
+        $callback = $this->callback; // Copy the callback
+        $path = $this->getResult();   // Copy the path
 
-        if (is_callable($callback)) {
-            $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($entityId, $path, $callback, $world) {
-                $entity = $world->getEntity($entityId); // Get the entity on the main thread!
-                if ($entity instanceof Creature) { // Check if the entity is valid
-                    call_user_func($callback, $entity, $path);
-                }
-            }, 0, false));
-        } else {
-            $server->getLogger()->warning("Callback function is not set for entity {$this->mobId}!");
-        }
+        $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($worldName, $entityId, $path, $callback) {
+            $server = Server::getInstance(); // Get Server instance inside the task
+            $world = $server->getWorldManager()->getWorldByName($worldName); // Get world on main thread
+
+            if ($world === null) {
+                // Handle world not found error.  Log or take other action.
+                return; // Important: Return to prevent further errors.
+            }
+
+            $entity = $world->getEntity($entityId); // Get entity on main thread
+            if ($entity instanceof Creature) { // Check if the entity is valid
+                call_user_func($callback, $entity, $path);
+            }
+        }, 0, false));
     }
 }
