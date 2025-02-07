@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
+use pocketmine\entity\Creature;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
@@ -15,7 +16,7 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
-    private array $pathfindingTasks = [];
+    private array $isJumping = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -47,7 +48,6 @@ class MobAITask extends Task {
         $this->checkForObstaclesAndJump($mob);
     }
 
-    // 착지 상태 감지 ▼
     private function detectLanding(Living $mob): void {
         $mobId = $mob->getId();
         $isOnGround = $mob->isOnGround();
@@ -76,40 +76,29 @@ class MobAITask extends Task {
     private function moveToPlayer(Zombie $mob, Player $player): void {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
-        $worldName = $mob->getWorld()->getFolderName();
 
-        $callback = function (Creature $mob, ?array $path) {
-            if ($path === null) {
-                $this->moveRandomly($mob);
-            } else {
-                $this->followPath($mob, $path);
-            }
-        };
+        $distance = $mobPos->distance($playerPos);
+        $speed = 0.23;
+        if ($distance < 5) $speed *= $distance / 5;
 
-        $task = new PathfindingTask($mobPos, $playerPos, null, $mob->getId(), "AStar", $worldName, $callback);
-        $this->plugin->getServer()->getAsyncPool()->submitTask($task);
-        $this->pathfindingTasks[$mob->getId()] = $task;
+        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
+        $currentMotion = $mob->getMotion();
+
+        $inertiaFactor = ($distance < 3) ? 0.1 : 0.2;
+        $blendedMotion = new Vector3(
+            ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
+            $currentMotion->y,
+            ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
+        );
+
+        $mob->setMotion($blendedMotion);
+        $mob->lookAt($playerPos);
     }
 
-    private function followPath(Zombie $mob, array $path): void {
-        if (empty($path)) {
-            return;
-        }
-
-        $nextStep = array_shift($path);
-        $mob->lookAt($nextStep);
-        $mob->setMotion($nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.25));
-
-        if (!empty($path)) {
-            $this->path[$mob->getId()] = $path;
-        }
-    }
     private function moveRandomly(Living $mob): void {
         $directionVectors = [
-            new Vector3(1, 0, 0),
-            new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1),
-            new Vector3(0, 0, -1)
+            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
         ];
         $randomDirection = $directionVectors[array_rand($directionVectors)];
 
@@ -129,77 +118,34 @@ class MobAITask extends Task {
         $currentTick = Server::getInstance()->getTick();
         $mobId = $mob->getId();
 
-        // 5틱(0.25초)마다 검사 ▼
         if (isset($this->landedTick[$mobId]) && $currentTick - $this->landedTick[$mobId] < 5) return;
 
         $yaw = $mob->getLocation()->yaw;
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $leftVector = new Vector3(-$directionVector->z, 0, $directionVector->x);
-        $rightVector = new Vector3($directionVector->z, 0, -$directionVector->x);
+        $frontPosition = $position->add($directionVector->multiply(1.5));
 
-        $leftBlock = $world->getBlockAt((int)floor($position->x + $leftVector->x), (int)$position->y, (int)floor($position->z + $leftVector->z));
-        $rightBlock = $world->getBlockAt((int)floor($position->x + $rightVector->x), (int)$position->y, (int)floor($position->z + $rightVector->z));
+        $blockInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y, (int) $frontPosition->z);
+        $blockAboveInFront = $world->getBlockAt((int) $frontPosition->x, (int) $frontPosition->y + 1, (int) $frontPosition->z);
 
-        if ($leftBlock->isSolid() && $rightBlock->isSolid()) return;
-
-        $maxJumpDistance = 1.2;
-        for ($i = 0; $i <= 1; $i++) {
-            for ($j = -1; $j <= 1; $j++) {
-                $frontBlockX = (int)floor($position->x + $directionVector->x * $i + $leftVector->x * $j);
-                $frontBlockY = (int)$position->y;
-                $frontBlockZ = (int)floor($position->z + $directionVector->z * $i + $leftVector->z * $j);
-
-                $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-                $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-                $frontBlockBelow = $world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ);
-
-                $blockHeight = $frontBlock->getPosition()->y + 0.5;
-                $heightDiff = $blockHeight - $position->y;
-
-                if ($heightDiff < 0 || $frontBlockBelow->isTransparent()) continue;
-
-                $blockCenterX = $frontBlockX + 0.5;
-                $blockCenterZ = $frontBlockZ + 0.5;
-                $dx = $blockCenterX - $position->x;
-                $dz = $blockCenterZ - $position->z;
-                $distance = sqrt($dx * $dx + $dz * $dz);
-
-                // 착지 직후 점프 우선권 ▼
-                $isJustLanded = isset($this->landedTick[$mobId]) 
-                             && ($currentTick - $this->landedTick[$mobId] <= 2);
-
-                if ($this->isClimbable($frontBlock) 
-                    && $frontBlockAbove->isTransparent() 
-                    && $distance <= $maxJumpDistance 
-                    && ($isJustLanded || $heightDiff <= 1.2)
-                ) {
-                    $this->jump($mob, $heightDiff);
-                    $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
-                    return;
-                }
-            }
+        if ($blockInFront->isSolid() && $blockAboveInFront->isTransparent()) {
+            $this->jump($mob, 1.0);
         }
     }
 
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-        // 낙하 속도 리셋 ▼
         if ($mob->getMotion()->y < -0.08) {
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x,
-                -0.08,
-                $mob->getMotion()->z
-            ));
+            $mob->setMotion(new Vector3($mob->getMotion()->x, -0.08, $mob->getMotion()->z));
         }
 
-        $baseForce = 0.52;
+        $baseForce = 0.5;
         $jumpForce = $baseForce + ($heightDiff * 0.15);
-        $jumpForce = min($jumpForce, 0.65);
+        $jumpForce = min($jumpForce, 0.75);
 
-        if (($mob->isOnGround() || $mob->getMotion()->y <= 0.1)) {
+        if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
             $direction = $mob->getDirectionVector();
-            $jumpBoost = 0.08;
+            $jumpBoost = 0.06;
             $mob->setMotion(new Vector3(
                 $mob->getMotion()->x + ($direction->x * $jumpBoost),
                 $jumpForce,
