@@ -21,6 +21,7 @@ use pocketmine\entity\Zombie as PmmpZombie;
 class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
+    private ?MobAITask $mobAITask = null;
     $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
     EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
@@ -31,13 +32,15 @@ class Main extends PluginBase implements Listener {
 
     // ✅ MobAITask 실행 로그 추가
     $this->getLogger()->info("MobAITask 실행 중...");
-    $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this), 1);
-
-        // ✅ 일정 시간마다 랜덤 좀비 스폰
-        $spawnInterval = 600; // 600 ticks (30초)
-        //$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
+    $this->mobAITask = new MobAITask($this);
+    $this->getScheduler()->scheduleRepeatingTask($this->mobAITask, 1);
+    // ✅ 일정 시간마다 랜덤 좀비 스폰
+    $spawnInterval = 600; // 600 ticks (30초)
+    //$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
     }
-
+    public function getMobAITask(): ?MobAITask {
+        return $this->mobAITask;
+    }
     /** ✅ 기본 좀비 스폰 시 커스텀 좀비로 교체 */
     public function onEntitySpawn(EntitySpawnEvent $event): void {
         $entity = $event->getEntity();
