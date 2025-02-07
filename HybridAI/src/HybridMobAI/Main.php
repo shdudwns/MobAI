@@ -41,8 +41,8 @@ class Main extends PluginBase implements Listener {
     private function initializeConfig(): void {
     $defaultConfig = [
         "AI" => [
-            "enabled" => false,
-            "pathfinding" => "A*",
+            "enabled" => true,
+            "pathfinding_priority" => ["A*", "BFS", "DFS", "Dijkstra", "Greedy"],
             "movement" => [
                 "random" => true,
                 "chase_player" => true,
@@ -56,13 +56,13 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set($key, $value);
         }
     }
-
     $this->saveConfig();
 }
 
 public function reloadAISettings(): void {
     $config = $this->getConfig()->get("AI");
     $aiEnabled = $config["enabled"];
+    $algorithmPriority = $config["pathfinding_priority"];
     $this->getScheduler()->scheduleRepeatingTask(new MobAITask($this, $aiEnabled), 1);
 }
     
