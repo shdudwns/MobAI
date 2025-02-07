@@ -20,8 +20,9 @@ use pocketmine\entity\Zombie as PmmpZombie;
 
 class Main extends PluginBase implements Listener {
 
-    public function onEnable(): void {
     private ?MobAITask $mobAITask = null;
+    
+    public function onEnable(): void {
     $this->getLogger()->info("HybridMobAI 플러그인 활성화");
 
     EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
