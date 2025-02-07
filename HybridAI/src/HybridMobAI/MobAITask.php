@@ -15,6 +15,7 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
+    private array $pathfindingTasks = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -75,26 +76,34 @@ class MobAITask extends Task {
     private function moveToPlayer(Zombie $mob, Player $player): void {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
+        $worldName = $mob->getWorld()->getFolderName();
 
-        $distance = $mobPos->distance($playerPos);
-        $speed = 0.3;
-        if ($distance < 5) $speed *= $distance / 5;
+        $callback = function (Creature $mob, ?array $path) {
+            if ($path === null) {
+                $this->moveRandomly($mob);
+            } else {
+                $this->followPath($mob, $path);
+            }
+        };
 
-        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
-        $currentMotion = $mob->getMotion();
-
-        // 관성 동적 조절 ▼
-        $inertiaFactor = ($distance < 3) ? 0.1 : 0.2;
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
-            $currentMotion->y,
-            ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
-        );
-
-        $mob->setMotion($blendedMotion);
-        $mob->lookAt($playerPos);
+        $task = new PathfindingTask($mobPos, $playerPos, null, $mob->getId(), "AStar", $worldName, $callback);
+        $this->plugin->getServer()->getAsyncPool()->submitTask($task);
+        $this->pathfindingTasks[$mob->getId()] = $task;
     }
 
+    private function followPath(Zombie $mob, array $path): void {
+        if (empty($path)) {
+            return;
+        }
+
+        $nextStep = array_shift($path);
+        $mob->lookAt($nextStep);
+        $mob->setMotion($nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.25));
+
+        if (!empty($path)) {
+            $this->path[$mob->getId()] = $path;
+        }
+    }
     private function moveRandomly(Living $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0),
