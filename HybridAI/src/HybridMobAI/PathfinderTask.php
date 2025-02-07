@@ -6,15 +6,15 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
 use pocketmine\entity\Creature;
-use pocketmine\player\Player;
 
 class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
     private float $goalX, $goalY, $goalZ;
     private int $mobId;
     private string $algorithm, $worldName;
+    private $callback; // 콜백 함수 저장
 
-    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName) {
+    public function __construct(float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, int $mobId, string $algorithm, string $worldName, callable $callback) {
         $this->startX = $startX;
         $this->startY = $startY;
         $this->startZ = $startZ;
@@ -24,6 +24,7 @@ class PathfinderTask extends AsyncTask {
         $this->mobId = $mobId;
         $this->algorithm = $algorithm;
         $this->worldName = $worldName;
+        $this->callback = $callback; // 콜백 함수 초기화
     }
 
     public function onRun(): void {
@@ -42,37 +43,27 @@ class PathfinderTask extends AsyncTask {
     public function onCompletion(): void {
         $server = Server::getInstance();
         $world = $server->getWorldManager()->getWorldByName($this->worldName);
-        if ($path !== null) {
-            $plugin->getLogger()->debug("첫 번째 스텝: " . $nextStep->__toString());
+
+        if ($world === null) {
+            $server->getLogger()->warning("World {$this->worldName} not found!"); // 월드 경고 메시지 추가
+            return;
         }
 
-        if ($world === null) return;
-
         $entity = $world->getEntity($this->mobId);
-        if ($entity === null || !$entity->isAlive()) return;
+        if ($entity === null || !$entity->isAlive()) {
+            $server->getLogger()->warning("Entity {$this->mobId} not found or dead!"); // 엔티티 경고 메시지 추가
+            return;
+        }
 
         $path = $this->getResult();
-        $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
 
-        if ($plugin instanceof Main) {
-            $mobAITask = $plugin->getMobAITask();
-
-            if ($path === null) {
-                // ✅ 경로를 찾지 못하면 랜덤 이동 실행
-                $mobAITask->moveRandomly($entity);
-            } else {
-                // ✅ 정상적으로 경로를 찾았을 경우 이동
-                if ($entity instanceof Creature) {
-                    $nextStep = $path[0] ?? null;
-                    if ($nextStep !== null) {
-                        $entity->lookAt($nextStep);
-                        $motion = $nextStep->subtractVector($entity->getPosition())->normalize()->multiply(0.15);
-                        if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
-                            $entity->setMotion($motion);
-                        }
-                    }
-                }
-            }
+        // 콜백 함수가 설정되었는지 확인 후 호출
+        if (is_callable($this->callback)) {
+            $server->getScheduler()->scheduleTask(new \pocketmine\scheduler\Task(function () use ($entity, $path, $this->callback) {
+                call_user_func($this->callback, $entity, $path);
+            }, 0, false));
+        } else {
+            $server->getLogger()->warning("Callback function is not set for entity {$this->mobId}!"); // 콜백 경고 메시지 추가
         }
     }
 }
