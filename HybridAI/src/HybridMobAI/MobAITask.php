@@ -25,7 +25,7 @@ class MobAITask extends Task {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
     $this->algorithmPriority = $algorithmPriority;
-    $this->entityAI = new EntityAI($plugin);
+    $this->entityAI = new EntityAI();
     }
 
     public function onRun(): void {
@@ -55,12 +55,11 @@ class MobAITask extends Task {
                 if ($this->entityAI->hasPath($mob)) {
                     $this->entityAI->moveAlongPath($mob);
                 } else {
-                    // ✅ EntityAI의 findPathAsync 호출
                     $this->entityAI->findPathAsync(
-                        $mob->getWorld(),       // 월드
-                        $mob->getPosition(),    // 시작 좌표
-                        $player->getPosition(), // 목표 좌표
-                        "A*",                   // 알고리즘
+                        $mob->getWorld(),
+                        $mob->getPosition(),
+                        $player->getPosition(),
+                        "A*",
                         function (?array $path) use ($mob) {
                             if ($path !== null) {
                                 $this->entityAI->setPath($mob, $path);
