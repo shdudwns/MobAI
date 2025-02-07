@@ -34,7 +34,7 @@ class PathfinderTask extends AsyncTask {
     }
 
     public function onRun(): void {
-        $pathfinder = new Pathfinder();
+        $pathfinder = new Pathfinder(); // Make sure Pathfinder class exists and is correctly implemented.
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
@@ -43,7 +43,7 @@ class PathfinderTask extends AsyncTask {
             $this->setResult($path);
             $this->taskId = $this->getThread()->getTaskId(); // Task ID 할당
         } catch (\Exception $e) {
-            $this->setResult(null);
+            $this->setResult(null); // Indicate pathfinding failure.
             $server = Server::getInstance();
             $server->getLogger()->error("Pathfinding error: " . $e->getMessage());
         }
@@ -70,7 +70,7 @@ class PathfinderTask extends AsyncTask {
 
         $path = $this->getResult();
 
-        if ($path === null || empty($path)) {
+        if ($path === null || empty($path)) { // Check for both null (error) and empty path.
             $plugin = $server->getPluginManager()->getPlugin("HybridMobAI");
             if ($plugin instanceof Main) {
                 $mobAITask = $plugin->getMobAITask();
