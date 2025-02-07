@@ -57,20 +57,21 @@ class EntityAI {
     } elseif (is_array($goal)) {
         $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
     }
-        $task = new PathfinderTask(
-        $this->plugin, // Main 인스턴스 전달
+
+    // ✅ 변환된 $start와 $goal을 PathfinderTask 생성자에 전달
+    $task = new PathfinderTask(
+        $this->plugin,
         $world->getFolderName(),
-        new Vector3((float)$start->x, (float)$start->y, (float)$start->z), // Vector3 객체 생성 및 float 형변환
-        new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z), // Vector3 객체 생성 및 float 형변환
+        $start, // 변환된 Vector3 객체 전달
+        $goal, // 변환된 Vector3 객체 전달
         $algorithm
     );
-    $task->callback = $callback; // 콜백 저장
+    $task->callback = $callback;
     Server::getInstance()->getAsyncPool()->submitTask($task);
 
-    // WorkerStartHook 제거: onCompletion에서 처리
     $task->onCompletion(Server::getInstance());
-
 }
+
 
 public function setPath(Living $mob, array $path): void {
     $this->entityPaths[$mob->getId()] = $path;
