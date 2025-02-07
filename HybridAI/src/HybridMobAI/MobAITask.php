@@ -15,15 +15,12 @@ class MobAITask extends Task {
     private int $tickCounter = 0;
     private array $hasLanded = [];
     private array $landedTick = [];
-    private array $path = []; // 경로 저장 배열 추가
-    private array $pathfindingTasks = []; // PathfindingTask 저장 배열 추가
     private string $algorithm;
-    private array $lastPathUpdate = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->algorithm = $this->selectAlgorithm();
-        $this->plugin->getLogger()->info(" 사용 알고리즘: " . $this->algorithm);
+        $this->plugin->getLogger()->info("🔹 사용 알고리즘: " . $this->algorithm);
     }
 
     public function onRun(): void {
@@ -41,86 +38,15 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-    $nearestPlayer = $this->findNearestPlayer($mob);
-
-    if ($nearestPlayer !== null) {
-        if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
-            $this->lastPathUpdate[$mob->getId()] = microtime(true);
-
-            // *** 핵심: 콜백 함수 정의 및 $this 복사 ***
-            $plugin = $this->plugin;
-            $mobAITaskInstance = $this;
-            $mobId = $mob->getId();
-            $worldName = $mob->getWorld()->getFolderName();
-            $algorithm = $this->algorithm; // 알고리즘 복사
-
-            $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName, $algorithm) {
-                $server = Server::getInstance();
-                $world = $server->getWorldManager()->getWorldByName($worldName);
-
-                if ($world === null) {
-                    $plugin->getLogger()->warning("World {$worldName} not found in callback!");
-                    return;
-                }
-
-                $entity = $world->getEntity($mobId);
-
-                if ($entity instanceof Creature) {
-                    if ($path === null) {
-                        $mobAITaskInstance->moveRandomly($entity);
-                    } else {
-                        $mobAITaskInstance->path[$entity->getId()] = $path;
-                    }
-                }
-            };
-
-            $task = new PathfinderTask(
-                $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
-                $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
-                $mob->getId(), $algorithm, $worldName, $callback // 복사된 알고리즘과 월드 이름 전달
-            );
-
-            $this->plugin->getServer()->getAsyncPool()->submitTask($task);
-            $this->pathfindingTasks[$mob->getId()] = $task;
-        }
-
-        if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
-            $this->followPath($mob);
-        }
-    } else {
-        $this->moveRandomly($mob);
-    }
-
-    $this->detectLanding($mob);
-    $this->checkForObstaclesAndJump($mob);
-}
-
-
-
-    private function followPath(Zombie $mob): void {
-        if (!isset($this->path[$mob->getId()]) || empty($this->path[$mob->getId()])) {
-            return; // 경로 없거나 비어있으면 종료
-        }
-
-        $path = $this->path[$mob->getId()];
-        $nextStep = array_shift($path); // 다음 좌표 가져오기
-
-        if ($nextStep instanceof Vector3) {
-            $mob->lookAt($nextStep);
-            $motion = $nextStep->subtractVector($mob->getPosition())->normalize()->multiply(0.15); // 이동 벡터 계산
-
-            // NaN 값 체크 후 이동
-            if (!is_nan($motion->getX()) && !is_nan($motion->getY()) && !is_nan($motion->getZ())) {
-                $mob->setMotion($motion);
-            }
-        }
-
-        if (empty($path)) {
-            unset($this->path[$mob->getId()]); // 경로 완료 시 삭제
-            unset($this->pathfindingTasks[$mob->getId()]); // 작업 완료 시 삭제
+        $nearestPlayer = $this->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $this->usePathfinder($mob, $nearestPlayer);
         } else {
-            $this->path[$mob->getId()] = $path; // 남은 경로 업데이트
+            $this->moveRandomly($mob);
         }
+
+        $this->detectLanding($mob);
+        $this->checkForObstaclesAndJump($mob);
     }
 
     private function detectLanding(Living $mob): void {
