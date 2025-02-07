@@ -16,9 +16,11 @@ class MobAITask extends Task {
     private array $hasLanded = [];
     private array $landedTick = [];
     private int $changeDirectionTick = 0;
+    private EntityAI $entityAI;
 
     public function __construct(Main $plugin) {
-        $this->plugin = $plugin;
+    $this->plugin = $plugin;
+    $this->entityAI = new EntityAI();
     }
 
     public function onRun(): void {
@@ -36,13 +38,17 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-        $nearestPlayer = $this->findNearestPlayer($mob);
-        if ($nearestPlayer !== null) {
-            $this->moveToPlayer($mob, $nearestPlayer);
-        } else {
-            $this->moveRandomly($mob);
+    if ($this->entityAI->isEnabled()) {
+        if (($player = $this->findNearestPlayer($mob)) !== null) {
+            $path = $this->entityAI->findPath($mob->getWorld(), $mob->getPosition(), $player->getPosition());
+            if ($path !== null) {
+                $this->entityAI->moveAlongPath($mob);
+            }
         }
-
+    } else {
+        // 기존 랜덤 이동 유지
+        $this->moveRandomly($mob);
+    }
         $this->detectLanding($mob);
         $this->checkForObstaclesAndJump($mob);
     }
