@@ -121,18 +121,19 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
     $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    // ✅ 블록이 앞에 있을 때만 AABB 충돌 감지 실행
-    if ($this->isCollidingWithBlock($mob, $frontBlock) && $frontBlockAbove->isTransparent()) {
+    // ✅ 정확한 블록 감지를 위한 좌표 기반 점프 복구
+    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
             $this->jump($mob, $heightDiff);
             return;
         }
     }
 
-    // ✅ 계단 감지 (연속된 계단 처리 추가)
-    if ($this->isStairOrSlab($frontBlock) || $this->isStairOrSlab($world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ))) {
+    // ✅ 연속된 계단 감지 후 점프 처리
+    if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
             return;
