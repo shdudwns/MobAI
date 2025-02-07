@@ -146,10 +146,16 @@ class MobAITask extends Task {
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
             if ($heightDiff <= 1.5 && $heightDiff > 0) {
+                // 점프를 하도록 설정
                 $this->jump($mob, $heightDiff);
                 $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
                 return;
             }
+        }
+
+        // 블록 옆에 있을 때 점프하지 않도록 추가 조건
+        if (abs($heightDiff) < 1.0) { // 블록의 높이 차가 작을 경우 점프하지 않음
+            return; // 블록 옆에 있으므로 점프하지 않음
         }
 
         // 계단 로직 추가 (ID 직접 사용)
@@ -161,33 +167,32 @@ class MobAITask extends Task {
         }
     }
 }
-
     public function jump(Living $mob, float $heightDiff = 1.0): void {
-        // 낙하 속도 리셋
-        if ($mob->getMotion()->y < -0.08) {
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x,
-                -0.08,
-                $mob->getMotion()->z
-            ));
-        }
-
-        $baseForce = 0.52;
-        $jumpForce = $baseForce + ($heightDiff * 0.15);
-        $jumpForce = min($jumpForce, 0.65);
-
-        if (($mob->isOnGround() || $mob->getMotion()->y <= 0.1)) {
-            $direction = $mob->getDirectionVector();
-            $jumpBoost = 0.08;
-
-            // 점프 시 수평 속도 유지
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x * 0.5 + ($direction->x * $jumpBoost),
-                $jumpForce,
-                $mob->getMotion()->z * 0.5 + ($direction->z * $jumpBoost)
-            ));
-        }
+    // 낙하 속도 리셋
+    if ($mob->getMotion()->y < -0.08) {
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x,
+            -0.08,
+            $mob->getMotion()->z
+        ));
     }
+
+    $baseForce = 0.52;
+    $jumpForce = $baseForce + ($heightDiff * 0.15);
+    $jumpForce = min($jumpForce, 0.65);
+
+    if (($mob->isOnGround() || $mob->getMotion()->y <= 0.1)) {
+        $direction = $mob->getDirectionVector();
+        $jumpBoost = 0.08;
+
+        // 점프 시 수평 속도를 줄여서 너무 빠르지 않도록 조정
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x * 0.3 + ($direction->x * $jumpBoost),
+            $jumpForce,
+            $mob->getMotion()->z * 0.3 + ($direction->z * $jumpBoost)
+        ));
+    }
+}
 
     private function stepUp(Living $mob): void {
         // 계단을 올라가는 로직
