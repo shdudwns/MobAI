@@ -103,13 +103,20 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
 }
     
     private function stepUp(Living $mob, float $heightDiff): void {
-    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // 1블록 이하 높이면 계단처럼 이동
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
-            0.35, // 계단을 오를 때 자연스럽게 상승
+            0.4, // 계단을 오를 때 자연스럽게 상승
             $mob->getMotion()->z
         ));
     }
+}
+
+private function isStairOrSlab(Block $block): bool {
+    $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단
+    $slabIds = [44, 126, 182]; // 슬라브
+
+    return in_array($block->getTypeId(), $stairIds) || in_array($block->getTypeId(), $slabIds);
 }
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
@@ -287,12 +294,6 @@ private function changeDirection(Living $mob): void {
             $mob->getMotion()->z * 0.5 + ($direction->z * $horizontalSpeed)
         ));
     }
-}
-    private function isStairOrSlab(Block $block): bool {
-    $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단 ID 목록
-    $slabIds = [44, 126, 182]; // 슬라브 ID 목록
-
-    return in_array($block->getTypeId(), $stairIds) || in_array($block->getTypeId(), $slabIds);
 }
     
     private function isClimbable(Block $block): bool {
