@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\math\Vector3;
 use pocketmine\Server;
+use pocketmine\entity\Zombie; // Important: Import the Zombie class
 
 class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
@@ -12,6 +13,7 @@ class PathfinderTask extends AsyncTask {
     private int $mobId;
     private string $algorithm;
     private string $worldName;
+    private int $taskId; // Store the task ID
 
     public function __construct(
         float $startX, float $startY, float $startZ,
@@ -30,18 +32,25 @@ class PathfinderTask extends AsyncTask {
     }
 
     public function onRun(): void {
-        $pathfinder = new Pathfinder(); // Ensure Pathfinder class exists and is correctly implemented.
+        $pathfinder = new Pathfinder(); // Make sure Pathfinder class exists and is correctly implemented.
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
         try {
             $path = $pathfinder->findPath($start, $goal, $this->algorithm);
             $this->setResult($path);
+
+            // Get the Task ID *after* submitting to the async pool
+            $this->taskId = $this->getThread()->getTaskId(); // This line is crucial
         } catch (\Exception $e) {
             $this->setResult(null); // Indicate pathfinding failure.
             $server = Server::getInstance();
             $server->getLogger()->error("Pathfinding error: " . $e->getMessage());
         }
+    }
+
+    public function getTaskId(): int { // Getter for the task ID
+        return $this->taskId;
     }
 
     public function onCompletion(): void {
