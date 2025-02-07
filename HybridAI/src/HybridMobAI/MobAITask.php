@@ -121,18 +121,17 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
     $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    // ✅ AABB를 활용한 충돌 감지 (조기 감지)
-    if ($this->isCollidingWithBlock($mob, $frontBlock)) {
+    // ✅ 블록이 앞에 있을 때만 AABB 충돌 감지 실행
+    if ($this->isCollidingWithBlock($mob, $frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
             $this->jump($mob, $heightDiff);
             return;
         }
     }
 
-    // ✅ 계단 감지 및 점프 (연속된 계단에서도 가능하도록 개선)
+    // ✅ 계단 감지 (연속된 계단 처리 추가)
     if ($this->isStairOrSlab($frontBlock) || $this->isStairOrSlab($world->getBlockAt($frontBlockX, $frontBlockY - 1, $frontBlockZ))) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
@@ -168,10 +167,11 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
         ));
 
         // ✅ 연속된 계단 감지 시 추가 점프 수행
-        $this->checkForObstaclesAndJump($mob);
+        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+            $this->checkForObstaclesAndJump($mob);
+        }), 2); // 2틱 뒤 다시 점프 시도
     }
 }
-
 private function isStairOrSlab(Block $block): bool {
     $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단
     $slabIds = [44, 126, 182]; // 슬라브
