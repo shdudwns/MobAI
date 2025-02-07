@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 use pocketmine\entity\Living;
+use pocketmine\entity\Zombie;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
@@ -145,10 +146,18 @@ class MobAITask extends Task {
 
             // 점프 조건을 유연하게 조정하여 가장자리에서도 점프 가능
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                if ($heightDiff <= 1.5) {
-                    // 점프할 때의 수평 속도를 유지
+                // 장애물의 높이가 몬스터의 점프 높이보다 낮다면 점프
+                if ($heightDiff <= 1.5 && $heightDiff > 0) {
                     $this->jump($mob, $heightDiff);
                     $this->landedTick[$mobId] = $currentTick; // 점프 시간 기록
+                    return;
+                }
+            }
+
+            // 계단 로직 추가
+            if ($frontBlock->getId() === Block::STEPS || $frontBlock->getId() === Block::DOUBLE_STEPS) {
+                if ($heightDiff <= 1.2) {
+                    $this->stepUp($mob);
                     return;
                 }
             }
@@ -182,6 +191,16 @@ class MobAITask extends Task {
         }
     }
 
+    private function stepUp(Living $mob): void {
+        // 계단을 올라가는 로직
+        if ($mob->isOnGround()) {
+            $mob->setMotion(new Vector3(
+                $mob->getMotion()->x,
+                0.4, // 계단 위로 올라갈 때의 Y 방향 속도
+                $mob->getMotion()->z
+            ));
+        }
+    }
     private function isClimbable(Block $block): bool {
         $climbableBlocks = [
             "pocketmine:block:snow_layer",
