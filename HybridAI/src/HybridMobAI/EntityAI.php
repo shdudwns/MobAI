@@ -57,9 +57,13 @@ class EntityAI {
     } elseif (is_array($goal)) {
         $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
     }
-
-
-    $task = new PathfinderTask($this->plugin, $world->getFolderName(), $start, $goal, $algorithm); // $this->plugin 전달
+        $task = new PathfinderTask(
+        $this->plugin, // Main 인스턴스 전달
+        $world->getFolderName(),
+        new Vector3((float)$start->x, (float)$start->y, (float)$start->z), // Vector3 객체 생성 및 float 형변환
+        new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z), // Vector3 객체 생성 및 float 형변환
+        $algorithm
+    );
     $task->callback = $callback; // 콜백 저장
     Server::getInstance()->getAsyncPool()->submitTask($task);
 
