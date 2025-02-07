@@ -35,13 +35,12 @@ class EntityAI {
     }
 }
 
-    public function moveAlongPath(Living $mob): void {
-        if (!$this->enabled || empty($this->path)) return;
+public function moveAlongPath(Living $mob, array $path): void {
+    if (empty($path)) return;
 
-        $nextPosition = array_shift($this->path); // 다음 이동할 위치 가져오기
-        if ($nextPosition instanceof Vector3) {
-            $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply(0.2));
-            $mob->lookAt($nextPosition);
-        }
+    $nextPosition = array_shift($path);
+    if ($nextPosition instanceof Vector3) {
+        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply(0.2));
+        $mob->lookAt($nextPosition);
     }
 }
