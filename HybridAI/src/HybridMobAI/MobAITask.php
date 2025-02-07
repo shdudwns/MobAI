@@ -44,20 +44,36 @@ class MobAITask extends Task {
         $nearestPlayer = $this->findNearestPlayer($mob);
 
         if ($nearestPlayer !== null) {
-            // 1초마다 경로 탐색 실행
             if (!isset($this->lastPathUpdate[$mob->getId()]) || (microtime(true) - $this->lastPathUpdate[$mob->getId()]) > 1) {
                 $this->lastPathUpdate[$mob->getId()] = microtime(true);
 
-                // 콜백 함수 정의
-                $callback = function (Creature $entity, ?array $path) use ($mob) {
-                    if ($path === null) {
-                        $this->moveRandomly($entity); // 경로 없으면 랜덤 이동
-                    } else {
-                        $this->path[$mob->getId()] = $path; // 경로 저장
+                // *** 핵심: 콜백 함수 정의 및 $this 복사 ***
+                $plugin = $this->plugin; // $this->plugin 복사
+                $mobAITaskInstance = $this; // $this 복사 (전체 인스턴스)
+                $mobId = $mob->getId();
+                $worldName = $mob->getWorld()->getFolderName();
+
+
+                $callback = function (Creature $entity, ?array $path) use ($plugin, $mobAITaskInstance, $mobId, $worldName) {
+                    $server = Server::getInstance();
+                    $world = $server->getWorldManager()->getWorldByName($worldName);
+
+                    if ($world === null) {
+                        $plugin->getLogger()->warning("World {$worldName} not found in callback!");
+                        return; // 중요: 월드가 없으면 리턴 필수!
+                    }
+
+                    $entity = $world->getEntity($mobId); // 메인 스레드에서 엔티티 가져오기
+
+                    if ($entity instanceof Creature) { // 엔티티가 유효한지 확인
+                        if ($path === null) {
+                            $mobAITaskInstance->moveRandomly($entity); // 복사된 $this 사용
+                        } else {
+                            $mobAITaskInstance->path[$entity->getId()] = $path; // 복사된 $this 사용
+                        }
                     }
                 };
 
-                // PathfindingTask 실행
                 $task = new PathfinderTask(
                     $mob->getPosition()->x, $mob->getPosition()->y, $mob->getPosition()->z,
                     $nearestPlayer->getPosition()->x, $nearestPlayer->getPosition()->y, $nearestPlayer->getPosition()->z,
@@ -65,15 +81,12 @@ class MobAITask extends Task {
                 );
 
                 $this->plugin->getServer()->getAsyncPool()->submitTask($task);
-                $this->pathfindingTasks[$mob->getId()] = $task; // 작업 저장
-
+                $this->pathfindingTasks[$mob->getId()] = $task;
             }
 
-            // 경로가 존재하면 따라가기
             if (isset($this->path[$mob->getId()]) && !empty($this->path[$mob->getId()])) {
                 $this->followPath($mob);
             }
-
         } else {
             $this->moveRandomly($mob);
         }
