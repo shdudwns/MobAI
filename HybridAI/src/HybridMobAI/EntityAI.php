@@ -39,16 +39,20 @@ class EntityAI {
             return null;
     }
 }
-    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, callable $callback): void {
-    $task = new PathfinderTask($world->getFolderName(), $start, $goal, "A*");
+    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
+    // ✅ Position이 아니라 Vector3를 전달
+    $startVec = new Vector3($start->x, $start->y, $start->z);
+    $goalVec = new Vector3($goal->x, $goal->y, $goal->z);
+
+    $task = new PathfinderTask($world->getFolderName(), $startVec, $goalVec, $algorithm);
     Server::getInstance()->getAsyncPool()->submitTask($task);
 
     Server::getInstance()->getAsyncPool()->addWorkerStartHook(function() use ($task, $callback) {
-        $path = $task->getResult();
-        $callback($path);
+        if (($path = $task->getResult()) !== null) {
+            $callback($path);
+        }
     });
 }
-
 public function setPath(Living $mob, array $path): void {
     $this->entityPaths[$mob->getId()] = $path;
 }
