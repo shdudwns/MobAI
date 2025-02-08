@@ -2,6 +2,8 @@
 
 namespace HybridMobAI;
 
+use pocketmine\math\Vector3;
+
 class VectorMath {
 
     /**
