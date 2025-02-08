@@ -23,46 +23,66 @@ class EntityAI {
         return $this->enabled;
     }
 
-    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-        $worldName = $world->getFolderName();
-        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $start, $goal, $algorithm, $callback) extends AsyncTask {
-            private string $worldName;
-            private Vector3 $start;
-            private Vector3 $goal;
-            private string $algorithm;
-            private $callback;
+    public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
+    $worldName = $world->getFolderName();
+    $startX = $start->x;
+    $startY = $start->y;
+    $startZ = $start->z;
+    $goalX = $goal->x;
+    $goalY = $goal->y;
+    $goalZ = $goal->z;
 
-            public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback) {
-                $this->worldName = $worldName;
-                $this->start = $start;
-                $this->goal = $goal;
-                $this->algorithm = $algorithm;
-                $this->callback = $callback;
-            }
+    Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback) extends AsyncTask {
+        private string $worldName;
+        private float $startX;
+        private float $startY;
+        private float $startZ;
+        private float $goalX;
+        private float $goalY;
+        private float $goalZ;
+        private string $algorithm;
+        private $callback;
 
-            public function onRun(): void {
-            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName); // 월드 객체 가져오기
-            if ($world instanceof World) { // 월드가 로드되었는지 확인
+        public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback) {
+            $this->worldName = $worldName;
+            $this->startX = $startX;
+            $this->startY = $startY;
+            $this->startZ = $startZ;
+            $this->goalX = $goalX;
+            $this->goalY = $goalY;
+            $this->goalZ = $goalZ;
+            $this->algorithm = $algorithm;
+            $this->callback = $callback;
+        }
+
+        public function onRun(): void {
+            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+            if ($world instanceof World) {
+                $start = new Vector3($this->startX, $this->startY, $this->startZ);
+                $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
                 $pathfinder = new Pathfinder($world);
+
+                // 알고리즘 선택
                 $path = match ($this->algorithm) {
-                    "A*" => $pathfinder->findPathAStar($this->start, $this->goal),
-                    "Dijkstra" => $pathfinder->findPathDijkstra($this->start, $this->goal),
-                    "Greedy" => $pathfinder->findPathGreedy($this->start, $this->goal),
-                    "BFS" => $pathfinder->findPathBFS($this->start, $this->goal),
-                    "DFS" => $pathfinder->findPathDFS($this->start, $this->goal),
-                    default => null,
+                    "A*" => $pathfinder->findPathAStar($start, $goal),
+                    "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
+                    "Greedy" => $pathfinder->findPathGreedy($start, $goal),
+                    "BFS" => $pathfinder->findPathBFS($start, $goal),
+                    "DFS" => $pathfinder->findPathDFS($start, $goal),
+                    default => null, // 지원하지 않는 알고리즘
                 };
+
                 $this->setResult($path);
             } else {
-                $this->setResult(null); // 월드가 로드되지 않았으면 null 반환
+                $this->setResult(null); // 월드 로드 실패
             }
         }
 
-            public function onCompletion(): void {
-                ($this->callback)($this->getResult());
-            }
-        });
-    }
+        public function onCompletion(): void {
+            ($this->callback)($this->getResult());
+        }
+    });
+}
 
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
     $pathfinder = new Pathfinder($world);
