@@ -139,7 +139,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
             $this->jump($mob, $heightDiff);
-            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+            $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
                 $this->checkForObstaclesAndJump($mob);
             }), 2);
             return;
@@ -150,7 +150,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->jump($mob, $heightDiff);
-            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+            $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
                 $this->checkForObstaclesAndJump($mob);
             }), 2);
             return;
