@@ -38,7 +38,9 @@ class ObstacleDetector {
         $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y; // ✅ +1 추가하여 정확한 점프 감지
 
         // ✅ 1. 평지에서 점프 방지
-        if ($heightDiff <= 0) return;
+        if ($heightDiff <= 0 || $frontBlock->isTransparent()) {
+            return;
+        }
 
         // ✅ 2. 블록에서 내려올 때 점프 방지 (더 강화된 조건)
         if ($blockBelow->getPosition()->y > $position->y - 0.5) {
