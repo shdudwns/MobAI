@@ -127,33 +127,37 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $direction2D = VectorMath::getDirection2D($angle);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontBlockPos = $position->addVector($directionVector);
+        // 몹의 이동 경로에 있는 블록을 감지하기 위해 몹의 크기를 고려한 offset 추가
+        $offset = $mob->getBoundingBox()->getMaxX() - $mob->getBoundingBox()->getMinX(); // Adjust offset as needed
+        $frontBlockPos = $position->addVector($directionVector->multiply($offset)); // Adjust multiplier as needed
+
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-        $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
-        // ✅ 평지에서는 점프하지 않도록 수정
+        // 정확한 높이 차이 계산
+        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y; // Correct height difference calculation
+
+        // 평지에서는 점프하지 않도록 수정
         if ($heightDiff < 0.5) {
             continue;
         }
 
-        // ✅ 계단 및 슬랩 감지
+        // 계단 및 슬랩 감지
         if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-            //$this->plugin->getLogger()->info("🔼 계단 감지 - 점프 실행");
             $this->stepUp($mob, $heightDiff);
             return;
         }
 
-        // ✅ 일반 블록 점프 처리
+        // 일반 블록 점프 처리
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             if ($heightDiff <= 1) {
-                //$this->plugin->getLogger()->info("⬆️ 블록 점프 실행");
                 $this->jump($mob, $heightDiff);
                 return;
             }
         }
     }
 }
+
     
     private function checkFrontBlock(Living $mob): ?Block {
     $position = $mob->getPosition();
