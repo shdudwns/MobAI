@@ -132,6 +132,15 @@ class EntityAI {
         }
     }
 
+public function getPath(Living $mob): ?array {
+    return $this->entityPaths[$mob->getId()] ?? null;
+}
+
+public function removePath(Living $mob): void {
+    unset($this->entityPaths[$mob->getId()]);
+}
+
+
     public function setPath(Living $mob, array $path): void {
         $this->entityPaths[$mob->getId()] = $path;
     }
