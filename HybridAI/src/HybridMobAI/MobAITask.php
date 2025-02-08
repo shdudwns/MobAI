@@ -173,13 +173,12 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
         $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
-
+        $this->getLogger()->info("계단점프");
         $mob->setMotion(new Vector3(
             $direction->x,
             0.6, // 계단을 오를 때 점프 강도를 높임
             $direction->z
         ));
-        $this->getLogger()->info("계단점프");
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
                 $this->checkForObstaclesAndJump($mob);
             }), 2);
