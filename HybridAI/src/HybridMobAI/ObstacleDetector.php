@@ -30,7 +30,7 @@ class ObstacleDetector {
             $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
             $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-            $heightDiff = $frontBlock->getPosition()->y - $position->y;
+            $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y; // ✅ +1 추가하여 정확한 점프 감지
 
             // ✅ 1. 평지에서 점프 방지
             if ($heightDiff <= 0) continue;
@@ -52,16 +52,39 @@ class ObstacleDetector {
                 }
             }
         }
+
+        // ✅ 5. 장애물이 있으면 AI가 우회 경로 탐색
+        $this->findAlternatePath($mob, $world);
     }
 
-    public function checkForWaterJump(Living $mob): void {
+    private function findAlternatePath(Living $mob, World $world): void {
         $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $block = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+        $yaw = $mob->getLocation()->yaw;
 
-        if ($block->getName() === "pocketmine:water") {
-            $this->waterJump($mob);
+        // ✅ 좌측과 우측을 탐색하여 우회 경로 찾기
+        $sideAngles = [$yaw - 90, $yaw + 90];
+        foreach ($sideAngles as $angle) {
+            $direction2D = VectorMath::getDirection2D($angle);
+            $sideVector = new Vector3($direction2D->x, 0, $direction2D->y);
+            $sideBlockPos = $position->addVector($sideVector);
+
+            $sideBlock = $world->getBlockAt((int)$sideBlockPos->x, (int)$sideBlockPos->y, (int)$sideBlockPos->z);
+            $sideBlockAbove = $world->getBlockAt((int)$sideBlockPos->x, (int)$sideBlockPos->y + 1, (int)$sideBlockPos->z);
+
+            // ✅ 우회 경로가 비어있으면 이동
+            if ($sideBlock->isTransparent() && $sideBlockAbove->isTransparent()) {
+                $this->moveSideways($mob, $sideVector);
+                return;
+            }
         }
+    }
+
+    private function moveSideways(Living $mob, Vector3 $sideVector): void {
+        $mob->setMotion(new Vector3(
+            $sideVector->x * 0.2, // ✅ 부드러운 이동
+            $mob->getMotion()->y,
+            $sideVector->z * 0.2
+        ));
     }
 
     private function stepUp(Living $mob, float $heightDiff): void {
@@ -90,16 +113,6 @@ class ObstacleDetector {
             $mob->setMotion(new Vector3(
                 $mob->getMotion()->x,
                 $jumpForce,
-                $mob->getMotion()->z
-            ));
-        }
-    }
-
-    private function waterJump(Living $mob): void {
-        if ($mob->getMotion()->y < 0.3) {
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x,
-                0.3, // ✅ 물에서 점프하면서 부드럽게 상승
                 $mob->getMotion()->z
             ));
         }
