@@ -69,12 +69,12 @@ class ObstacleDetector {
             $direction->z
         ));
 
-        // ✅ 연속적인 계단 이동을 위해 착지 후 추가 체크
+        // ✅ 착지 후 바로 다음 장애물 검사
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob, $mob->getWorld());
             }
-        }), 2);
+        }), 2); // 2틱(0.1초) 후 착지 확인
     }
 
     private function jump(Living $mob, float $heightDiff): void {
@@ -88,6 +88,13 @@ class ObstacleDetector {
                 $jumpForce,
                 $mob->getMotion()->z
             ));
+
+            // ✅ 착지 후 바로 다음 장애물 검사
+            $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+                if ($mob->isOnGround()) {
+                    $this->checkForObstaclesAndJump($mob, $mob->getWorld());
+                }
+            }), 2); // 2틱(0.1초) 후 착지 확인
         }
     }
 
