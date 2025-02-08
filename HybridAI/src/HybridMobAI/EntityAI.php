@@ -40,13 +40,9 @@ class EntityAI {
     }
 }
     public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ `Position`이 들어오면 `Vector3`로 변환
-    if ($start instanceof Position) {
-        $start = new Vector3((float) $start->x, (float) $start->y, (float) $start->z);
-    }
-    if ($goal instanceof Position) {
-        $goal = new Vector3((float) $goal->x, (float) $goal->y, (float) $goal->z);
-    }
+    // ✅ `Position` 객체가 전달될 가능성이 있으므로 명확하게 `Vector3`로 변환
+    $start = new Vector3((float) $start->x, (float) $start->y, (float) $start->z);
+    $goal = new Vector3((float) $goal->x, (float) $goal->y, (float) $goal->z);
 
     $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
     Server::getInstance()->getAsyncPool()->submitTask($task);
