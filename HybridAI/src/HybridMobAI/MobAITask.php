@@ -157,10 +157,11 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         }
 
         // 일반적인 블록 (점프)
-        if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
-            $this->jump($mob, $heightDiff);
-            return;
-        }
+        if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff > 0 && $heightDiff <= 1) {
+    $this->jump($mob, $heightDiff);
+    return;
+}
+            
     }
 }
 
