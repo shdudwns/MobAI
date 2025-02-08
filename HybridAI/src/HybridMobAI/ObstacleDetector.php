@@ -13,7 +13,9 @@ class ObstacleDetector {
     public function checkForObstaclesAndJump(Living $mob, World $world): void {
         $position = $mob->getPosition();
         $yaw = $mob->getLocation()->yaw;
-        $direction2D = VectorMath::getDirection2D($yaw);
+        $angles = [$yaw, $yaw + 30, $yaw - 30]; // 정밀한 장애물 감지
+        foreach ($angles as $angle) {
+        $direction2D = VectorMath::getDirection2D($angle);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
         $frontBlockPos = $position->addVector($directionVector);
@@ -28,6 +30,7 @@ class ObstacleDetector {
             $this->stepUp($mob, $heightDiff);
         } else if ($heightDiff <= 1.5) {
             $this->jump($mob, $heightDiff);
+        }
         }
     }
 
