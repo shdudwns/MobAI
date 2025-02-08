@@ -14,6 +14,8 @@ use pocketmine\math\AxisAlignedBB as AABB;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\entity\animation\ArmSwingAnimation;
+use pocketmine\block\Stair;
+use pocketmine\block\Slab;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -187,10 +189,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     }
 }
 private function isStairOrSlab(Block $block): bool {
-    $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단
-    $slabIds = [44, 126, 182]; // 슬라브
-
-    return in_array($block->getTypeId(), $stairIds) || in_array($block->getTypeId(), $slabIds);
+    return $block instanceof Stair || $block instanceof Slab;
 }
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
