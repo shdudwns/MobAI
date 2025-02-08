@@ -62,19 +62,18 @@ class EntityAI {
                 $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
                 $pathfinder = new Pathfinder($world);
 
-                // 알고리즘 선택
                 $path = match ($this->algorithm) {
                     "A*" => $pathfinder->findPathAStar($start, $goal),
                     "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
                     "Greedy" => $pathfinder->findPathGreedy($start, $goal),
                     "BFS" => $pathfinder->findPathBFS($start, $goal),
                     "DFS" => $pathfinder->findPathDFS($start, $goal),
-                    default => null, // 지원하지 않는 알고리즘
+                    default => null,
                 };
 
                 $this->setResult($path);
             } else {
-                $this->setResult(null); // 월드 로드 실패
+                $this->setResult(null);
             }
         }
 
@@ -83,6 +82,7 @@ class EntityAI {
         }
     });
 }
+
 
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
     $pathfinder = new Pathfinder($world);
