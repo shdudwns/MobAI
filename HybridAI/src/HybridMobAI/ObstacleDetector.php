@@ -16,6 +16,12 @@ use pocketmine\Server;
 use pocketmine\scheduler\ClosureTask;
 
 class ObstacleDetector {
+
+    private Main $plugin;
+    
+    public function __construct(Main $plugin) {
+        $this->plugin = $plugin;
+    }
     public function checkForObstaclesAndJump(Living $mob, World $world): void {
         $position = $mob->getPosition();
         $yaw = $mob->getLocation()->yaw;
@@ -97,7 +103,7 @@ class ObstacleDetector {
         ));
 
         // ✅ 연속적인 계단 이동을 위해 착지 후 추가 체크
-        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob, $mob->getWorld());
             }
