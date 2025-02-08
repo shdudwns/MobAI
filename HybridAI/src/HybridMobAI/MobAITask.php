@@ -65,7 +65,7 @@ class MobAITask extends Task {
                 $this->entityAI->moveAlongPath($mob);
             } else {
                 // ✅ 경로가 없으면 기본 AI 사용
-                $this->entityAI->findPath(
+                $this->entityAI->findPathAsync(
                     $mob->getWorld(),
                     $mob->getPosition(),
                     $player->getPosition(),
@@ -133,7 +133,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
     $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-    $heightDiff = $frontBlock->getPosition()->y - $position->y;
+    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
     // ✅ 평지에서는 계단으로 감지하지 않도록 수정
     if ($heightDiff < 0.5) {
