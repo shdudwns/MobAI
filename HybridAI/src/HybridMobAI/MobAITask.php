@@ -135,7 +135,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $frontBlockPos = $position->addVector($directionVector);
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-        $heightDiff = $frontBlock->getPosition()->y+0.5 - $position->y;
+        $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
         // ✅ 평지에서는 계단으로 감지하지 않도록 수정
         if ($heightDiff < 0) {
