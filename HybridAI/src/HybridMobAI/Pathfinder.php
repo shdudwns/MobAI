@@ -187,29 +187,3 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
     return $neighbors;
 }
 }
-
-class PathfinderTask {
-    private string $worldName;
-    private Vector3 $start;
-    private Vector3 $goal;
-    private string $algorithm;
-
-    public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
-        $this->worldName = $worldName;
-        $this->start = new Vector3((float) $start->x, (float) $start->y, (float) $start->z);
-        $this->goal = new Vector3((float) $goal->x, (float) $goal->y, (float) $goal->z);
-        $this->algorithm = $algorithm;
-    }
-
-    public function findPath(): ?array {
-        $pathfinder = new Pathfinder();
-        return match ($this->algorithm) {
-            "A*" => $pathfinder->findPathAStar($this->start, $this->goal),
-            "BFS" => $pathfinder->findPathBFS($this->start, $this->goal),
-            "DFS" => $pathfinder->findPathDFS($this->start, $this->goal),
-            "Dijkstra" => $pathfinder->findPathDijkstra($this->start, $this->goal),
-            "Greedy" => $pathfinder->findPathGreedy($this->start, $this->goal),
-            default => null
-        };
-    }
-}
