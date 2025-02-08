@@ -65,27 +65,29 @@ class EntityAI {
                 }
 
                 public function onRun(): void {
-                    $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-                    if (!$world instanceof World) {
-                        $this->setResult(null);
-                        return;
-                    }
+    $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+    if (!$world instanceof World) {
+        $this->setResult(null);
+        return;
+    }
 
-                    $start = new Vector3($this->startX, $this->startY, $this->startZ);
-                    $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-                    $pathfinder = new Pathfinder();
+    $start = new Vector3($this->startX, $this->startY, $this->startZ);
+    $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-                    $path = match ($this->algorithm) {
-                        "A*" => $pathfinder->findPathAStar($world, $start, $goal),
-                        "Dijkstra" => $pathfinder->findPathDijkstra($world, $start, $goal),
-                        "Greedy" => $pathfinder->findPathGreedy($world, $start, $goal),
-                        "BFS" => $pathfinder->findPathBFS($world, $start, $goal),
-                        "DFS" => $pathfinder->findPathDFS($world, $start, $goal),
-                        default => null,
-                    };
+    $startX = (float) $start->x;
+    $startY = (float) $start->y;
+    $startZ = (float) $start->z;
+    $goalX = (float) $goal->x;
+    $goalY = (float) $goal->y;
+    $goalZ = (float) $goal->z;
 
-                    $this->setResult($path);
-                }
+
+    $pathfinderTask = new PathfinderTask($this->worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $this->algorithm);
+    $path = $pathfinderTask->findPath();
+
+    $this->setResult($path);
+
+}
 
                 public function onCompletion(): void {
                     $result = $this->getResult();
