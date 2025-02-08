@@ -12,11 +12,11 @@ use pocketmine\world\Position;
 use pocketmine\plugin\PluginBase; // PluginBase 임포트
 
 class EntityAI {
-    private bool $enabled = false; // AI 활성화 여부
-    private array $path = []; // A* 경로
-    private ?Vector3 $target = null; // 목표 위치
+    private bool $enabled = false;
+    private array $path = [];
+    private ?Vector3 $target = null;
     private array $entityPaths = [];
-    private PluginBase $plugin; // PluginBase 인스턴스 저장
+    private PluginBase $plugin;
 
     public function __construct(PluginBase $plugin) {
         $this->plugin = $plugin;
@@ -31,99 +31,96 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-    $worldName = $world->getFolderName();
-    $startX = $start->x;
-    $startY = $start->y;
-    $startZ = $start->z;
-    $goalX = $goal->x;
-    $goalY = $goal->y;
-    $goalZ = $goal->z;
+        $worldName = $world->getFolderName();
+        $startX = $start->x;
+        $startY = $start->y;
+        $startZ = $start->z;
+        $goalX = $goal->x;
+        $goalY = $goal->y;
+        $goalZ = $goal->z;
 
-    $plugin = $this->plugin; // $plugin 인스턴스 캡처
-    $entityAI = $this;       // $this 캡처
+        $plugin = $this->plugin;
+        $entityAI = $this;
 
-    Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin) extends AsyncTask {
-        private string $worldName;
-        private float $startX;
-        private float $startY;
-        private float $startZ;
-        private float $goalX;
-        private float $goalY;
-        private float $goalZ;
-        private string $algorithm;
-        private $callback;
-        private EntityAI $entityAI;
-        private PluginBase $plugin;
+        Server::getInstance()->getAsyncPool()->submitTask(new class($world, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin, $worldName) extends AsyncTask {
+            private string $worldName;
+            private float $startX;
+            private float $startY;
+            private float $startZ;
+            private float $goalX;
+            private float $goalY;
+            private float $goalZ;
+            private string $algorithm;
+            private $callback;
+            private EntityAI $entityAI;
+            private PluginBase $plugin;
+            private World $world;
 
-        public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin) {
-            $this->worldName = $worldName;
-            $this->startX = $startX;
-            $this->startY = $startY;
-            $this->startZ = $startZ;
-            $this->goalX = $goalX;
-            $this->goalY = $goalY;
-            $this->goalZ = $goalZ;
-            $this->algorithm = $algorithm;
-            $this->callback = $callback;
-            $this->entityAI = $entityAI;
-            $this->plugin = $plugin;
-        }
+            public function __construct(World $world, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin, string $worldName) {
+                $this->world = $world;
+                $this->worldName = $worldName;
+                $this->startX = $startX;
+                $this->startY = $startY;
+                $this->startZ = $startZ;
+                $this->goalX = $goalX;
+                $this->goalY = $goalY;
+                $this->goalZ = $goalZ;
+                $this->algorithm = $algorithm;
+                $this->callback = $callback;
+                $this->entityAI = $entityAI;
+                $this->plugin = $plugin;
+            }
 
-        public function onRun(): void {
-            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-            if ($world instanceof World) {
+            public function onRun(): void {
                 $start = new Vector3($this->startX, $this->startY, $this->startZ);
                 $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-                $pathfinder = new Pathfinder($world);
+                $pathfinder = new Pathfinder();
 
                 $path = match ($this->algorithm) {
-                    "A*" => $pathfinder->findPathAStar($start, $goal),
-                    "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
-                    "Greedy" => $pathfinder->findPathGreedy($start, $goal),
-                    "BFS" => $pathfinder->findPathBFS($start, $goal),
-                    "DFS" => $pathfinder->findPathDFS($start, $goal),
+                    "A*" => $pathfinder->findPathAStar($this->world, $start, $goal),
+                    "Dijkstra" => $pathfinder->findPathDijkstra($this->world, $start, $goal),
+                    "Greedy" => $pathfinder->findPathGreedy($this->world, $start, $goal),
+                    "BFS" => $pathfinder->findPathBFS($this->world, $start, $goal),
+                    "DFS" => $pathfinder->findPathDFS($this->world, $start, $goal),
                     default => null,
                 };
 
                 $this->setResult($path);
-            } else {
-                $this->setResult(null);
             }
-        }
 
-        public function onCompletion(): void {
-            ($this->callback)($this->getResult());
-            $this->plugin->getLogger()->info("경로 탐색 완료!");
-        }
-    });
+            public function onCompletion(): void {
+                $result = $this->getResult();
+                ($this->callback)($result); // 콜백 함수 호출
+
+                if ($result !== null) {
+                   $this->plugin->getLogger()->info("경로 탐색 완료!");
+                } else {
+                    $this->plugin->getLogger()->info("경로를 찾을 수 없습니다.");
+                }
+
+            }
+        });
     }
 
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
-        $pathfinder = new Pathfinder($world);
+        $pathfinder = new Pathfinder();
 
         switch ($algorithm) {
             case "A*":
-                return $pathfinder->findPathAStar($start, $goal);
+                return $pathfinder->findPathAStar($world, $start, $goal);
             case "Dijkstra":
-                return $pathfinder->findPathDijkstra($start, $goal);
+                return $pathfinder->findPathDijkstra($world, $start, $goal);
             case "Greedy":
-                return $pathfinder->findPathGreedy($start, $goal);
+                return $pathfinder->findPathGreedy($world, $start, $goal);
             case "BFS":
-                return $pathfinder->findPathBFS($start, $goal);
+                return $pathfinder->findPathBFS($world, $start, $goal);
             case "DFS":
-                return $pathfinder->findPathDFS($start, $goal);
+                return $pathfinder->findPathDFS($world, $start, $goal);
             default:
                 return null;
         }
     }
-    private function logDebug(string $message, mixed $data = null): void {
-        $logMessage = "[" . date("Y-m-d H:i:s") . "] " . $message;
-        if ($data !== null) {
-            $logMessage .= " " . print_r($data, true);
-        }
-        $logMessage .= "\n";
-        file_put_contents("debug_log.txt", $logMessage, FILE_APPEND);
-    }
+
 
     public function setPath(Living $mob, array $path): void {
         $this->entityPaths[$mob->getId()] = $path;
