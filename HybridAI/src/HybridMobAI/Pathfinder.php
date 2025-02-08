@@ -11,46 +11,50 @@ class Pathfinder {
     }
 
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-        $openSet = [$start];
-        $openSetHash = [self::vectorToStr($start) => true];
-        $cameFrom = [];
-        $gScore = [self::vectorToStr($start) => 0];
-        $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
+    $openSet = [$start];
+    $openSetHash = [self::vectorToStr($start) => true];
+    $cameFrom = [];
+    $gScore = [self::vectorToStr($start) => 0];
+    $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
 
-        $maxDepth = 500;
-        $depth = 0;
+    $maxDepth = 500;
+    $depth = 0;
 
-        while (!empty($openSet) && $depth < $maxDepth) {
-            usort($openSet, fn($a, $b) => $fScore[self::vectorToStr($a)] <=> $fScore[self::vectorToStr($b)]);
-            $current = array_shift($openSet);
-            $currentKey = self::vectorToStr($current);
+    while (!empty($openSet) && $depth < $maxDepth) {
+        // ✅ 기존 usort() 대신 array_multisort() 사용하여 정렬 최적화
+        $keys = array_map(fn($vec) => $fScore[self::vectorToStr($vec)], $openSet);
+        array_multisort($keys, SORT_ASC, $openSet);
 
-            if ($current->equals($goal)) {
-                return $this->reconstructPath($cameFrom, $current);
-            }
+        $current = array_shift($openSet);
+        $currentKey = self::vectorToStr($current);
 
-            foreach ($this->getNeighbors($world, $current) as $neighbor) {
-                $neighborKey = self::vectorToStr($neighbor);
-                $tentativeGScore = $gScore[$currentKey] + 1;
-
-                if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
-                    $cameFrom[$neighborKey] = $current;
-                    $gScore[$neighborKey] = $tentativeGScore;
-                    $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-
-                    if (!in_array($neighbor, $openSet, true)) {
-                        $openSet[] = $neighbor;
-                        $openSetHash[$neighborKey] = true;
-                    }
-                }
-            }
-
-            $depth++;
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
         }
 
-        return null;
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $tentativeGScore = $gScore[$currentKey] + 1;
+
+            // ✅ `in_array()` 대신 `isset()` 사용하여 탐색 속도 개선
+            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $gScore[$neighborKey] = $tentativeGScore;
+                $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
+
+                if (!isset($openSetHash[$neighborKey])) {
+                    $openSet[] = $neighbor;
+                    $openSetHash[$neighborKey] = true;
+                }
+            }
+        }
+
+        $depth++;
     }
 
+    return null;
+}
+    
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
         $openSet = [$start];
         $cameFrom = [];
