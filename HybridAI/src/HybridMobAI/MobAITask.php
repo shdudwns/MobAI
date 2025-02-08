@@ -173,21 +173,26 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     return $frontBlock->getPosition()->y + 0.5 - $mob->getPosition()->y;
 }
-    
+
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
-        $this->plugin()->getLogger()->info("계단점프");
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.3);
+
         $mob->setMotion(new Vector3(
             $direction->x,
             0.6, // 계단을 오를 때 점프 강도를 높임
             $direction->z
         ));
-        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+
+        // ✅ 연속된 계단을 감지하여 계속 이동하도록 함
+        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+            if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob);
-            }), 2);
+            }
+        }), 2);
     }
 }
+    
 private function isStairOrSlab(Block $block): bool {
     return $block instanceof Stair || $block instanceof Slab;
 }
