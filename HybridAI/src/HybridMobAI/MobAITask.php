@@ -147,9 +147,6 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUP($mob, $heightDiff);
-            $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
-                $this->checkForObstaclesAndJump($mob);
-            }), 2);
             return;
         }
     }
@@ -182,6 +179,10 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
             0.6, // 계단을 오를 때 점프 강도를 높임
             $direction->z
         ));
+        $this->getLogger()->info("계단점프);
+        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+                $this->checkForObstaclesAndJump($mob);
+            }), 2);
     }
 }
 private function isStairOrSlab(Block $block): bool {
