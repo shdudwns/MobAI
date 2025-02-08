@@ -7,6 +7,7 @@ use pocketmine\world\World;
 use pocketmine\entity\Living;
 use pocketmine\block\Block;
 use pocketmine\Server;
+use pocketmine\scheduler\AsyncTask;
 
 class EntityAI {
     private bool $enabled = false; // AI 활성화 여부
@@ -20,6 +21,41 @@ class EntityAI {
 
     public function isEnabled(): bool {
         return $this->enabled;
+    }
+
+    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
+        Server::getInstance()->getAsyncPool()->submitTask(new class($world, $start, $goal, $algorithm, $callback) extends AsyncTask {
+            private World $world;
+            private Vector3 $start;
+            private Vector3 $goal;
+            private string $algorithm;
+            private $callback;
+
+            public function __construct(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback) {
+                $this->world = $world;
+                $this->start = $start;
+                $this->goal = $goal;
+                $this->algorithm = $algorithm;
+                $this->callback = $callback;
+            }
+
+            public function onRun(): void {
+                $pathfinder = new Pathfinder($this->world);
+                $path = match ($this->algorithm) {
+                    "A*" => $pathfinder->findPathAStar($this->start, $this->goal),
+                    "Dijkstra" => $pathfinder->findPathDijkstra($this->start, $this->goal),
+                    "Greedy" => $pathfinder->findPathGreedy($this->start, $this->goal),
+                    "BFS" => $pathfinder->findPathBFS($this->start, $this->goal),
+                    "DFS" => $pathfinder->findPathDFS($this->start, $this->goal),
+                    default => null,
+                };
+                $this->setResult($path);
+            }
+
+            public function onCompletion(): void {
+                ($this->callback)($this->getResult());
+            }
+        });
     }
 
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
