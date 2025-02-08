@@ -130,7 +130,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $frontBlockPos = $position->addVector($directionVector);
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
+        $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
         // ✅ 평지에서는 점프하지 않도록 수정
         if ($heightDiff < 0.5) {
@@ -174,18 +174,19 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
 
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.5) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.3);
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
 
+        // ✅ 이동 속도 및 점프 곡선 조절
         $mob->setMotion(new Vector3(
             $direction->x,
-            0.6 + ($heightDiff * 0.2), // 계단을 오를 때 추가 점프력 부여
+            0.5 + ($heightDiff * 0.15), // 기존보다 부드럽게 상승
             $direction->z
         ));
 
-        // ✅ 2틱 간격으로 실행하여 연속된 계단 감지
+        // ✅ 점프 후 속도를 조절하여 자연스럽게 이동
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
-                $this->checkForObstaclesAndJump($mob);
+                $mob->setMotion($mob->getMotion()->multiply(0.5)); // 착지 후 속도 줄이기
             }
         }), 2);
     }
