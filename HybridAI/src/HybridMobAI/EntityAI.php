@@ -24,15 +24,16 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-        Server::getInstance()->getAsyncPool()->submitTask(new class($world, $start, $goal, $algorithm, $callback) extends AsyncTask {
-            private World $world;
+        $worldName = $world->getFolderName();
+        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $start, $goal, $algorithm, $callback) extends AsyncTask {
+            private string $worldName;
             private Vector3 $start;
             private Vector3 $goal;
             private string $algorithm;
             private $callback;
 
-            public function __construct(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback) {
-                $this->world = $world;
+            public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback) {
+                $this->worldName = $worldName;
                 $this->start = $start;
                 $this->goal = $goal;
                 $this->algorithm = $algorithm;
@@ -40,7 +41,9 @@ class EntityAI {
             }
 
             public function onRun(): void {
-                $pathfinder = new Pathfinder($this->world);
+            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName); // 월드 객체 가져오기
+            if ($world instanceof World) { // 월드가 로드되었는지 확인
+                $pathfinder = new Pathfinder($world);
                 $path = match ($this->algorithm) {
                     "A*" => $pathfinder->findPathAStar($this->start, $this->goal),
                     "Dijkstra" => $pathfinder->findPathDijkstra($this->start, $this->goal),
@@ -50,7 +53,10 @@ class EntityAI {
                     default => null,
                 };
                 $this->setResult($path);
+            } else {
+                $this->setResult(null); // 월드가 로드되지 않았으면 null 반환
             }
+        }
 
             public function onCompletion(): void {
                 ($this->callback)($this->getResult());
