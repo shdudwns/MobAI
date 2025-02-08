@@ -5,7 +5,6 @@ namespace HybridMobAI;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\entity\Living;
-use pocketmine\block\Block;
 use pocketmine\Server;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\world\Position;
@@ -39,67 +38,102 @@ class EntityAI {
         $goalY = $goal->y;
         $goalZ = $goal->z;
 
-        $plugin = $this->plugin;
-        $entityAI = $this;
-
-        // 1. 캡처할 모든 데이터를 이 곳에서 캡처합니다.
-        $capturedThis = $this;
-        $capturedWorld = $world;
-        $capturedStart = $start;
-        $capturedGoal = $goal;
+        // 필요한 데이터 캡처 (개선)
+        $capturedWorldName = $worldName;
+        $capturedStartX = $startX;
+        $capturedStartY = $startY;
+        $capturedStartZ = $startZ;
+        $capturedGoalX = $goalX;
+        $capturedGoalY = $goalY;
+        $capturedGoalZ = $goalZ;
         $capturedAlgorithm = $algorithm;
 
-        // 2. 콜백 함수를 래핑하는 *일반 함수*를 만듭니다. (익명 함수가 아님)
-        $callbackFunction = function($result) use ($capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm, $callback) {
-            $callback($result, $capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm);
+        // 콜백 클로저 개선 (캡처한 데이터 직접 사용)
+        $callbackFunction = function($result) use ($capturedWorldName, $capturedStartX, $capturedStartY, $capturedStartZ, $capturedGoalX, $capturedGoalY, $capturedGoalZ, $capturedAlgorithm, $callback) {
+            $plugin = Server::getInstance()->getPluginManager()->getPlugin("HybridAI");
+            if ($plugin instanceof Main) {
+                $entityAI = $plugin->getEntityAI();
+                $world = Server::getInstance()->getWorldManager()->getWorldByName($capturedWorldName);  // 캡처한 worldName 사용
+                if ($world instanceof World) {
+                    $startPos = new Position($capturedStartX, $capturedStartY, $capturedStartZ, $world); // 캡처한 좌표 사용
+                    $goalPos = new Position($capturedGoalX, $capturedGoalY, $capturedGoalZ, $world); // 캡처한 좌표 사용
+
+                    // 타입 힌팅 추가 (개선)
+                    $callback($result, $entityAI, $world, $startPos, $goalPos, $capturedAlgorithm);
+                } else {
+                    // 월드 로드 실패 처리 (오류 처리 추가)
+                    $callback(null, null, null, null, null, $capturedAlgorithm); // 예시: null 전달
+                }
+            } else {
+                // 플러그인 로드 실패 처리 (오류 처리 추가)
+                $callback(null, null, null, null, null, $capturedAlgorithm); // 예시: null 전달
+            }
         };
 
-        // 3. AsyncTask 객체 생성을 별도의 함수로 분리 (핵심 변경 사항)
-        $createAsyncTask = function() use ($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction, $entityAI, $plugin) {
-            return new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction, $entityAI, $plugin) extends AsyncTask {
-                // ... (AsyncTask 속성들 - 이전과 동일)
+        // 원시 데이터만 사용하여 비동기 작업 생성
+        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction) extends AsyncTask {
+            private string $worldName;
+            private float $startX;
+            private float $startY;
+            private float $startZ;
+            private float $goalX;
+            private float $goalY;
+            private float $goalZ;
+            private string $algorithm;
+            private \Closure $callback;
 
-                public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callbackFunction, EntityAI $entityAI, PluginBase $plugin) {
-                    // ... (AsyncTask 생성자 - 이전과 동일)
-                    $this->callbackFunction = $callbackFunction;
+            public function __construct(
+                string $worldName,
+                float $startX, float $startY, float $startZ,
+                float $goalX, float $goalY, float $goalZ,
+                string $algorithm,
+                \Closure $callback
+            ) {
+                $this->worldName = $worldName;
+                $this->startX = $startX;
+                $this->startY = $startY;
+                $this->startZ = $startZ;
+                $this->goalX = $goalX;
+                $this->goalY = $goalY;
+                $this->goalZ = $goalZ;
+                $this->algorithm = $algorithm;
+                $this->callback = $callback;
+            }
+
+            public function onRun(): void {
+                $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+                if (!$world instanceof World) {
+                    $this->setResult(null);
+                    return;
                 }
 
-                public function onRun(): void {
-                    $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-                    if (!$world instanceof World) {
-                        $this->setResult(null);
-                        return;
-                    }
+                $pathfinder = new Pathfinder();
+                $start = new Vector3($this->startX, $this->startY, $this->startZ);
+                $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-                    $start = new Vector3($this->startX, $this->startY, $this->startZ);
-                    $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-
-                    // PathfinderTask에 필요한 모든 좌표값을 float으로 형변환하여 전달
-                    $startX = (float) $start->x;
-                    $startY = (float) $start->y;
-                    $startZ = (float) $start->z;
-                    $goalX = (float) $goal->x;
-                    $goalY = (float) $goal->y;
-                    $goalZ = (float) $goal->z;
-
-                    $pathfinderTask = new PathfinderTask($this->worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $this->algorithm);
-                    $path = $pathfinderTask->findPath();
-
-                    $this->setResult($path);
-
+                switch ($this->algorithm) {
+                    case "A*":
+                        $path = $pathfinder->findPathAStar($world, $start, $goal);
+                        break;
+                    // 다른 알고리즘 처리...
+                    default:
+                        $path = null;
                 }
 
-                public function onCompletion(): void {
-                    $result = $this->getResult();
-                    ($this->callbackFunction)($result); // 래핑된 콜백 호출
-                    // ... (로그 출력 - 이전과 동일)
+                $this->setResult($path);
+            }
+
+            public function onCompletion(): void {
+                if (isset($this->callback)) {
+                    ($this->callback)($this->getResult());
                 }
-            };
+            }
         };
 
-        // 4. AsyncTask 실행
-        Server::getInstance()->getAsyncPool()->submitTask($createAsyncTask()); // 함수 호출 후 반환된 AsyncTask 객체 전달
+        Server::getInstance()->getAsyncPool()->submitTask($task);
     }
+
+
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         $pathfinder = new Pathfinder();
 
