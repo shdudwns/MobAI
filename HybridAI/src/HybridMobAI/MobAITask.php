@@ -117,7 +117,10 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
+    $angles = [$yaw, $yaw + 45, $yaw - 45];
+    
+    foreach ($angles as $angle) {
+    $direction2D = VectorMath::getDirection2D($angle);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
     $frontBlockX = (int)floor($position->x + $directionVector->x);
@@ -141,8 +144,8 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
-            return;
         }
+    }
     }
 }
     private function checkFrontBlock(Living $mob): ?Block {
