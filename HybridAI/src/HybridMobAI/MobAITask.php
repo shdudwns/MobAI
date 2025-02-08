@@ -205,9 +205,14 @@ private function isStairOrSlab(Block $block): bool {
     if ($nearestPlayer !== null) {
         $distance = $mob->getPosition()->distance($nearestPlayer->getPosition());
 
-        // ✅ `hasClearLineOfSight()` 사용
-        if ($distance <= 1.5 && $mob->hasClearLineOfSight($nearestPlayer)) {
-            $damage = $this->plugin->getConfig()->get("attack_damage", 2); // 기본 데미지 2
+        // ✅ 몬스터가 플레이어를 정면으로 바라볼 때만 공격 가능
+        $mobDirection = $mob->getDirectionVector();
+        $toPlayer = $nearestPlayer->getPosition()->subtract($mob->getPosition())->normalize();
+        $dotProduct = $mobDirection->dot($toPlayer);
+
+        // ✅ dotProduct가 0.7 이상이면 정면 방향
+        if ($distance <= 1.5 && $dotProduct >= 0.7) {
+            $damage = $this->plugin->getConfig()->get("attack_damage", 2);
             $event = new EntityDamageByEntityEvent($mob, $nearestPlayer, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage);
             $nearestPlayer->attack($event);
 
