@@ -49,20 +49,19 @@ class EntityAI {
 }
 
 public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ `Position`이 들어오면 `Vector3`로 변환 후 로그 저장
+    // ✅ 변환 확인 로그 추가
     if (!$start instanceof Vector3) {
-        $this->logDebug("⚠️ 변환 전 Start 값 (Position 객체 감지)", $start);
+        $this->logDebug("⚠️ findPathAsync - 변환 전 Start 값 (Position 객체 감지)", $start);
         $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
-        $this->logDebug("✅ 변환 후 Start 값 (Vector3 변환 완료)", $start);
+        $this->logDebug("✅ findPathAsync - 변환 후 Start 값 (Vector3 변환 완료)", $start);
     }
 
     if (!$goal instanceof Vector3) {
-        $this->logDebug("⚠️ 변환 전 Goal 값 (Position 객체 감지)", $goal);
+        $this->logDebug("⚠️ findPathAsync - 변환 전 Goal 값 (Position 객체 감지)", $goal);
         $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
-        $this->logDebug("✅ 변환 후 Goal 값 (Vector3 변환 완료)", $goal);
+        $this->logDebug("✅ findPathAsync - 변환 후 Goal 값 (Vector3 변환 완료)", $goal);
     }
 
-    // ✅ 경로 탐색 로그 저장
     $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start:", $start);
     $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal:", $goal);
 
