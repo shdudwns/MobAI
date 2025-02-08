@@ -134,24 +134,15 @@ public static function storeCallback(string $id, callable $callback): void {
 public static function getCallback(string $id): ?callable {
     return self::$callbacks[$id] ?? null;
 }
-    public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
-        $pathfinder = new Pathfinder();
+    public function findPath(World $world, Vector3 $start, Vector3 $goal): ?array {
+    $enabledAlgorithms = $this->plugin->getConfig()->get("pathfinding")["enabled_algorithms"];
 
-        switch ($algorithm) {
-            case "A*":
-                return $pathfinder->findPathAStar($world, $start, $goal);
-            case "Dijkstra":
-                return $pathfinder->findPathDijkstra($world, $start, $goal);
-            case "Greedy":
-                return $pathfinder->findPathGreedy($world, $start, $goal);
-            case "BFS":
-                return $pathfinder->findPathBFS($world, $start, $goal);
-            case "DFS":
-                return $pathfinder->findPathDFS($world, $start, $goal);
-            default:
-                return null;
-        }
+    if (in_array("A*", $enabledAlgorithms)) {
+        return (new Pathfinder())->findPathAStar($world, $start, $goal);
     }
+
+    return null; // A*만 사용하도록 설정
+}
 
 public function getPath(Living $mob): ?array {
     return $this->entityPaths[$mob->getId()] ?? null;
