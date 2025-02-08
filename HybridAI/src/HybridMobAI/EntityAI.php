@@ -42,7 +42,7 @@ class EntityAI {
         $plugin = $this->plugin;
         $entityAI = $this;
 
-        Server::getInstance()->getAsyncPool()->submitTask(new class($world, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin, $worldName) extends AsyncTask {
+        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin) extends AsyncTask {
             private string $worldName;
             private float $startX;
             private float $startY;
@@ -54,10 +54,8 @@ class EntityAI {
             private $callback;
             private EntityAI $entityAI;
             private PluginBase $plugin;
-            private World $world;
 
-            public function __construct(World $world, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin, string $worldName) {
-                $this->world = $world;
+            public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin) {
                 $this->worldName = $worldName;
                 $this->startX = $startX;
                 $this->startY = $startY;
@@ -72,16 +70,22 @@ class EntityAI {
             }
 
             public function onRun(): void {
+                $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+                if (!$world instanceof World) {
+                    $this->setResult(null); // 월드가 없을 경우 null 반환
+                    return;
+                }
+
                 $start = new Vector3($this->startX, $this->startY, $this->startZ);
                 $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
                 $pathfinder = new Pathfinder();
 
                 $path = match ($this->algorithm) {
-                    "A*" => $pathfinder->findPathAStar($this->world, $start, $goal),
-                    "Dijkstra" => $pathfinder->findPathDijkstra($this->world, $start, $goal),
-                    "Greedy" => $pathfinder->findPathGreedy($this->world, $start, $goal),
-                    "BFS" => $pathfinder->findPathBFS($this->world, $start, $goal),
-                    "DFS" => $pathfinder->findPathDFS($this->world, $start, $goal),
+                    "A*" => $pathfinder->findPathAStar($world, $start, $goal),
+                    "Dijkstra" => $pathfinder->findPathDijkstra($world, $start, $goal),
+                    "Greedy" => $pathfinder->findPathGreedy($world, $start, $goal),
+                    "BFS" => $pathfinder->findPathBFS($world, $start, $goal),
+                    "DFS" => $pathfinder->findPathDFS($world, $start, $goal),
                     default => null,
                 };
 
@@ -90,14 +94,13 @@ class EntityAI {
 
             public function onCompletion(): void {
                 $result = $this->getResult();
-                ($this->callback)($result); // 콜백 함수 호출
+                ($this->callback)($result);
 
                 if ($result !== null) {
-                   $this->plugin->getLogger()->info("경로 탐색 완료!");
+                    $this->plugin->getLogger()->info("경로 탐색 완료!");
                 } else {
                     $this->plugin->getLogger()->info("경로를 찾을 수 없습니다.");
                 }
-
             }
         });
     }
@@ -120,7 +123,6 @@ class EntityAI {
                 return null;
         }
     }
-
 
     public function setPath(Living $mob, array $path): void {
         $this->entityPaths[$mob->getId()] = $path;
