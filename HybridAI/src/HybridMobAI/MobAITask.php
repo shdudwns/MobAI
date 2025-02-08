@@ -124,7 +124,10 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
+    $angles = [$yaw, $yaw + 45, $yaw - 45];
+    
+    foreach ($angles as $angle) {
+    $direction2D = VectorMath::getDirection2D($angle);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
     $frontBlockX = (int)floor($position->x + $directionVector->x);
@@ -136,7 +139,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
     // ✅ 평지에서는 계단으로 감지하지 않도록 수정
-    if ($heightDiff < 0.5) {
+    if ($heightDiff < 0) {
         return;
     }
 
@@ -154,6 +157,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
             $this->jump($mob, $heightDiff);
             return;
         }
+    }
     }
 }
     
