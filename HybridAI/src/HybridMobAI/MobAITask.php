@@ -121,33 +121,49 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+    $angles = [$yaw, $yaw + 45, $yaw - 45];
 
-    $frontBlockPos = $position->addVector($directionVector);
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-    
-    $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
+    $boundingBox = $mob->getBoundingBox();
 
-    // ✅ 평지에서는 점프하지 않도록 수정
-    if ($heightDiff < 0.5) {
-        return;
+    if ($boundingBox === null) {
+        return; // or handle the error appropriately
     }
 
-    // ✅ 계단 및 슬랩 감지
-    if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-        $this->stepUp($mob, $heightDiff);
-        return;
-    }
+    // 수정된 부분: 속성에 직접 접근
+    $xSize = $boundingBox->maxX - $boundingBox->minX;
+    $zSize = $boundingBox->maxZ - $boundingBox->minZ;
 
-    // ✅ 일반 블록 점프 처리
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1) {
-            $this->jump($mob, $heightDiff);
+    $offset = max($xSize, $zSize) / 2; // Use the larger dimension for the offset, divide by 2 for radius. Adjust divisor as needed.
+
+    foreach ($angles as $angle) {
+        $direction2D = VectorMath::getDirection2D($angle);
+        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+        $frontBlockPos = $position->addVector($directionVector->multiply($offset));
+
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+        $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+
+        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
+
+        if ($heightDiff < 0.5) {
+            continue;
+        }
+
+        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
+            return;
+        }
+
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1) {
+                $this->jump($mob, $heightDiff);
+                return;
+            }
         }
     }
 }
+
 
     
     private function checkFrontBlock(Living $mob): ?Block {
