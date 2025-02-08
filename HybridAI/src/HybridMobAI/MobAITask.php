@@ -14,6 +14,8 @@ use pocketmine\math\AxisAlignedBB as AABB;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\entity\animation\ArmSwingAnimation;
+use pocketmine\block\Stair;
+use pocketmine\block\Slab;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -159,38 +161,49 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-
-    $frontBlockX = (int)floor($position->x + $directionVector->x);
-    $frontBlockY = (int)$position->y;
-    $frontBlockZ = (int)floor($position->z + $directionVector->z);
-
-    return $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    
+    // 정확한 방향 계산을 위해 0.6m 앞쪽을 확인
+    $direction = VectorMath::getDirection2D($yaw)->mult(0.6);
+    
+    $frontX = (int)floor($position->x + $direction->x);
+    $frontY = (int)floor($position->y + 0.5); // 몸 중앙 높이
+    $frontZ = (int)floor($position->z + $direction->y);
+    
+    return $world->getBlockAt($frontX, $frontY, $frontZ);
 }
 private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     return $frontBlock->getPosition()->y + 0.5 - $mob->getPosition()->y;
 }
     
     private function stepUp(Living $mob, float $heightDiff): void {
-    if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
-        $this->plugin()->getLogger()->info("계단점프");
-        $mob->setMotion(new Vector3(
-            $direction->x,
-            0.6, // 계단을 오를 때 점프 강도를 높임
-            $direction->z
-        ));
-        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
-                $this->checkForObstaclesAndJump($mob);
-            }), 2);
+    $direction = $mob->getDirectionVector()->normalize();
+    $horizontalBoost = 0.25; // 수평 이동 추가 힘
+    
+    $mob->setMotion(new Vector3(
+        $direction->x * $horizontalBoost,
+        0.42 + min($heightDiff * 0.2, 0.3), // 높이에 따른 점프력 조정
+        $direction->z * $horizontalBoost
+    ));
+    
+    // 0.1초 후 추가 점프 체크
+    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+        $this->checkForObstaclesAndJump($mob);
+    }), 2);
+}
+
+    private function isCollidingWithStair(Living $mob, Block $block): bool {
+    if($block instanceof Stair) {
+        $mobPos = $mob->getPosition();
+        $stairFacing = $block->getFacing();
+        $mobDirection = $mob->getHorizontalFacing();
+        
+        // 계단 방향과 몹 진행방향이 일치할 때만 충돌 처리
+        return $stairFacing === $mobDirection;
     }
+    return false;
 }
 private function isStairOrSlab(Block $block): bool {
-    $stairIds = [108, 109, 114, 128, 134, 135, 136, 156, 163, 164, 180]; // 계단
-    $slabIds = [44, 126, 182]; // 슬라브
-
-    return in_array($block->getTypeId(), $stairIds) || in_array($block->getTypeId(), $slabIds);
+    return $block instanceof Stair || $block instanceof Slab;
 }
     private function findNearestPlayer(Zombie $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
@@ -289,7 +302,8 @@ private function moveRandomly(Living $mob): void {
     
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
     
-    if ($blockBelow->isTransparent()) {
+    // 계단 위에서는 방향 변경하지 않음
+    if($blockBelow->isTransparent() && !$this->isStairOrSlab($blockBelow)) {
         $this->changeDirection($mob);
     }
 }
