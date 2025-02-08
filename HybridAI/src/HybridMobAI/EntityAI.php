@@ -17,11 +17,9 @@ class EntityAI {
     private array $entityPaths = [];
     private PluginBase $plugin;
     private array $targets = [];
-    private array $enabledAlgorithms;
 
     public function __construct(PluginBase $plugin) {
         $this->plugin = $plugin;
-        $this->enabledAlgorithms = $plugin->getConfig()->get("AI")["enabled_algorithms"] ?? ["A*"];
     }
 
     public function setEnabled(bool $enabled): void {
@@ -49,7 +47,6 @@ class EntityAI {
     $goalY = $goal->y;
     $goalZ = $goal->z;
 
-    $algorithm = $this->enabledAlgorithms[array_rand($this->enabledAlgorithms)];
     $callbackId = spl_object_hash((object) $callback);
     EntityAI::storeCallback($callbackId, $callback);
 
