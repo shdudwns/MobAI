@@ -10,6 +10,8 @@ use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
 use pocketmine\math\AxisAlignedBB as AABB;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
 
 class MobAITask extends Task {
     private Main $plugin;
