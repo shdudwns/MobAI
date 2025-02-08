@@ -30,89 +30,105 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-        $worldName = $world->getFolderName();
-        $startX = $start->x;
-        $startY = $start->y;
-        $startZ = $start->z;
-        $goalX = $goal->x;
-        $goalY = $goal->y;
-        $goalZ = $goal->z;
+    $worldName = $world->getFolderName();
+    $startX = $start->x;
+    $startY = $start->y;
+    $startZ = $start->z;
+    $goalX = $goal->x;
+    $goalY = $goal->y;
+    $goalZ = $goal->z;
 
-        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback) extends AsyncTask {
-            private string $worldName;
-            private float $startX;
-            private float $startY;
-            private float $startZ;
-            private float $goalX;
-            private float $goalY;
-            private float $goalZ;
-            private string $algorithm;
-            private \Closure $callback;
+    // 클로저를 저장하는 ID 생성
+    $callbackId = spl_object_hash((object) $callback);
+    EntityAI::storeCallback($callbackId, $callback);
 
-            public function __construct(
-                string $worldName,
-                float $startX, float $startY, float $startZ,
-                float $goalX, float $goalY, float $goalZ,
-                string $algorithm,
-                \Closure $callback
-            ) {
-                $this->worldName = $worldName;
-                $this->startX = $startX;
-                $this->startY = $startY;
-                $this->startZ = $startZ;
-                $this->goalX = $goalX;
-                $this->goalY = $goalY;
-                $this->goalZ = $goalZ;
-                $this->algorithm = $algorithm;
-                $this->callback = $callback;
+    $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackId) extends AsyncTask {
+        private string $worldName;
+        private float $startX;
+        private float $startY;
+        private float $startZ;
+        private float $goalX;
+        private float $goalY;
+        private float $goalZ;
+        private string $algorithm;
+        private string $callbackId;
+
+        public function __construct(
+            string $worldName,
+            float $startX, float $startY, float $startZ,
+            float $goalX, float $goalY, float $goalZ,
+            string $algorithm,
+            string $callbackId
+        ) {
+            $this->worldName = $worldName;
+            $this->startX = $startX;
+            $this->startY = $startY;
+            $this->startZ = $startZ;
+            $this->goalX = $goalX;
+            $this->goalY = $goalY;
+            $this->goalZ = $goalZ;
+            $this->algorithm = $algorithm;
+            $this->callbackId = $callbackId;
+        }
+
+        public function onRun(): void {
+            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+            if (!$world instanceof World) {
+                $this->setResult(null);
+                return;
             }
 
-            public function onRun(): void {
-                $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-                if (!$world instanceof World) {
-                    $this->setResult(null);
-                    return;
-                }
+            $start = new Vector3($this->startX, $this->startY, $this->startZ);
+            $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
+            $pathfinder = new Pathfinder();
 
-                $start = new Vector3($this->startX, $this->startY, $this->startZ);
-                $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-                $pathfinder = new Pathfinder(); // Pathfinder 객체 onRun() 내부에서 생성
-
-                switch ($this->algorithm) {
-                    case "A*":
-                        $path = $pathfinder->findPathAStar($world, $start, $goal);
-                        break;
-                    case "Dijkstra":
-                        $path = $pathfinder->findPathDijkstra($world, $start, $goal);
-                        break;
-                    case "Greedy":
-                        $path = $pathfinder->findPathGreedy($world, $start, $goal);
-                        break;
-                    case "BFS":
-                        $path = $pathfinder->findPathBFS($world, $start, $goal);
-                        break;
-                    case "DFS":
-                        $path = $pathfinder->findPathDFS($world, $start, $goal);
-                        break;
-                    default:
-                        $path = null;
-                }
-
-                $this->setResult($path);
+            switch ($this->algorithm) {
+                case "A*":
+                    $path = $pathfinder->findPathAStar($world, $start, $goal);
+                    break;
+                case "Dijkstra":
+                    $path = $pathfinder->findPathDijkstra($world, $start, $goal);
+                    break;
+                case "Greedy":
+                    $path = $pathfinder->findPathGreedy($world, $start, $goal);
+                    break;
+                case "BFS":
+                    $path = $pathfinder->findPathBFS($world, $start, $goal);
+                    break;
+                case "DFS":
+                    $path = $pathfinder->findPathDFS($world, $start, $goal);
+                    break;
+                default:
+                    $path = null;
             }
 
-            public function onCompletion(): void {
-                $result = $this->getResult();
-                if (isset($this->callback)) {
-                    ($this->callback)($result);
+            $this->setResult(["path" => $path, "callbackId" => $this->callbackId]);
+        }
+
+        public function onCompletion(): void {
+            $result = $this->getResult();
+            if ($result !== null && isset($result["callbackId"])) {
+                $callback = EntityAI::getCallback($result["callbackId"]);
+                if ($callback !== null) {
+                    ($callback)($result["path"]);
                 }
             }
-        };
+        }
+    };
 
-        Server::getInstance()->getAsyncPool()->submitTask($task);
-    }
+    Server::getInstance()->getAsyncPool()->submitTask($task);
+}
 
+// ✅ 클로저 저장 및 호출을 위한 정적 변수 추가
+private static array $callbacks = [];
 
+public static function storeCallback(string $id, callable $callback): void {
+    self::$callbacks[$id] = $callback;
+}
+
+public static function getCallback(string $id): ?callable {
+    return self::$callbacks[$id] ?? null;
+}
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         $pathfinder = new Pathfinder();
 
