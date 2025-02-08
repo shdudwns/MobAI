@@ -170,6 +170,8 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
             $this->jump($mob, $heightDiff);
             return;
         }
+        $this->jump($mob,1);
+        return;
     }
 }
 
