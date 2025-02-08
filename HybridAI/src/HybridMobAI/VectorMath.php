@@ -1,6 +1,6 @@
 <?php
 
-namespace pocketmine\math;
+namespace HybridMobAI;
 
 class VectorMath {
 
