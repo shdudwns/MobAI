@@ -128,7 +128,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
     $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
     
-    $heightDiff = $frontBlock->getPosition()->y - $position->y;
+    $heightDiff = $frontBlock->getPosition()->y +1 - $position->y;
 
     // ✅ 평지에서는 점프하지 않도록 수정
     if ($heightDiff < 0.5) {
@@ -305,7 +305,7 @@ private function changeDirection(Living $mob): void {
         return;
     }
 }
-    Public function jump(Living $mob, float $heightDiff = 1.0): void {
+    public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
     if ($mob->getMotion()->y < -0.08) {
         $mob->setMotion(new Vector3(
