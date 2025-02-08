@@ -51,56 +51,67 @@ class MobAITask extends Task {
     }
 
 private function handleMobAI(Living $mob): void {
+    $tracker = new EntityTracker();
+    $navigator = new EntityNavigator();
+    $detector = new ObstacleDetector();
+    $ai = new EntityAI($this->plugin);
+
     if (!$this->aiEnabled) {
-        $nearestPlayer = $this->findNearestPlayer($mob);
+        $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
-            $this->moveToPlayer($mob, $nearestPlayer);
+            $navigator->moveToPlayer($mob, $nearestPlayer);
         } else {
-            $this->moveRandomly($mob);
+            $navigator->moveRandomly($mob);
         }
-    } else {
-        $mobId = $mob->getId();
-        $currentTick = Server::getInstance()->getTick();
+        return;
+    }
 
-        $player = $this->findNearestPlayer($mob);
-        if ($player !== null) {
-            $previousTarget = $this->entityAI->getTarget($mob);
+    // ✅ AI 활성화 상태에서의 동작
+    $mobId = $mob->getId();
+    $currentTick = Server::getInstance()->getTick();
 
-            // ✅ 기존 경로가 있고, 플레이어 위치 변화가 크지 않으면 재탐색 X
-            if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
-                $this->entityAI->moveAlongPath($mob);
-                return;
-            }
+    $player = $tracker->findNearestPlayer($mob);
+    if ($player !== null) {
+        $previousTarget = $ai->getTarget($mob);
 
-            $this->entityAI->setTarget($mob, $player->getPosition());
+        // ✅ 기존 경로가 있고, 플레이어 위치 변화가 크지 않으면 경로 유지하면서 이동
+        if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
+            $ai->moveAlongPath($mob);
+            return;
+        }
 
-            // ✅ 경로 갱신 주기를 기존 20~60틱에서 40~80틱으로 늘려 성능 최적화
-            $updateInterval = $this->entityAI->hasPath($mob) ? mt_rand(40, 80) : 20;
-            if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
-                $this->lastPathUpdate[$mobId] = $currentTick;
+        $ai->setTarget($mob, $player->getPosition());
 
-                $this->entityAI->findPathAsync(
-                    $mob->getWorld(),
-                    $mob->getPosition(),
-                    $player->getPosition(),
-                    "A*",
-                    function (?array $path) use ($mob, $player) {
-                        if ($path !== null) {
-                            $this->entityAI->setPath($mob, $path);
-                        } else {
-                            $this->moveToPlayer($mob, $player);
-                        }
+        // ✅ 경로 갱신 주기 동안에도 몬스터가 멈추지 않도록 `moveToPlayer()` 보조 실행
+        if ($ai->hasPath($mob)) {
+            $navigator->moveAlongPath($mob);
+        } else {
+            $navigator->moveToPlayer($mob, $player);
+        }
+
+        // ✅ 경로 갱신 주기를 줄여 부드러운 이동 유지
+        $updateInterval = $ai->hasPath($mob) ? mt_rand(20, 40) : 10;
+        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
+            $this->lastPathUpdate[$mobId] = $currentTick;
+
+            $ai->findPathAsync(
+                $mob->getWorld(),
+                $mob->getPosition(),
+                $player->getPosition(),
+                "A*",
+                function (?array $path) use ($mob, $player, $ai, $navigator) {
+                    if ($path !== null) {
+                        $ai->setPath($mob, $path);
+                    } else {
+                        $navigator->moveToPlayer($mob, $player);
                     }
-                );
-            }
+                }
+            );
         }
     }
 
-    $this->detectLanding($mob);
-    $this->checkForObstaclesAndJump($mob);
-    $this->attackNearestPlayer($mob);
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
-
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
