@@ -176,19 +176,22 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
 }
     
     private function stepUp(Living $mob, float $heightDiff): void {
-    $direction = $mob->getDirectionVector()->normalize();
-    $horizontalBoost = 0.25; // 수평 이동 추가 힘
-    
-    $mob->setMotion(new Vector3(
-        $direction->x * $horizontalBoost,
-        0.42 + min($heightDiff * 0.2, 0.3), // 높이에 따른 점프력 조정
-        $direction->z * $horizontalBoost
-    ));
-    
-    // 0.1초 후 추가 점프 체크
-    $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
-        $this->checkForObstaclesAndJump($mob);
-    }), 2);
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
+
+        $mob->setMotion(new Vector3(
+            $direction->x,
+            0.6, // 계단을 오를 때 점프 강도를 높임
+            $direction->z
+        ));
+
+        // ✅ 계단 감지 로직을 개선하여 자연스럽게 연속된 계단을 오를 수 있도록 수정
+        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+            if ($mob->isOnGround()) {
+                $this->checkForObstaclesAndJump($mob);
+            }
+        }), 2);
+    }
 }
 
     private function isCollidingWithStair(Living $mob, Block $block): bool {
