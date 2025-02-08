@@ -17,6 +17,7 @@ use pocketmine\entity\animation\ArmSwingAnimation;
 use pocketmine\block\Stair;
 use pocketmine\block\Slab;
 use pocketmine\world\Position;
+use pocketmine\block\Air;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -113,22 +114,23 @@ private function handleMobAI(Living $mob): void {
     $this->handleSwimming($mob);
 }
 
-    private function handleSwimming(Living $mob): void {
+private function handleSwimming(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
     $blockAtFeet = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
     $blockAtHead = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
-    if ($blockAtFeet->isTransparent() || $blockAtHead->isTransparent() || $blockAtFeet->getId() === Block::WATER || $blockAtHead->getId() === Block::WATER) {
-        // 물속 (또는 공중)에서 점프
+    // ✅ Air 블록이 아니고, 물 블록일 경우에만 점프 (수영) 모션 실행
+    if (!($blockAtFeet instanceof Air) && $blockAtFeet->getId() === Block::WATER || !($blockAtHead instanceof Air) && $blockAtHead->getId() === Block::WATER) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x * 0.9,
-            0.3,
+            0.3, // 수면 위로 이동하도록 점프
             $mob->getMotion()->z * 0.9
         ));
     }
 }
+
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
