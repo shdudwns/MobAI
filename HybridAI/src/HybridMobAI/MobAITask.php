@@ -53,7 +53,7 @@ class MobAITask extends Task {
 private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
-    $detector = new ObstacleDetector($plugin);
+    $detector = new ObstacleDetector($this->plugin);
     $ai = new EntityAI($this->plugin);
 
     if (!$this->aiEnabled) {
