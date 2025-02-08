@@ -124,36 +124,54 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    $directions = [ // 8방향 벡터
-        new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-        new Vector3(0, 0, 1), new Vector3(0, 0, -1),
-        new Vector3(1, 0, 1), new Vector3(1, 0, -1),
-        new Vector3(-1, 0, 1), new Vector3(-1, 0, -1)
-    ];
+    // 바로 앞 블록 확인
+    $frontBlockPos = $position->addVector($directionVector);
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
 
-    foreach ($directions as $dir) {
-        $frontBlockPos = $position->addVector($directionVector)->addVector($dir);
-        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-        $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-        
-        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
+    $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
 
-        if ($heightDiff < 0.5 && $heightDiff > -0.01) { // Epsilon 값을 이용한 비교
-        continue; // 평지에서는 점프하지 않음
-}
-
-
+    if (!($heightDiff < 0.5 && $heightDiff > -0.01)) {  // Epsilon 값을 이용한 비교
         if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
             return;
         }
 
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5) { // 점프 조건 완화
+            if ($heightDiff <= 1.5) {
                 $this->jump($mob, $heightDiff);
+                return;
             }
         }
     }
+
+    // 왼쪽 및 오른쪽 확인
+    $leftDir = VectorMath::rotateVector($directionVector, 90);  // 왼쪽으로 90도 회전
+    $rightDir = VectorMath::rotateVector($directionVector, -90);  // 오른쪽으로 90도 회전
+
+    foreach ([$leftDir, $rightDir] as $dir) {
+        $blockPos = $position->addVector($dir);
+        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        $blockAbove = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z);
+
+        $heightDiff = $block->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
+
+        if (!($heightDiff < 0.5 && $heightDiff > -0.01)) {  // Epsilon 값을 이용한 비교
+            if ($this->isStairOrSlab($block) && $blockAbove->isTransparent()) {
+                $this->stepUp($mob, $heightDiff);
+                return;
+            }
+
+            if ($this->isClimbable($block) && $blockAbove->isTransparent()) {
+                if ($heightDiff <= 1.5) {
+                    $this->jump($mob, $heightDiff);
+                    return;
+                }
+            }
+        }
+    }
+}
+
 }
 
 
