@@ -4,6 +4,7 @@ namespace HybridMobAI;
 
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
+use pocketmine\math\VectorMath;
 use pocketmine\world\World;
 use pocketmine\block\Block;
 use pocketmine\block\Stair;
