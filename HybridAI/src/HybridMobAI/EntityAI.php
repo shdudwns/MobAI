@@ -49,28 +49,6 @@ class EntityAI {
     file_put_contents("debug_log.txt", $logMessage, FILE_APPEND);
 }
 
-public function findPathAsync(World $world, mixed $start, mixed $goal, string $algorithm, callable $callback): void {
-    try {
-        // ✅ `Position` → `Vector3` 변환 강제 적용
-        $start = PositionHelper::toVector3($start);
-        $goal = PositionHelper::toVector3($goal);
-
-        // ✅ PathFinderTask 실행 로그
-        $this->logDebug("🛠️ PathFinderTask 실행 - Start:", $start);
-        $this->logDebug("🛠️ PathFinderTask 실행 - Goal:", $goal);
-
-        // ✅ 새로운 방식의 비동기 처리
-        Server::getInstance()->getAsyncPool()->submitTask(new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm, function (?array $path) use ($callback) {
-            if ($path !== null) {
-                Server::getInstance()->getScheduler()->scheduleTask(new SynchronizedTask(function () use ($callback, $path) {
-                    $callback($path);
-                }));
-            }
-        }));
-    } catch (\Throwable $e) {
-        $this->logDebug("❌ PathFinderTask 실행 중 오류 발생", $e->getMessage());
-    }
-}
 public function setPath(Living $mob, array $path): void {
     $this->entityPaths[$mob->getId()] = $path;
 }
