@@ -48,40 +48,34 @@ class EntityAI {
     file_put_contents("debug_log.txt", $logMessage, FILE_APPEND);
 }
 
-public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ 강제 변환 및 디버그 로그 추가
-    if (!$start instanceof Vector3) {
-        $this->logDebug("⚠️ findPathAsync - 변환 전 Start 값 (Position 객체 감지)", json_encode($start));
-        
-        // ✅ float 변환을 확실히 수행
-        $start = new Vector3((float)$start->getX(), (float)$start->getY(), (float)$start->getZ());
-
-        $this->logDebug("✅ findPathAsync - 변환 후 Start 값 (Vector3 변환 완료)", json_encode($start));
+public function findPathAsync(World $world, mixed $start, mixed $goal, string $algorithm, callable $callback): void {
+    // ✅ `Position`이 들어오면 `Vector3`로 변환 후 로그 저장
+    if ($start instanceof Position) {
+        $this->logDebug("⚠️ 변환 전 Start 값 (Position 객체 감지)", $start);
+        $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
+        $this->logDebug("✅ 변환 후 Start 값 (Vector3 변환 완료)", $start);
     }
 
-    if (!$goal instanceof Vector3) {
-        $this->logDebug("⚠️ findPathAsync - 변환 전 Goal 값 (Position 객체 감지)", json_encode($goal));
-        
-        // ✅ float 변환을 확실히 수행
-        $goal = new Vector3((float)$goal->getX(), (float)$goal->getY(), (float)$goal->getZ());
-
-        $this->logDebug("✅ findPathAsync - 변환 후 Goal 값 (Vector3 변환 완료)", json_encode($goal));
+    if ($goal instanceof Position) {
+        $this->logDebug("⚠️ 변환 전 Goal 값 (Position 객체 감지)", $goal);
+        $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
+        $this->logDebug("✅ 변환 후 Goal 값 (Vector3 변환 완료)", $goal);
     }
 
-    // ✅ 숫자가 맞는지 체크
-    if (!is_numeric($start->x) || !is_numeric($start->y) || !is_numeric($start->z)) {
-        throw new \InvalidArgumentException("findPathAsync: Start 좌표가 숫자가 아닙니다: " . json_encode($start));
-    }
-    if (!is_numeric($goal->x) || !is_numeric($goal->y) || !is_numeric($goal->z)) {
-        throw new \InvalidArgumentException("findPathAsync: Goal 좌표가 숫자가 아닙니다: " . json_encode($goal));
-    }
-
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start: " . json_encode($start));
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal: " . json_encode($goal));
+    // ✅ 경로 탐색 로그 저장
+    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start:", $start);
+    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal:", $goal);
 
     try {
         $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
         Server::getInstance()->getAsyncPool()->submitTask($task);
+
+        // ✅ 결과를 가져오기 위한 ClosureTask 추가
+        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($task, $callback) {
+            if (($path = $task->getResult()) !== null) {
+                $callback($path);
+            }
+        }), 1);
     } catch (\Throwable $e) {
         $this->logDebug("❌ PathFinderTask 생성 중 오류 발생", $e->getMessage());
     }
