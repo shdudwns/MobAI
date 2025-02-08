@@ -96,14 +96,16 @@ public function reloadAISettings(): void {
 
     /** ✅ 엔티티가 공격받을 때 처리 */
     public function onEntityDamage(EntityDamageEvent $event): void {
-        $entity = $event->getEntity();
-        if ($entity instanceof Living) {
-            if ($event instanceof EntityDamageByEntityEvent) {
-                $damager = $event->getDamager();
-                $this->handleDamageResponse($entity, $damager);
-            }
+    $entity = $event->getEntity();
+    
+    if ($entity instanceof Living && $event instanceof EntityDamageByEntityEvent) {
+        $damager = $event->getDamager();
+
+        if ($damager instanceof Player && $entity instanceof Zombie) {
+            $this->applyKnockback($entity, $damager);
         }
     }
+}
 
     private function handleDamageResponse(Living $mob, $damager): void {
         if ($damager instanceof Player && $mob instanceof Zombie) {
@@ -147,18 +149,6 @@ public function reloadAISettings(): void {
     
     $this->spawnZombieAt($player->getWorld(), $spawnPosition);
 }*/
-
-    public function onEntityDamage(EntityDamageEvent $event): void {
-    $entity = $event->getEntity();
-    
-    if ($entity instanceof Living && $event instanceof EntityDamageByEntityEvent) {
-        $damager = $event->getDamager();
-
-        if ($damager instanceof Player && $entity instanceof Zombie) {
-            $this->applyKnockback($entity, $damager);
-        }
-    }
-}
 
 private function applyKnockback(Living $mob, Player $damager): void {
     $damagerPos = $damager->getPosition();
