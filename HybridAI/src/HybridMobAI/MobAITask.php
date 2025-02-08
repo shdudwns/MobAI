@@ -172,10 +172,10 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
             $direction->z
         ));
 
-        // ✅ 연속된 계단에서도 checkForObstaclesAndJump()를 다시 실행
+        // ✅ 연속된 계단을 감지하도록 2틱 뒤 다시 실행
         Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             $this->checkForObstaclesAndJump($mob);
-        }), 2); // 2틱 뒤 다시 점프 시도
+        }), 2);
     }
 }
 private function isStairOrSlab(Block $block): bool {
