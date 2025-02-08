@@ -28,7 +28,7 @@ class ObstacleDetector {
             $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
             $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-            $heightDiff = $frontBlock->getPosition()->y - $position->y;
+            $heightDiff = $frontBlock->getPosition()->y + 1- $position->y;
 
             // ✅ 1. 평지에서 점프 방지
             if ($heightDiff <= 0) continue;
