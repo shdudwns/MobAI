@@ -49,21 +49,21 @@ class EntityAI {
 }
 
 public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ 변환 확인 로그 추가
+    // ✅ 강제 변환 및 디버그 로그 추가
     if (!$start instanceof Vector3) {
-        $this->logDebug("⚠️ findPathAsync - 변환 전 Start 값 (Position 객체 감지)", $start);
+        $this->logDebug("⚠️ findPathAsync - 변환 전 Start 값 (Position 객체 감지)", json_encode($start));
         $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
-        $this->logDebug("✅ findPathAsync - 변환 후 Start 값 (Vector3 변환 완료)", $start);
+        $this->logDebug("✅ findPathAsync - 변환 후 Start 값 (Vector3 변환 완료)", json_encode($start));
     }
 
     if (!$goal instanceof Vector3) {
-        $this->logDebug("⚠️ findPathAsync - 변환 전 Goal 값 (Position 객체 감지)", $goal);
+        $this->logDebug("⚠️ findPathAsync - 변환 전 Goal 값 (Position 객체 감지)", json_encode($goal));
         $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
-        $this->logDebug("✅ findPathAsync - 변환 후 Goal 값 (Vector3 변환 완료)", $goal);
+        $this->logDebug("✅ findPathAsync - 변환 후 Goal 값 (Vector3 변환 완료)", json_encode($goal));
     }
 
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start:", $start);
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal:", $goal);
+    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start: " . json_encode($start));
+    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal: " . json_encode($goal));
 
     try {
         $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
