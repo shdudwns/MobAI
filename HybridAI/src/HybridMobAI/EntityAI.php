@@ -49,7 +49,7 @@ class EntityAI {
 }
 
 public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
-    // ✅ `Position` 객체가 전달될 경우 `Vector3`로 변환
+    // ✅ `Position` 객체가 들어오면 `Vector3`로 변환 후 로그 저장
     if (!$start instanceof Vector3) {
         $this->logDebug("⚠️ 변환 전 Start 값:", $start);
         $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
@@ -62,7 +62,7 @@ public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, strin
         $this->logDebug("✅ 변환 후 Goal 값:", $goal);
     }
 
-    // ✅ 디버깅 로그 추가
+    // ✅ 경로 탐색 로그 저장
     $this->logDebug("🛠️ PathFinderTask 생성 - Start:", $start);
     $this->logDebug("🛠️ PathFinderTask 생성 - Goal:", $goal);
 
@@ -75,7 +75,6 @@ public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, strin
         }
     });
 }
-
 public function setPath(Living $mob, array $path): void {
     $this->entityPaths[$mob->getId()] = $path;
 }
