@@ -27,6 +27,9 @@ class MobAITask extends Task {
     private bool $aiEnabled;
     private EntityAI $entityAI;
     private array $algorithmPriority;
+    private const STEP_HEIGHT = 0.5;
+    private const JUMP_HEIGHT = 1.5;
+    private const EPSILON = 0.001;
 
     public function __construct(Main $plugin, bool $aiEnabled, array $algorithmPriority) {
     $this->plugin = $plugin;
@@ -117,64 +120,45 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $this->hasLanded[$mobId] = $isOnGround;
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
+    private function checkForObstacle(Living $mob, Vector3 $direction): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
+
+    $blockPos = $position->addVector($direction);
+    $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+    $blockAbove = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z);
+
+    $heightDiff = $block->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
+
+    // 평지 점프 방지
+    if (abs($heightDiff) < self::EPSILON) {
+        return;
+    }
+
+    if ($this->isStairOrSlab($block) && $blockAbove->isTransparent()) { 
+        $this->stepUp($mob, $heightDiff); // 높이 차이를 고려
+        return;
+    }
+
+    if ($this->isClimbable($block) && $blockAbove->isTransparent() && $heightDiff <= self::JUMP_HEIGHT) {
+        $this->jump($mob, $heightDiff); // 점프 높이를 고려
+        return;
+    }
+}
+
+private function checkForObstaclesAndJump(Living $mob): void {
     $yaw = $mob->getLocation()->yaw;
     $direction2D = VectorMath::getDirection2D($yaw);
     $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    // 바로 앞 블록 확인
-    $frontBlockPos = $position->addVector($directionVector);
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+    $this->checkForObstacle($mob, $directionVector); // 앞 블록 확인
 
-    $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
+    $leftDir = VectorMath::rotateVector($directionVector, 90);
+    $rightDir = VectorMath::rotateVector($directionVector, -90);
 
-    if (!($heightDiff < 0.5 && $heightDiff > -0.01)) {  // Epsilon 값을 이용한 비교
-        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-            $this->stepUp($mob, $heightDiff);
-            return;
-        }
-
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
-        }
-    }
-
-    // 왼쪽 및 오른쪽 확인
-    $leftDir = VectorMath::rotateVector($directionVector, 90);  // 왼쪽으로 90도 회전
-    $rightDir = VectorMath::rotateVector($directionVector, -90);  // 오른쪽으로 90도 회전
-
-    foreach ([$leftDir, $rightDir] as $dir) {
-        $blockPos = $position->addVector($dir);
-        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
-        $blockAbove = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z);
-
-        $heightDiff = $block->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
-
-        if (!($heightDiff < 0.5 && $heightDiff > -0.01)) {  // Epsilon 값을 이용한 비교
-            if ($this->isStairOrSlab($block) && $blockAbove->isTransparent()) {
-                $this->stepUp($mob, $heightDiff);
-                return;
-            }
-
-            if ($this->isClimbable($block) && $blockAbove->isTransparent()) {
-                if ($heightDiff <= 1.5) {
-                    $this->jump($mob, $heightDiff);
-                    return;
-                }
-            }
-        }
-    }
+    $this->checkForObstacle($mob, $leftDir); // 왼쪽 블록 확인
+    $this->checkForObstacle($mob, $rightDir); // 오른쪽 블록 확인
 }
-
-}
-
-
     
     private function checkFrontBlock(Living $mob): ?Block {
     $position = $mob->getPosition();
