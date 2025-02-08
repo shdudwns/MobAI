@@ -137,7 +137,10 @@ class Pathfinder {
     }
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
-        return abs($a->x - $b->x) + abs($a->y - $b->y) + abs($a->z - $b->z);
+    $dx = abs($a->x - $b->x);
+    $dy = abs($a->y - $b->y);
+    $dz = abs($a->z - $b->z);
+    return sqrt($dx * $dx + dy * dy + dz * dz); // 유클리드 거리 계산
     }
 
     private function reconstructPath(array $cameFrom, Vector3 $current): array {
@@ -151,8 +154,7 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): array {
-    $neighbors = [];
+    private function getNeighbors(World $world, Vector3 $pos): iterable {
     $directions = [
         new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
         new Vector3(0, 0, 1), new Vector3(0, 0, -1)
@@ -163,24 +165,9 @@ class Pathfinder {
         $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
         $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
 
-        // ✅ 기존 방식: 바닥이 solid하고 위에 장애물이 없으면 이동 가능
         if (!$block->isSolid() && $blockBelow->isSolid()) {
-            $neighbors[] = $neighbor;
-        }
-
-        // ✅ 추가: 점프할 수 있는 블록 탐색 (최대 2칸 높이)
-        for ($i = 1; $i <= 2; $i++) {
-            $jumpPos = $neighbor->addVector(new Vector3(0, $i, 0));
-            $jumpBlock = $world->getBlockAt((int)$jumpPos->x, (int)$jumpPos->y, (int)$jumpPos->z);
-            $jumpBlockBelow = $world->getBlockAt((int)$jumpPos->x, (int)($jumpPos->y - 1), (int)$jumpPos->z);
-
-            if (!$jumpBlock->isSolid() && $jumpBlockBelow->isSolid()) {
-                $neighbors[] = $jumpPos;
-                break; // 한 번만 점프 가능
-            }
+            yield $neighbor; // ✅ 배열을 반환하지 않고 `yield` 사용하여 성능 최적화
         }
     }
-
-    return $neighbors;
 }
 }
