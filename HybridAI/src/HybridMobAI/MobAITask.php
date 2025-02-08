@@ -63,6 +63,7 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveRandomly($mob);
         }
+        $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
         return;
     }
 
