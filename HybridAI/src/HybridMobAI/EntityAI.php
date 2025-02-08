@@ -49,35 +49,25 @@ class EntityAI {
 }
 
 public function findPathAsync(World $world, mixed $start, mixed $goal, string $algorithm, callable $callback): void {
-    // ✅ `Position`이 들어오면 `Vector3`로 변환 후 로그 저장
-    if ($start instanceof Position) {
-        $this->logDebug("⚠️ 변환 전 Start 값 (Position 객체 감지)", $start);
-        $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
-        $this->logDebug("✅ 변환 후 Start 값 (Vector3 변환 완료)", $start);
-    }
-
-    if ($goal instanceof Position) {
-        $this->logDebug("⚠️ 변환 전 Goal 값 (Position 객체 감지)", $goal);
-        $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
-        $this->logDebug("✅ 변환 후 Goal 값 (Vector3 변환 완료)", $goal);
-    }
-
-    // ✅ 경로 탐색 로그 저장
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start:", $start);
-    $this->logDebug("🛠️ PathFinderTask 실행 준비 - Goal:", $goal);
-
     try {
-        $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
-        Server::getInstance()->getAsyncPool()->submitTask($task);
+        // ✅ `Position` → `Vector3` 변환 강제 적용
+        $start = PositionHelper::toVector3($start);
+        $goal = PositionHelper::toVector3($goal);
 
-        // ✅ 결과를 가져오기 위한 ClosureTask 추가
-        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($task, $callback) {
-            if (($path = $task->getResult()) !== null) {
-                $callback($path);
+        // ✅ PathFinderTask 실행 로그
+        $this->logDebug("🛠️ PathFinderTask 실행 - Start:", $start);
+        $this->logDebug("🛠️ PathFinderTask 실행 - Goal:", $goal);
+
+        // ✅ 새로운 방식의 비동기 처리
+        Server::getInstance()->getAsyncPool()->submitTask(new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm, function (?array $path) use ($callback) {
+            if ($path !== null) {
+                Server::getInstance()->getScheduler()->scheduleTask(new SynchronizedTask(function () use ($callback, $path) {
+                    $callback($path);
+                }));
             }
-        }), 1);
+        }));
     } catch (\Throwable $e) {
-        $this->logDebug("❌ PathFinderTask 생성 중 오류 발생", $e->getMessage());
+        $this->logDebug("❌ PathFinderTask 실행 중 오류 발생", $e->getMessage());
     }
 }
 public function setPath(Living $mob, array $path): void {
