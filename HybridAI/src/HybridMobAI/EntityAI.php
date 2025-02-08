@@ -38,43 +38,7 @@ class EntityAI {
         $goalY = $goal->y;
         $goalZ = $goal->z;
 
-        // 필요한 데이터 캡처 (개선)
-        $capturedWorldName = $worldName;
-        $capturedStartX = $startX;
-        $capturedStartY = $startY;
-        $capturedStartZ = $startZ;
-        $capturedGoalX = $goalX;
-        $capturedGoalY = $goalY;
-        $capturedGoalZ = $goalZ;
-        $capturedAlgorithm = $algorithm;
-
-        // 콜백 클로저 개선 (캡처한 데이터 직접 사용)
-        $callbackFunction = function($result) use ($capturedWorldName, $capturedStartX, $capturedStartY, $capturedStartZ, $capturedGoalX, $capturedGoalY, $capturedGoalZ, $capturedAlgorithm, $callback) {
-            $plugin = Server::getInstance()->getPluginManager()->getPlugin("HybridAI");
-            if ($plugin instanceof Main) {
-                $entityAI = $plugin->getEntityAI();
-                $world = Server::getInstance()->getWorldManager()->getWorldByName($capturedWorldName);  // 캡처한 worldName 사용
-                if ($world instanceof World) {
-                    $startPos = new Position($capturedStartX, $capturedStartY, $capturedStartZ, $world); // 캡처한 좌표 사용
-                    $goalPos = new Position($capturedGoalX, $capturedGoalY, $capturedGoalZ, $world); // 캡처한 좌표 사용
-
-                    // 타입 힌팅 추가 (개선)
-                    $callback($result, $entityAI, $world, $startPos, $goalPos, $capturedAlgorithm);
-                } else {
-                    // 월드 로드 실패 처리 (오류 처리 추가)
-                    $callback(null, null, null, null, null, $capturedAlgorithm); // 예시: null 전달
-                }
-            } else {
-                // 플러그인 로드 실패 처리 (오류 처리 추가)
-                $callback(null, null, null, null, null, $capturedAlgorithm); // 예시: null 전달
-            }
-        };
-
-        // Pathfinder 객체 생성 (AsyncTask 외부에서)
-        $pathfinder = new Pathfinder(); // 스레드 안전 문제 해결
-
-        // 원시 데이터만 사용하여 비동기 작업 생성
-        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction, $pathfinder) extends AsyncTask { // $pathfinder 추가
+        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback) extends AsyncTask {
             private string $worldName;
             private float $startX;
             private float $startY;
@@ -84,15 +48,13 @@ class EntityAI {
             private float $goalZ;
             private string $algorithm;
             private \Closure $callback;
-            private Pathfinder $pathfinder; // $pathfinder 속성 추가
 
             public function __construct(
                 string $worldName,
                 float $startX, float $startY, float $startZ,
                 float $goalX, float $goalY, float $goalZ,
                 string $algorithm,
-                \Closure $callback,
-                Pathfinder $pathfinder // $pathfinder 인자 추가
+                \Closure $callback
             ) {
                 $this->worldName = $worldName;
                 $this->startX = $startX;
@@ -103,7 +65,6 @@ class EntityAI {
                 $this->goalZ = $goalZ;
                 $this->algorithm = $algorithm;
                 $this->callback = $callback;
-                $this->pathfinder = $pathfinder; // $pathfinder 속성 초기화
             }
 
             public function onRun(): void {
@@ -115,22 +76,23 @@ class EntityAI {
 
                 $start = new Vector3($this->startX, $this->startY, $this->startZ);
                 $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
+                $pathfinder = new Pathfinder(); // Pathfinder 객체 onRun() 내부에서 생성
 
                 switch ($this->algorithm) {
                     case "A*":
-                        $path = $this->pathfinder->findPathAStar($world, $start, $goal); // $pathfinder 사용
+                        $path = $pathfinder->findPathAStar($world, $start, $goal);
                         break;
                     case "Dijkstra":
-                        $path = $this->pathfinder->findPathDijkstra($world, $start, $goal); // $pathfinder 사용
+                        $path = $pathfinder->findPathDijkstra($world, $start, $goal);
                         break;
                     case "Greedy":
-                        $path = $this->pathfinder->findPathGreedy($world, $start, $goal); // $pathfinder 사용
+                        $path = $pathfinder->findPathGreedy($world, $start, $goal);
                         break;
                     case "BFS":
-                        $path = $this->pathfinder->findPathBFS($world, $start, $goal); // $pathfinder 사용
+                        $path = $pathfinder->findPathBFS($world, $start, $goal);
                         break;
                     case "DFS":
-                        $path = $this->pathfinder->findPathDFS($world, $start, $goal); // $pathfinder 사용
+                        $path = $pathfinder->findPathDFS($world, $start, $goal);
                         break;
                     default:
                         $path = null;
@@ -140,8 +102,9 @@ class EntityAI {
             }
 
             public function onCompletion(): void {
+                $result = $this->getResult();
                 if (isset($this->callback)) {
-                    ($this->callback)($this->getResult());
+                    ($this->callback)($result);
                 }
             }
         };
