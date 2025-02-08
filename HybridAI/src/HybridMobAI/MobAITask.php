@@ -121,24 +121,20 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $angles = [$yaw, $yaw + 45, $yaw - 45];
+
+    // 8방향 탐색 (더욱 촘촘하게 장애물 확인)
+    $angles = [$yaw, $yaw + 45, $yaw - 90, $yaw + 90, $yaw + 135, $yaw - 135, $yaw + 180, $yaw - 180];
 
     $boundingBox = $mob->getBoundingBox();
+    if ($boundingBox === null) return;
 
-    if ($boundingBox === null) {
-        return; // or handle the error appropriately
-    }
-
-    // 수정된 부분: 속성에 직접 접근
     $xSize = $boundingBox->maxX - $boundingBox->minX;
     $zSize = $boundingBox->maxZ - $boundingBox->minZ;
-
-    $offset = max($xSize, $zSize) / 2; // Use the larger dimension for the offset, divide by 2 for radius. Adjust divisor as needed.
+    $offset = max($xSize, $zSize) / 2;
 
     foreach ($angles as $angle) {
         $direction2D = VectorMath::getDirection2D($angle);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-
         $frontBlockPos = $position->addVector($directionVector->multiply($offset));
 
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
@@ -146,20 +142,27 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
 
-        if ($heightDiff < 0.5) {
-            continue;
-        }
+        // 높이 차이가 0.5보다 작으면 무시
+        if ($heightDiff < 0.5) continue;
 
+        // 계단 또는 슬라브 블록 처리
         if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
             return;
         }
 
+        // 특정 블록 (울타리, 유리, 액자) 처리
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             if ($heightDiff <= 1) {
                 $this->jump($mob, $heightDiff);
                 return;
             }
+        }
+
+        // 일반적인 블록 (점프)
+        if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+            $this->jump($mob, $heightDiff);
+            return;
         }
     }
 }
@@ -332,8 +335,7 @@ private function changeDirection(Living $mob): void {
 
     // 기본 점프 힘
     $baseJumpForce = 0.42;
-    $extraJumpBoost = min(0.1 * $heightDiff, 0.3);
-
+    $extraJumpBoost = min(0.1 * $heightDiff, 0.3); // 최대 0.3 추가
     $jumpForce = $baseJumpForce + $extraJumpBoost;
 
     if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
@@ -351,12 +353,15 @@ private function changeDirection(Living $mob): void {
 
     
     private function isClimbable(Block $block): bool {
-    $climbableBlocks = [
-        "pocketmine:block:snow_layer",
-        "pocketmine:block:fence",
-        "pocketmine:block:glass",
-        "pocketmine:block:frame"
-    ];
-    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+    switch ($block->getId()) {
+        case Block::SNOW_LAYER:
+        case Block::FENCE:
+        case Block::GLASS:
+        case Block::ITEM_FRAME: // 액자
+        case Block::FLOWER_POT: // 화분
+        case Block::COBWEB: // 거미줄
+            return true;
+        default:
+            return false;
 }
 }
