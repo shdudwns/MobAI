@@ -363,5 +363,6 @@ private function changeDirection(Living $mob): void {
             return true;
         default:
             return false;
-}
+    }
+    }
 }
