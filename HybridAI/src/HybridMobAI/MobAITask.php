@@ -27,6 +27,7 @@ class MobAITask extends Task {
     private bool $aiEnabled;
     private EntityAI $entityAI;
     private array $algorithmPriority;
+    private array $lastPathUpdate = [];
 
     public function __construct(Main $plugin, bool $aiEnabled, array $algorithmPriority) {
     $this->plugin = $plugin;
@@ -48,27 +49,33 @@ class MobAITask extends Task {
             }
         }
     }
-    
+
 private function handleMobAI(Living $mob): void {
-        if (!$this->aiEnabled) {
-            // 기본 AI 사용 (MobAITask 내의 함수 직접 호출)
-            $nearestPlayer = $this->findNearestPlayer($mob);
-            if ($nearestPlayer !== null) {
-                $this->moveToPlayer($mob, $nearestPlayer);
-            } else {
-                $this->moveRandomly($mob);
-            }
+    if (!$this->aiEnabled) {
+        // 기본 AI 사용 (기존 방식 유지)
+        $nearestPlayer = $this->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $this->moveToPlayer($mob, $nearestPlayer);
         } else {
-            // AI 활성화된 경우
+            $this->moveRandomly($mob);
+        }
+    } else {
+        // ✅ AI 활성화된 경우 경로 탐색 주기 제한 (20틱 = 1초)
+        $mobId = $mob->getId();
+        $currentTick = Server::getInstance()->getTick();
+
+        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 20)) {
+            $this->lastPathUpdate[$mobId] = $currentTick;
+
             if (($player = $this->findNearestPlayer($mob)) !== null) {
-                $thisPlugin = $this; // $this 캡처
+                $thisPlugin = $this;
 
                 $this->entityAI->findPathAsync(
                     $mob->getWorld(),
                     $mob->getPosition(),
                     $player->getPosition(),
                     "A*",
-                    function (?array $path) use ($mob, $thisPlugin, $player) { // 클로저 안에서 $this 사용을 위해 $thisPlugin 변수 사용
+                    function (?array $path) use ($mob, $thisPlugin, $player) {
                         if ($path !== null) {
                             $thisPlugin->entityAI->setPath($mob, $path);
                         } else {
@@ -76,16 +83,14 @@ private function handleMobAI(Living $mob): void {
                         }
                     }
                 );
-            } else {
-                $this->moveRandomly($mob);
             }
         }
+    }
 
         $this->detectLanding($mob);
         $this->checkForObstaclesAndJump($mob);
         $this->attackNearestPlayer($mob);
-    }
-
+}
 
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
