@@ -8,6 +8,7 @@ use pocketmine\entity\Living;
 use pocketmine\block\Block;
 use pocketmine\Server;
 use pocketmine\scheduler\AsyncTask;
+use pocketmine\world\Position;
 
 class EntityAI {
     private bool $enabled = false; // AI 활성화 여부
