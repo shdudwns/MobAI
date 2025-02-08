@@ -32,7 +32,7 @@ class MobAITask extends Task {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
     $this->algorithmPriority = $algorithmPriority;
-    $this->entityAI = new EntityAI();
+    $this->entityAI = new EntityAI($plugin);
     }
 
     public function onRun(): void {
