@@ -155,7 +155,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.15);
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
 
         $mob->setMotion(new Vector3(
             $direction->x,
@@ -163,7 +163,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
             $direction->z
         ));
 
-        // ✅ 연속된 계단 감지 시 추가 점프 수행
+        // ✅ 연속된 계단에서도 checkForObstaclesAndJump()를 다시 실행
         Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             $this->checkForObstaclesAndJump($mob);
         }), 2); // 2틱 뒤 다시 점프 시도
