@@ -140,7 +140,7 @@ class Pathfinder {
     $dx = abs($a->x - $b->x);
     $dy = abs($a->y - $b->y);
     $dz = abs($a->z - $b->z);
-    return sqrt($dx * $dx + dy * dy + dz * dz); // 유클리드 거리 계산
+    return sqrt($dx * $dx + $dy * $dy + $dz * $dz); // 유클리드 거리 계산
     }
 
     private function reconstructPath(array $cameFrom, Vector3 $current): array {
