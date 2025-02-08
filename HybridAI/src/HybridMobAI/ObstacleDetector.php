@@ -12,12 +12,14 @@ use pocketmine\block\Fence;
 use pocketmine\block\Wall;
 use pocketmine\block\Trapdoor;
 use pocketmine\world\World;
+use pocketmine\Server;
+use pocketmine\scheduler\ClosureTask;
 
 class ObstacleDetector {
     public function checkForObstaclesAndJump(Living $mob, World $world): void {
         $position = $mob->getPosition();
         $yaw = $mob->getLocation()->yaw;
-        $angles = [$yaw, $yaw + 20, $yaw - 20]; // 정밀한 장애물 감지
+        $angles = [$yaw, $yaw + 15, $yaw - 15]; // ✅ 더 정밀한 장애물 감지 (좁은 범위)
 
         foreach ($angles as $angle) {
             $direction2D = VectorMath::getDirection2D($angle);
@@ -28,15 +30,15 @@ class ObstacleDetector {
             $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
             $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-            $heightDiff = $frontBlock->getPosition()->y + 1- $position->y;
+            $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
             // ✅ 1. 평지에서 점프 방지
             if ($heightDiff <= 0) continue;
 
-            // ✅ 2. 블록에서 내려올 때 점프 방지 (현재 블록보다 낮은 블록을 감지)
+            // ✅ 2. 블록에서 내려올 때 점프 방지
             if ($blockBelow->getPosition()->y > $position->y - 0.5) continue;
 
-            // ✅ 3. 계단 감지 및 연속 이동 지원
+            // ✅ 3. 계단 및 연속 이동 지원
             if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
                 $this->stepUp($mob, $heightDiff);
                 return;
@@ -52,17 +54,31 @@ class ObstacleDetector {
         }
     }
 
+    public function checkForWaterJump(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $block = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+
+        if ($block->getName() === "pocketmine:water") {
+            $this->waterJump($mob);
+        }
+    }
+
     private function stepUp(Living $mob, float $heightDiff): void {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.12); // ✅ 수평 이동 속도 조절하여 자연스러움 개선
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.12); // ✅ 수평 이동 속도 일정하게 유지
 
         $mob->setMotion(new Vector3(
             $direction->x,
-            0.3 + ($heightDiff * 0.1), // ✅ 더 부드러운 상승 적용
+            0.3 + ($heightDiff * 0.1),
             $direction->z
         ));
 
         // ✅ 연속적인 계단 이동을 위해 착지 후 추가 체크
-        $this->scheduleCheckForNextStep($mob);
+        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+            if ($mob->isOnGround()) {
+                $this->checkForObstaclesAndJump($mob, $mob->getWorld());
+            }
+        }), 2);
     }
 
     private function jump(Living $mob, float $heightDiff): void {
@@ -79,12 +95,14 @@ class ObstacleDetector {
         }
     }
 
-    private function scheduleCheckForNextStep(Living $mob): void {
-        $mob->getWorld()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
-            if ($mob->isOnGround()) {
-                $this->checkForObstaclesAndJump($mob, $mob->getWorld());
-            }
-        }), 2);
+    private function waterJump(Living $mob): void {
+        if ($mob->getMotion()->y < 0.3) {
+            $mob->setMotion(new Vector3(
+                $mob->getMotion()->x,
+                0.3, // ✅ 물에서 점프하면서 부드럽게 상승
+                $mob->getMotion()->z
+            ));
+        }
     }
 
     private function isStairOrSlab(Block $block): bool {
