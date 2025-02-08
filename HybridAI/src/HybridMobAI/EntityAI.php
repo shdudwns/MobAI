@@ -115,9 +115,20 @@ class EntityAI {
                     case "A*":
                         $path = $pathfinder->findPathAStar($world, $start, $goal);
                         break;
-                    // 다른 알고리즘 처리...
+                    case "Dijkstra":
+                        $path = $pathfinder->findPathDijkstra($world, $start, $goal);
+                        break;
+                    case "Greedy":
+                        $path = $pathfinder->findPathGreedy($world, $start, $goal);
+                        break;
+                    case "BFS":
+                        $path = $pathfinder->findPathBFS($world, $start, $goal);
+                        break;
+                    case "DFS":
+                        $path = $pathfinder->findPathDFS($world, $start, $goal);
+                        break;
                     default:
-                        $path = null;
+                        $path = null; // 알 수 없는 알고리즘
                 }
 
                 $this->setResult($path);
