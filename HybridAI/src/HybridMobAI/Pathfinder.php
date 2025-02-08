@@ -197,12 +197,12 @@ class PathfinderTask extends AsyncTask {
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
     $this->worldName = $worldName;
 
-    // ✅ 강제 변환 (혹시라도 Position이 들어오면 예외 처리)
-    if (!$start instanceof Vector3 || !$goal instanceof Vector3) {
-        throw new \InvalidArgumentException("PathfinderTask: Start 또는 Goal이 Vector3가 아닙니다. start: " . json_encode($start) . " goal: " . json_encode($goal));
+    // ✅ 만약 Position이 들어오면 예외 발생
+    if ($start instanceof Position || $goal instanceof Position) {
+        throw new \InvalidArgumentException("PathfinderTask: Position 객체가 전달됨! Vector3로 변환 필요. start: " . json_encode($start) . " goal: " . json_encode($goal));
     }
 
-    // ✅ 숫자 확인 후 변환
+    // ✅ 숫자 확인
     foreach (['x', 'y', 'z'] as $key) {
         if (!is_numeric($start->{$key}) || !is_numeric($goal->{$key})) {
             throw new \InvalidArgumentException("PathfinderTask: 좌표 값이 숫자가 아닙니다. start: " . json_encode($start) . " goal: " . json_encode($goal));
