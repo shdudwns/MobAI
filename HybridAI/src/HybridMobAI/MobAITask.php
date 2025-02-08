@@ -118,7 +118,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
     $angles = [$yaw, $yaw + 45, $yaw - 45];
-    
+
     foreach ($angles as $angle) {
         $direction2D = VectorMath::getDirection2D($angle);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
@@ -132,23 +132,24 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
-        // ✅ 내려가는 경우 점프하지 않도록 수정
+        // ✅ 내려가는 경우 점프하지 않음
         if ($heightDiff < 0) {
             continue;
         }
 
-        // ✅ 점프 조건 강화
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5 && $heightDiff > 0) {
+        // ✅ 계단, 슬라브 감지 -> 점프 처리
+        if ($this->isStairOrSlab($frontBlock)) {
+            if ($frontBlockAbove->isTransparent()) {
                 $this->jump($mob, $heightDiff);
                 return;
             }
         }
 
-        // ✅ 계단 감지
-        if ($this->isStairOrSlab($frontBlock)) {
-            if ($frontBlockAbove->isTransparent()) {
-                $this->stepUp($mob, $heightDiff);
+        // ✅ 블록이 있고, 위쪽이 비어있다면 점프
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1.5 && $heightDiff > 0) {
+                $this->jump($mob, $heightDiff);
+                return;
             }
         }
     }
