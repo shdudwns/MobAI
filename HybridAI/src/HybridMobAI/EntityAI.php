@@ -52,14 +52,28 @@ public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, strin
     // ✅ 강제 변환 및 디버그 로그 추가
     if (!$start instanceof Vector3) {
         $this->logDebug("⚠️ findPathAsync - 변환 전 Start 값 (Position 객체 감지)", json_encode($start));
-        $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
+        
+        // ✅ float 변환을 확실히 수행
+        $start = new Vector3((float)$start->getX(), (float)$start->getY(), (float)$start->getZ());
+
         $this->logDebug("✅ findPathAsync - 변환 후 Start 값 (Vector3 변환 완료)", json_encode($start));
     }
 
     if (!$goal instanceof Vector3) {
         $this->logDebug("⚠️ findPathAsync - 변환 전 Goal 값 (Position 객체 감지)", json_encode($goal));
-        $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
+        
+        // ✅ float 변환을 확실히 수행
+        $goal = new Vector3((float)$goal->getX(), (float)$goal->getY(), (float)$goal->getZ());
+
         $this->logDebug("✅ findPathAsync - 변환 후 Goal 값 (Vector3 변환 완료)", json_encode($goal));
+    }
+
+    // ✅ 숫자가 맞는지 체크
+    if (!is_numeric($start->x) || !is_numeric($start->y) || !is_numeric($start->z)) {
+        throw new \InvalidArgumentException("findPathAsync: Start 좌표가 숫자가 아닙니다: " . json_encode($start));
+    }
+    if (!is_numeric($goal->x) || !is_numeric($goal->y) || !is_numeric($goal->z)) {
+        throw new \InvalidArgumentException("findPathAsync: Goal 좌표가 숫자가 아닙니다: " . json_encode($goal));
     }
 
     $this->logDebug("🛠️ PathFinderTask 실행 준비 - Start: " . json_encode($start));
