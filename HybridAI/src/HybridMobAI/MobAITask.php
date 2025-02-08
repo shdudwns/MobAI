@@ -163,7 +163,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $yaw = $mob->getLocation()->yaw;
     
     // 정확한 방향 계산을 위해 0.6m 앞쪽을 확인
-    $direction = VectorMath::getDirection2D($yaw)->mult(0.6);
+    $direction = VectorMath::getDirection2D($yaw)->multiply(0.6);
     
     $frontX = (int)floor($position->x + $direction->x);
     $frontY = (int)floor($position->y + 0.5); // 몸 중앙 높이
