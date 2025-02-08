@@ -42,49 +42,53 @@ class Pathfinder {
 }
     
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
-        $openSet = [$start];
-        $cameFrom = [];
-        $cost = [self::vectorToStr($start) => 0];
+    $openSet = new \SplPriorityQueue();
+    $openSet->insert($start, 0);
 
-        while (!empty($openSet)) {
-            usort($openSet, fn($a, $b) => $cost[self::vectorToStr($a)] <=> $cost[self::vectorToStr($b)]);
-            $current = array_shift($openSet);
-            $currentKey = self::vectorToStr($current);
+    $cameFrom = [];
+    $cost = [self::vectorToStr($start) => 0];
 
-            if ($current->equals($goal)) {
-                return $this->reconstructPath($cameFrom, $current);
-            }
+    while (!$openSet->isEmpty()) {
+        $current = $openSet->extract();
+        $currentKey = self::vectorToStr($current);
 
-            foreach ($this->getNeighbors($world, $current) as $neighbor) {
-                $neighborKey = self::vectorToStr($neighbor);
-                $newCost = $cost[$currentKey] + 1;
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
+        }
 
-                if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
-                    $cameFrom[$neighborKey] = $current;
-                    $cost[$neighborKey] = $newCost;
-                    $openSet[] = $neighbor;
-                }
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $newCost = $cost[$currentKey] + 1;
+
+            if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $cost[$neighborKey] = $newCost;
+                $openSet->insert($neighbor, -$newCost);
             }
         }
-        return null;
     }
-
+    return null;
+}
+    
     public function findPathGreedy(World $world, Vector3 $start, Vector3 $goal): ?array {
-        $current = $start;
-        $path = [];
+    $openSet = new \SplPriorityQueue();
+    $openSet->insert($start, -$this->heuristic($start, $goal));
 
-        while (!$current->equals($goal)) {
-            $neighbors = $this->getNeighbors($world, $current);
-            usort($neighbors, fn($a, $b) => $this->heuristic($a, $goal) <=> $this->heuristic($b, $goal));
+    $cameFrom = [];
 
-            if (empty($neighbors)) return null;
-
-            $current = array_shift($neighbors);
-            $path[] = $current;
+    while (!$openSet->isEmpty()) {
+        $current = $openSet->extract();
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
         }
 
-        return $path;
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $cameFrom[self::vectorToStr($neighbor)] = $current;
+            $openSet->insert($neighbor, -$this->heuristic($neighbor, $goal));
+        }
     }
+    return null;
+}
 
     public function findPathBFS(World $world, Vector3 $start, Vector3 $goal): ?array {
         $queue = [[$start]];
