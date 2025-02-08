@@ -305,8 +305,8 @@ private function changeDirection(Living $mob): void {
         return;
     }
 }
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
-    // 낙하 속도 리셋
+    Public function jump(Living $mob, float $heightDiff = 1.0): void {
+    // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
     if ($mob->getMotion()->y < -0.08) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
@@ -315,21 +315,20 @@ private function changeDirection(Living $mob): void {
         ));
     }
 
-    // 기본 점프 힘
-    $baseJumpForce = 0.42;
-    $extraJumpBoost = min(0.1 * $heightDiff, 0.3);
+    // 기본 점프 힘 설정
+    $baseJumpForce = 0.42; // 기본 점프력
+    $extraJumpBoost = min(0.1 * $heightDiff, 0.3); // 높이에 따라 추가 점프력 조정
 
     $jumpForce = $baseJumpForce + $extraJumpBoost;
-
+    
     if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
-        $yaw = $mob->getLocation()->getYaw();
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $horizontalSpeed = 0.2; // 수평 이동 속도
+        $direction = $mob->getDirectionVector();
+        $horizontalSpeed = 0.1; // 수평 이동 속도 추가
 
         $mob->setMotion(new Vector3(
-            $direction2D->x * $horizontalSpeed, // 수평 방향으로 속도 설정
+            $mob->getMotion()->x * 0.5 + ($direction->x * $horizontalSpeed),
             $jumpForce,
-            $direction2D->y * $horizontalSpeed // 수평 방향으로 속도 설정
+            $mob->getMotion()->z * 0.5 + ($direction->z * $horizontalSpeed)
         ));
     }
 }
