@@ -66,47 +66,25 @@ private function handleMobAI(Living $mob): void {
         return;
     }
 
-    // ✅ AI 활성화 상태에서의 동작
     $mobId = $mob->getId();
     $currentTick = Server::getInstance()->getTick();
 
     $player = $tracker->findNearestPlayer($mob);
     if ($player !== null) {
-        $previousTarget = $ai->getTarget($mob);
-
-        // ✅ 기존 경로가 있고, 플레이어 위치 변화가 크지 않으면 경로 유지하면서 이동
-        if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
-            $ai->moveAlongPath($mob);
-            return;
-        }
-
-        $ai->setTarget($mob, $player->getPosition());
-
-        // ✅ 경로 갱신 주기 동안에도 몬스터가 멈추지 않도록 `moveToPlayer()` 보조 실행
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
             $navigator->moveToPlayer($mob, $player);
         }
 
-        // ✅ 경로 갱신 주기를 줄여 부드러운 이동 유지
-        $updateInterval = $ai->hasPath($mob) ? mt_rand(20, 40) : 10;
-        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
+        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 20)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
 
-            $ai->findPathAsync(
-                $mob->getWorld(),
-                $mob->getPosition(),
-                $player->getPosition(),
-                "A*",
-                function (?array $path) use ($mob, $player, $ai, $navigator) {
-                    if ($path !== null) {
-                        $ai->setPath($mob, $path);
-                    } else {
-                        $navigator->moveToPlayer($mob, $player);
-                    }
+            $ai->findPathAsync($mob->getWorld(), $mob->getPosition(), $player->getPosition(), "A*", function (?array $path) use ($mob, $ai) {
+                if ($path !== null) {
+                    $ai->setPath($mob, $path);
                 }
-            );
+            });
         }
     }
 
