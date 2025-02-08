@@ -146,7 +146,6 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     // ✅ 점프 조건 강화 (블록이 앞에 있고, 점프 가능한 경우)
     if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
-            $this->plugin->getLogger()->info("점프");
             $this->jump($mob, $heightDiff);
             return;
         }
