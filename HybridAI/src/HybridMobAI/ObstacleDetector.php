@@ -58,6 +58,11 @@ class ObstacleDetector {
                 return;
             }
         }
+
+        // ✅ 5. 블록 모서리 정중앙에서 점프 지원
+        if ($this->isEdgeOfBlock($position, $frontBlockPos)) {
+            $this->jump($mob, $heightDiff);
+        }
     }
 
     private function stepUp(Living $mob, float $heightDiff): void {
@@ -110,5 +115,14 @@ class ObstacleDetector {
             $block instanceof Trapdoor || 
             $block->isSolid()
         );
+    }
+
+    private function isEdgeOfBlock(Vector3 $position, Vector3 $frontBlockPos): bool {
+        // ✅ 블록 모서리 정중앙인지 확인
+        $xDiff = abs($position->x - $frontBlockPos->x);
+        $zDiff = abs($position->z - $frontBlockPos->z);
+
+        // 모서리 정중앙이라면 true 반환
+        return ($xDiff > 0.4 && $xDiff < 0.6) || ($zDiff > 0.4 && $zDiff < 0.6);
     }
 }
