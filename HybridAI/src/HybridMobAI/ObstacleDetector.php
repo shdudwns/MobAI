@@ -26,39 +26,36 @@ class ObstacleDetector {
         $position = $mob->getPosition();
         $yaw = $mob->getLocation()->yaw;
 
-        // ✅ 대각선 방향 포함한 4방향 검사 (정면, 좌측 45도, 우측 45도)
-        $angles = [$yaw, $yaw + 45, $yaw - 45];
-        foreach ($angles as $angle) {
-            $direction2D = VectorMath::getDirection2D($angle);
-            $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
-            $frontBlockPos = $position->addVector($directionVector);
-            
-            $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-            $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-            $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+        // ✅ 정면 방향만 검사 (대각선 제외)
+        $direction2D = VectorMath::getDirection2D($yaw);
+        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+        $frontBlockPos = $position->addVector($directionVector);
+        
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+        $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+        $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-            $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y; // ✅ +1 추가하여 정확한 점프 감지
+        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y; // ✅ +1 추가하여 정확한 점프 감지
 
-            // ✅ 1. 평지에서 점프 방지
-            if ($heightDiff <= 0) continue;
+        // ✅ 1. 평지에서 점프 방지
+        if ($heightDiff <= 0) return;
 
-            // ✅ 2. 블록에서 내려올 때 점프 방지 (더 강화된 조건)
-            if ($blockBelow->getPosition()->y > $position->y - 0.5 && !$this->isEdgeOfBlock($position, $frontBlockPos)) {
-                continue;
-            }
+        // ✅ 2. 블록에서 내려올 때 점프 방지 (더 강화된 조건)
+        if ($blockBelow->getPosition()->y > $position->y - 0.5 && !$this->isEdgeOfBlock($position, $frontBlockPos)) {
+            return;
+        }
 
-            // ✅ 3. 계단 및 연속 이동 지원
-            if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-                $this->stepUp($mob, $heightDiff);
+        // ✅ 3. 계단 및 연속 이동 지원
+        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
+            return;
+        }
+
+        // ✅ 4. 점프 가능한 일반 블록 감지 (정면 블록만 대상)
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1.2) {
+                $this->jump($mob, $heightDiff);
                 return;
-            }
-
-            // ✅ 4. 점프 가능한 일반 블록 감지 (대각선 방향 포함)
-            if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-                if ($heightDiff <= 1.2) {
-                    $this->jump($mob, $heightDiff);
-                    return;
-                }
             }
         }
     }
