@@ -70,8 +70,11 @@ class EntityAI {
             }
         };
 
+        // Pathfinder 객체 생성 (AsyncTask 외부에서)
+        $pathfinder = new Pathfinder(); // 스레드 안전 문제 해결
+
         // 원시 데이터만 사용하여 비동기 작업 생성
-        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction) extends AsyncTask {
+        $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackFunction, $pathfinder) extends AsyncTask { // $pathfinder 추가
             private string $worldName;
             private float $startX;
             private float $startY;
@@ -81,13 +84,15 @@ class EntityAI {
             private float $goalZ;
             private string $algorithm;
             private \Closure $callback;
+            private Pathfinder $pathfinder; // $pathfinder 속성 추가
 
             public function __construct(
                 string $worldName,
                 float $startX, float $startY, float $startZ,
                 float $goalX, float $goalY, float $goalZ,
                 string $algorithm,
-                \Closure $callback
+                \Closure $callback,
+                Pathfinder $pathfinder // $pathfinder 인자 추가
             ) {
                 $this->worldName = $worldName;
                 $this->startX = $startX;
@@ -98,6 +103,7 @@ class EntityAI {
                 $this->goalZ = $goalZ;
                 $this->algorithm = $algorithm;
                 $this->callback = $callback;
+                $this->pathfinder = $pathfinder; // $pathfinder 속성 초기화
             }
 
             public function onRun(): void {
@@ -107,28 +113,27 @@ class EntityAI {
                     return;
                 }
 
-                $pathfinder = new Pathfinder();
                 $start = new Vector3($this->startX, $this->startY, $this->startZ);
                 $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
                 switch ($this->algorithm) {
                     case "A*":
-                        $path = $pathfinder->findPathAStar($world, $start, $goal);
+                        $path = $this->pathfinder->findPathAStar($world, $start, $goal); // $pathfinder 사용
                         break;
                     case "Dijkstra":
-                        $path = $pathfinder->findPathDijkstra($world, $start, $goal);
+                        $path = $this->pathfinder->findPathDijkstra($world, $start, $goal); // $pathfinder 사용
                         break;
                     case "Greedy":
-                        $path = $pathfinder->findPathGreedy($world, $start, $goal);
+                        $path = $this->pathfinder->findPathGreedy($world, $start, $goal); // $pathfinder 사용
                         break;
                     case "BFS":
-                        $path = $pathfinder->findPathBFS($world, $start, $goal);
+                        $path = $this->pathfinder->findPathBFS($world, $start, $goal); // $pathfinder 사용
                         break;
                     case "DFS":
-                        $path = $pathfinder->findPathDFS($world, $start, $goal);
+                        $path = $this->pathfinder->findPathDFS($world, $start, $goal); // $pathfinder 사용
                         break;
                     default:
-                        $path = null; // 알 수 없는 알고리즘
+                        $path = null;
                 }
 
                 $this->setResult($path);
