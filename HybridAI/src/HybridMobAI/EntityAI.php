@@ -39,30 +39,24 @@ class EntityAI {
             return null;
     }
 }
-    public function findPathAsync(World $world, $start, $goal, string $algorithm, callable $callback): void {
-        // ✅ Position 또는 배열 형태의 좌표가 들어오면 Vector3로 변환
-        if ($start instanceof Position) {
-            $start = new Vector3((float)$start->x, (float)$start->y, (float)$start->z);
-        } elseif (is_array($start)) {
-            $start = new Vector3((float)$start[0], (float)$start[1], (float)$start[2]);
-        }
-
-        if ($goal instanceof Position) {
-            $goal = new Vector3((float)$goal->x, (float)$goal->y, (float)$goal->z);
-        } elseif (is_array($goal)) {
-            $goal = new Vector3((float)$goal[0], (float)$goal[1], (float)$goal[2]);
-        }
-
-        // ✅ PathfinderTask 생성자에 올바른 인자 전달
-        $task = new PathfinderTask(
-            $world->getFolderName(), // 월드 이름 (string)
-            $start,                 // 시작 좌표 (Vector3)
-            $goal,                  // 목표 좌표 (Vector3)
-            $algorithm              // 알고리즘 (string)
-        );
-        $task->callback = $callback;
-        Server::getInstance()->getAsyncPool()->submitTask($task);
+    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
+    // ✅ Position이 들어오면 Vector3로 변환
+    if ($start instanceof Position) {
+        $start = new Vector3((float) $start->x, (float) $start->y, (float) $start->z);
     }
+    if ($goal instanceof Position) {
+        $goal = new Vector3((float) $goal->x, (float) $goal->y, (float) $goal->z);
+    }
+
+    $task = new PathfinderTask($world->getFolderName(), $start, $goal, $algorithm);
+    Server::getInstance()->getAsyncPool()->submitTask($task);
+
+    Server::getInstance()->getAsyncPool()->addWorkerStartHook(function() use ($task, $callback) {
+        if (($path = $task->getResult()) !== null) {
+            $callback($path);
+        }
+    });
+}
 
 
 public function setPath(Living $mob, array $path): void {
