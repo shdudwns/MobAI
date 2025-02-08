@@ -9,7 +9,7 @@ use pocketmine\block\Block;
 use pocketmine\Server;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\world\Position;
-use pocketmine\plugin\PluginBase; // PluginBase 임포트
+use pocketmine\plugin\PluginBase;
 
 class EntityAI {
     private bool $enabled = false;
@@ -40,7 +40,7 @@ class EntityAI {
         $goalZ = $goal->z;
 
         $plugin = $this->plugin;
-        $entityAI = $this;
+        $entityAI = $this; // $this 캡쳐!
 
         Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin) extends AsyncTask {
             private string $worldName;
@@ -52,7 +52,7 @@ class EntityAI {
             private float $goalZ;
             private string $algorithm;
             private $callback;
-            private EntityAI $entityAI;
+            private EntityAI $entityAI; // 캡쳐한 $this 저장
             private PluginBase $plugin;
 
             public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin) {
@@ -65,14 +65,14 @@ class EntityAI {
                 $this->goalZ = $goalZ;
                 $this->algorithm = $algorithm;
                 $this->callback = $callback;
-                $this->entityAI = $entityAI;
+                $this->entityAI = $entityAI; // 캡쳐한 $this 할당
                 $this->plugin = $plugin;
             }
 
             public function onRun(): void {
                 $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
                 if (!$world instanceof World) {
-                    $this->setResult(null); // 월드가 없을 경우 null 반환
+                    $this->setResult(null);
                     return;
                 }
 
@@ -98,6 +98,8 @@ class EntityAI {
 
                 if ($result !== null) {
                     $this->plugin->getLogger()->info("경로 탐색 완료!");
+                    // $this 사용 예시 (캡쳐한 $entityAI 사용):
+                     $this->entityAI->setPath($someMob, $result); // someMob은 Living Entity
                 } else {
                     $this->plugin->getLogger()->info("경로를 찾을 수 없습니다.");
                 }
