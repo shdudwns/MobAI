@@ -148,9 +148,13 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         // ✅ 계단 감지
         if ($this->isStairOrSlab($frontBlock)) {
             $this->jump($mob, $heightDiff);
+            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+                $this->checkForObstaclesAndJump($mob);
+            }), 2); // 2틱 후 다시 점프 체크
             return;
     }
 }
+    }
     private function checkFrontBlock(Living $mob): ?Block {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
