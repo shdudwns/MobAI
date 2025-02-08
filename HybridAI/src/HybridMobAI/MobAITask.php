@@ -49,51 +49,60 @@ class MobAITask extends Task {
         }
     }
 
-    private function handleMobAI(Zombie $mob): void {
-        if (!$this->aiEnabled) {
-            // 기본 AI 사용
-            $nearestPlayer = $this->findNearestPlayer($mob);
-            if ($nearestPlayer !== null) {
-                $this->moveToPlayer($mob, $nearestPlayer);
+    <?php
+
+private function handleMobAI(Zombie $mob): void {
+    if (!$this->aiEnabled) {
+        // 기본 AI 사용
+        $nearestPlayer = $this->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $this->moveToPlayer($mob, $nearestPlayer);
+        } else {
+            $this->moveRandomly($mob);
+        }
+    } else {
+        // AI 활성화된 경우
+        if (($player = $this->findNearestPlayer($mob)) !== null) {
+            if ($this->entityAI->hasPath($mob)) {
+                // 경로가 있으면 따라가기
+                $this->entityAI->moveAlongPath($mob);
+
+                // 경로의 마지막 지점에 도착했는지 확인하고, 도착했다면 경로를 제거합니다.
+                if ($this->entityAI->hasPath($mob) && count($this->entityAI->getPath($mob)) == 0) {
+                    $this->entityAI->removePath($mob);
+                }
+
             } else {
-                $this->moveRandomly($mob);
+                // 경로가 없으면 경로 탐색
+                $thisPlugin = $this; // $this를 캡처
+                $mobPosition = $mob->getPosition(); // mob 위치 미리 가져오기
+                $playerPosition = $player->getPosition(); // player 위치 미리 가져오기
+
+                $this->entityAI->findPathAsync(
+                    $mob->getWorld(),
+                    $mobPosition, // 미리 가져온 mob 위치 사용
+                    $playerPosition, // 미리 가져온 player 위치 사용
+                    "A*", // 또는 원하는 알고리즘
+                    function (?array $path) use ($mob, $thisPlugin, $player) { // $player 추가, EntityAI, World, Position 인자 제거
+                        if ($path !== null) {
+                            $thisPlugin->entityAI->setPath($mob, $path);
+                        } else {
+                            // 경로 탐색 실패 시 플레이어에게 이동
+                            $thisPlugin->moveToPlayer($mob, $player); // $player 사용
+                        }
+                    }
+                );
             }
         } else {
-            // AI 활성화된 경우
-            if (($player = $this->findNearestPlayer($mob)) !== null) {
-                if ($this->entityAI->hasPath($mob)) {
-                    // 경로가 있으면 따라가기
-                    $this->entityAI->moveAlongPath($mob);
-                } else {
-                    // 경로가 없으면 경로 탐색
-                    $entity = $mob;
-                    $thisPlugin = $this;
-
-                    $this->entityAI->findPathAsync(
-                        $mob->getWorld(),
-                        $mob->getPosition(),
-                        $player->getPosition(),
-                        "A*", // 또는 원하는 알고리즘
-                        function (?array $path, EntityAI $entityAI, World $world, Position $startPos, Position $goalPos, string $algorithm) use ($entity, $thisPlugin, $player) { // $player 추가
-                            if ($path !== null) {
-                                $thisPlugin->entityAI->setPath($entity, $path);
-                            } else {
-                                // 경로 탐색 실패 시 플레이어에게 이동
-                                $thisPlugin->moveToPlayer($entity, $player); // $player 사용
-                            }
-                        }
-                    );
-                }
-            } else {
-                // 플레이어가 없으면 랜덤 이동
-                $this->moveRandomly($mob);
-            }
+            // 플레이어가 없으면 랜덤 이동
+            $this->moveRandomly($mob);
         }
-
-        $this->detectLanding($mob);
-        $this->checkForObstaclesAndJump($mob);
-        $this->attackNearestPlayer($mob);
     }
+
+    $this->detectLanding($mob);
+    $this->checkForObstaclesAndJump($mob);
+    $this->attackNearestPlayer($mob);
+}
 
 
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
