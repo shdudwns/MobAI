@@ -67,15 +67,12 @@ private function handleMobAI(Living $mob): void {
         return;
     }
 
-    // ✅ AI 활성화 상태에서의 동작
     $mobId = $mob->getId();
     $currentTick = Server::getInstance()->getTick();
-
     $player = $tracker->findNearestPlayer($mob);
+
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
-
-        // ✅ 기존 경로가 있고, 플레이어 위치 변화가 크지 않으면 경로 유지하면서 이동
         if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
             $ai->moveAlongPath($mob);
             return;
@@ -83,28 +80,28 @@ private function handleMobAI(Living $mob): void {
 
         $ai->setTarget($mob, $player->getPosition());
 
-        // ✅ 경로 갱신 주기 동안에도 몬스터가 멈추지 않도록 `moveToPlayer()` 보조 실행
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
             $navigator->moveToPlayer($mob, $player);
         }
 
-        // ✅ 경로 갱신 주기를 줄여 부드러운 이동 유지
-        $updateInterval = $ai->hasPath($mob) ? mt_rand(20, 40) : 10;
-        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
+        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
+
+            $this->plugin->getLogger()->info("AI 경로 탐색 시작: {$mob->getId()} - 목표 {$player->getPosition()->x}, {$player->getPosition()->y}, {$player->getPosition()->z}");
 
             $ai->findPathAsync(
                 $mob->getWorld(),
                 $mob->getPosition(),
                 $player->getPosition(),
-                "A*",
                 function (?array $path) use ($mob, $player, $ai, $navigator) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
+                        $this->plugin->getLogger()->info("경로 탐색 성공! 몬스터 {$mob->getId()} 목표로 이동");
                     } else {
                         $navigator->moveToPlayer($mob, $player);
+                        $this->plugin->getLogger()->info("경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도");
                     }
                 }
             );
@@ -112,6 +109,24 @@ private function handleMobAI(Living $mob): void {
     }
 
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
+    $this->handleSwimming($mob);
+}
+
+    private function handleSwimming(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+
+    $blockAtFeet = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+    $blockAtHead = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+
+    if ($blockAtFeet->getId() === Block::WATER || $blockAtHead->getId() === Block::WATER) {
+        // ✅ 몬스터가 물속에 있으면 점프하며 이동 (수영 모션 구현)
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x * 0.9, 
+            0.3, // 수면 위로 이동하도록 점프
+            $mob->getMotion()->z * 0.9
+        ));
+    }
 }
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
