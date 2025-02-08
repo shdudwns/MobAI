@@ -148,6 +148,32 @@ public function reloadAISettings(): void {
     $this->spawnZombieAt($player->getWorld(), $spawnPosition);
 }*/
 
+    public function onEntityDamage(EntityDamageEvent $event): void {
+    $entity = $event->getEntity();
+    
+    if ($entity instanceof Living && $event instanceof EntityDamageByEntityEvent) {
+        $damager = $event->getDamager();
+
+        if ($damager instanceof Player && $entity instanceof Zombie) {
+            $this->applyKnockback($entity, $damager);
+        }
+    }
+}
+
+private function applyKnockback(Living $mob, Player $damager): void {
+    $damagerPos = $damager->getPosition();
+    $mobPos = $mob->getPosition();
+
+    // ✅ 넉백 방향 계산 (플레이어 반대 방향)
+    $knockbackDir = (new Vector3(
+        $mobPos->x - $damagerPos->x,
+        0.2, // Y축 살짝 띄움
+        $mobPos->z - $damagerPos->z
+    ))->normalize()->multiply(0.4); // 넉백 강도 조절
+
+    // ✅ 몬스터에게 넉백 적용
+    $mob->setMotion($knockbackDir);
+}
     /** ✅ 청크가 로드된 경우에만 좀비 스폰 */
     public function spawnZombieAt(World $world, Vector3 $position): void {
         if (!$world->isChunkLoaded($position->getFloorX() >> 4, $position->getFloorZ() >> 4)) {
