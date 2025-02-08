@@ -43,37 +43,42 @@ class MobAITask extends Task {
     }
 
     private function handleMobAI(Zombie $mob): void {
-        if (!$this->aiEnabled) {
-            $nearestPlayer = $this->findNearestPlayer($mob);
-            if ($nearestPlayer !== null) {
-                $this->moveToPlayer($mob, $nearestPlayer);
+    if (!$this->aiEnabled) {
+        $nearestPlayer = $this->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $this->moveToPlayer($mob, $nearestPlayer);
+        } else {
+            $this->moveRandomly($mob);
+        }
+    } else {
+        if (($player = $this->findNearestPlayer($mob)) !== null) {
+            if ($this->entityAI->hasPath($mob)) {
+                $this->entityAI->moveAlongPath($mob);
             } else {
-                $this->moveRandomly($mob);
+                // ✅ 인자 순서 수정 (올바른 순서: world, start, goal, algorithm, callback)
+                $this->entityAI->findPathAsync(
+                    $mob->getWorld(),
+                    $mob->getPosition(),
+                    $player->getPosition(),
+                    "A*", // ✅ 알고리즘을 올바르게 전달
+                    function (?array $path) use ($mob) {
+                        if ($path !== null) {
+                            $this->entityAI->setPath($mob, $path);
+                        } else {
+                            $this->moveRandomly($mob);
+                        }
+                    }
+                );
             }
         } else {
-            if (($player = $this->findNearestPlayer($mob)) !== null) {
-                if ($this->entityAI->hasPath($mob)) {
-                    $this->entityAI->moveAlongPath($mob);
-                } else {
-                    $this->entityAI->findPathAsync(
-                        $mob->getWorld(),
-                        $mob->getPosition(),
-                        $player->getPosition(),
-                        "A*",
-                        function (?array $path) use ($mob) {
-                            if ($path !== null) {
-                                $this->entityAI->setPath($mob, $path);
-                            } else {
-                                $this->moveRandomly($mob);
-                            }
-                        }
-                    );
-                }
-            } else {
-                $this->moveRandomly($mob);
-            }
+            $this->moveRandomly($mob);
         }
     }
+
+    $this->detectLanding($mob);
+    $this->checkForObstaclesAndJump($mob);
+    $this->attackNearestPlayer($mob);
+}
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
@@ -120,7 +125,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
     $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-    // ✅ 정확한 블록 감지를 위한 좌표 기반 점프 복구
+    // ✅ 점프 조건 강화 (블록이 앞에 있고, 점프 가능한 경우)
     if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
             $this->jump($mob, $heightDiff);
@@ -128,7 +133,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         }
     }
 
-    // ✅ 연속된 계단 감지 후 점프 처리
+    // ✅ 계단 감지 (연속된 계단에서도 점프 가능하게 수정)
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
@@ -189,6 +194,14 @@ private function isStairOrSlab(Block $block): bool {
 
         return $nearestPlayer;
     }
+    
+    private function attackNearestPlayer(Zombie $mob): void {
+    $nearestPlayer = $this->findNearestPlayer($mob);
+    if ($nearestPlayer !== null && $mob->getPosition()->distance($nearestPlayer->getPosition()) <= 1.5) {
+        $event = new EntityDamageByEntityEvent($mob, $nearestPlayer, EntityDamageEvent::CAUSE_ENTITY_ATTACK, 4);
+        $nearestPlayer->attack($event);
+    }
+}
 
     private function moveToPlayer(Zombie $mob, Player $player): void {
     $mobPos = $mob->getPosition();
