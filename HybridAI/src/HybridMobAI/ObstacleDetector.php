@@ -26,7 +26,7 @@ class ObstacleDetector {
         $position = $mob->getPosition();
         $yaw = $mob->getLocation()->yaw;
 
-        // ✅ 정면 방향만 검사 (옆 블록 무시)
+        // ✅ 정면 방향만 검사 (대각선 제외)
         $direction2D = VectorMath::getDirection2D($yaw);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
         $frontBlockPos = $position->addVector($directionVector);
@@ -41,7 +41,7 @@ class ObstacleDetector {
         if ($heightDiff <= 0) return;
 
         // ✅ 2. 블록에서 내려올 때 점프 방지 (더 강화된 조건)
-        if ($blockBelow->getPosition()->y > $position->y - 0.5 && !$this->isEdgeOfBlock($position, $frontBlockPos)) {
+        if ($blockBelow->getPosition()->y > $position->y - 0.5) {
             return;
         }
 
@@ -110,14 +110,5 @@ class ObstacleDetector {
             $block instanceof Trapdoor || 
             $block->isSolid()
         );
-    }
-
-    private function isEdgeOfBlock(Vector3 $position, Vector3 $frontBlockPos): bool {
-        // ✅ 블록 모서리 중앙인지 확인
-        $xDiff = abs($position->x - $frontBlockPos->x);
-        $zDiff = abs($position->z - $frontBlockPos->z);
-
-        // 모서리 중앙이라면 true 반환
-        return ($xDiff > 0.3 && $xDiff < 0.7) || ($zDiff > 0.3 && $zDiff < 0.7);
     }
 }
