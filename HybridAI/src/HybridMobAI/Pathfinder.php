@@ -4,186 +4,180 @@ namespace HybridMobAI;
 
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
-use pocketmine\block\Block;
-use pocketmine\scheduler\AsyncTask;
 
 class Pathfinder {
-    private World $world;
-
-    public function __construct(World $world) {
-        $this->world = $world;
+    private static function vectorToStr(Vector3 $vector): string {
+        return "{$vector->x}:{$vector->y}:{$vector->z}";
     }
 
-    public function findPathAStar(Vector3 $start, Vector3 $goal): ?array {
-    $openSet = [$start];
-    $openSetHash = [self::vectorToStr($start) => true];
-    $cameFrom = [];
-    $gScore = [self::vectorToStr($start) => 0];
-    $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
+    public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
+        $openSet = [$start];
+        $openSetHash = [self::vectorToStr($start) => true];
+        $cameFrom = [];
+        $gScore = [self::vectorToStr($start) => 0];
+        $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
 
-    $maxDepth = 500;
-    $depth = 0;
+        $maxDepth = 500;
+        $depth = 0;
 
-    while (!empty($openSet) && $depth < $maxDepth) {
-        usort($openSet, fn($a, $b) => $fScore[self::vectorToStr($a)] <=> $fScore[self::vectorToStr($b)]);
-        $current = array_shift($openSet);
-        $currentKey = self::vectorToStr($current);
+        while (!empty($openSet) && $depth < $maxDepth) {
+            usort($openSet, fn($a, $b) => $fScore[self::vectorToStr($a)] <=> $fScore[self::vectorToStr($b)]);
+            $current = array_shift($openSet);
+            $currentKey = self::vectorToStr($current);
 
-        if ($current->equals($goal)) {
-            return $this->reconstructPath($cameFrom, $current);
+            if ($current->equals($goal)) {
+                return $this->reconstructPath($cameFrom, $current);
+            }
+
+            foreach ($this->getNeighbors($world, $current) as $neighbor) {
+                $neighborKey = self::vectorToStr($neighbor);
+                $tentativeGScore = $gScore[$currentKey] + 1;
+
+                if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
+                    $cameFrom[$neighborKey] = $current;
+                    $gScore[$neighborKey] = $tentativeGScore;
+                    $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
+
+                    if (!in_array($neighbor, $openSet, true)) {
+                        $openSet[] = $neighbor;
+                        $openSetHash[$neighborKey] = true;
+                    }
+                }
+            }
+
+            $depth++;
         }
 
-        foreach ($this->getNeighbors($current) as $neighbor) {
-            $neighborKey = self::vectorToStr($neighbor);
-            $tentativeGScore = $gScore[$currentKey] + 1;
+        return null;
+    }
 
-            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
-                $cameFrom[$neighborKey] = $current;
-                $gScore[$neighborKey] = $tentativeGScore;
-                $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
+    public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
+        $openSet = [$start];
+        $cameFrom = [];
+        $cost = [self::vectorToStr($start) => 0];
 
-                if (!in_array($neighbor, $openSet, true)) {
+        while (!empty($openSet)) {
+            usort($openSet, fn($a, $b) => $cost[self::vectorToStr($a)] <=> $cost[self::vectorToStr($b)]);
+            $current = array_shift($openSet);
+            $currentKey = self::vectorToStr($current);
+
+            if ($current->equals($goal)) {
+                return $this->reconstructPath($cameFrom, $current);
+            }
+
+            foreach ($this->getNeighbors($world, $current) as $neighbor) {
+                $neighborKey = self::vectorToStr($neighbor);
+                $newCost = $cost[$currentKey] + 1;
+
+                if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
+                    $cameFrom[$neighborKey] = $current;
+                    $cost[$neighborKey] = $newCost;
                     $openSet[] = $neighbor;
-                    $openSetHash[$neighborKey] = true;
                 }
             }
         }
-
-        $depth++;
+        return null;
     }
 
-    return null;
-}
+    public function findPathGreedy(World $world, Vector3 $start, Vector3 $goal): ?array {
+        $current = $start;
+        $path = [];
 
-private static function vectorToStr(Vector3 $vector): string {
-    return "{$vector->x}:{$vector->y}:{$vector->z}";
-}
-public function findPathDijkstra(Vector3 $start, Vector3 $goal): ?array {
-    $openSet = [$start];
-    $cameFrom = [];
-    $cost = [self::vectorToStr($start) => 0];
+        while (!$current->equals($goal)) {
+            $neighbors = $this->getNeighbors($world, $current);
+            usort($neighbors, fn($a, $b) => $this->heuristic($a, $goal) <=> $this->heuristic($b, $goal));
 
-    while (!empty($openSet)) {
-        usort($openSet, fn($a, $b) => $cost[self::vectorToStr($a)] <=> $cost[self::vectorToStr($b)]);
-        $current = array_shift($openSet);
-        $currentKey = self::vectorToStr($current);
+            if (empty($neighbors)) return null;
 
-        if ($current->equals($goal)) {
-            return $this->reconstructPath($cameFrom, $current);
+            $current = array_shift($neighbors);
+            $path[] = $current;
         }
 
-        foreach ($this->getNeighbors($current) as $neighbor) {
-            $neighborKey = self::vectorToStr($neighbor);
-            $newCost = $cost[$currentKey] + 1;
+        return $path;
+    }
 
-            if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
-                $cameFrom[$neighborKey] = $current;
-                $cost[$neighborKey] = $newCost;
-                $openSet[] = $neighbor;
+    public function findPathBFS(World $world, Vector3 $start, Vector3 $goal): ?array {
+        $queue = [[$start]];
+        $visited = [self::vectorToStr($start) => true];
+
+        while (!empty($queue)) {
+            $path = array_shift($queue);
+            $current = end($path);
+
+            if ($current->equals($goal)) {
+                return $path;
+            }
+
+            foreach ($this->getNeighbors($world, $current) as $neighbor) {
+                $neighborKey = self::vectorToStr($neighbor);
+                if (!isset($visited[$neighborKey])) {
+                    $visited[$neighborKey] = true;
+                    $newPath = $path;
+                    $newPath[] = $neighbor;
+                    $queue[] = $newPath;
+                }
             }
         }
-    }
-    return null;
-}
-
-public function findPathGreedy(Vector3 $start, Vector3 $goal): ?array {
-    $current = $start;
-    $path = [];
-
-    while (!$current->equals($goal)) {
-        $neighbors = $this->getNeighbors($current);
-        usort($neighbors, fn($a, $b) => $this->heuristic($a, $goal) <=> $this->heuristic($b, $goal));
-
-        if (empty($neighbors)) return null;
-
-        $current = array_shift($neighbors);
-        $path[] = $current;
+        return null;
     }
 
-    return $path;
-}
-    public function findPathBFS(Vector3 $start, Vector3 $goal): ?array {
-    $queue = [[$start]];
-    $visited = [self::vectorToStr($start) => true];
+    public function findPathDFS(World $world, Vector3 $start, Vector3 $goal): ?array {
+        $stack = [[$start]];
+        $visited = [self::vectorToStr($start) => true];
 
-    while (!empty($queue)) {
-        $path = array_shift($queue);
-        $current = end($path);
+        while (!empty($stack)) {
+            $path = array_pop($stack);
+            $current = end($path);
 
-        if ($current->equals($goal)) {
-            return $path;
-        }
+            if ($current->equals($goal)) {
+                return $path;
+            }
 
-        foreach ($this->getNeighbors($current) as $neighbor) {
-            $neighborKey = self::vectorToStr($neighbor);
-            if (!isset($visited[$neighborKey])) {
-                $visited[$neighborKey] = true;
-                $newPath = $path;
-                $newPath[] = $neighbor;
-                $queue[] = $newPath;
+            foreach ($this->getNeighbors($world, $current) as $neighbor) {
+                $neighborKey = self::vectorToStr($neighbor);
+                if (!isset($visited[$neighborKey])) {
+                    $visited[$neighborKey] = true;
+                    $newPath = $path;
+                    $newPath[] = $neighbor;
+                    $stack[] = $newPath;
+                }
             }
         }
+        return null;
     }
-    return null;
-}
-
-public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
-    $stack = [[$start]];
-    $visited = [self::vectorToStr($start) => true];
-
-    while (!empty($stack)) {
-        $path = array_pop($stack);
-        $current = end($path);
-
-        if ($current->equals($goal)) {
-            return $path;
-        }
-
-        foreach ($this->getNeighbors($current) as $neighbor) {
-            $neighborKey = self::vectorToStr($neighbor);
-            if (!isset($visited[$neighborKey])) {
-                $visited[$neighborKey] = true;
-                $newPath = $path;
-                $newPath[] = $neighbor;
-                $stack[] = $newPath;
-            }
-        }
-    }
-    return null;
-}
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
         return abs($a->x - $b->x) + abs($a->y - $b->y) + abs($a->z - $b->z);
     }
 
     private function reconstructPath(array $cameFrom, Vector3 $current): array {
-    $path = [$current];
-    $currentKey = self::vectorToStr($current);
-    while (isset($cameFrom[$currentKey])) {
-        $current = $cameFrom[$currentKey];
-        array_unshift($path, $current);
+        $path = [$current];
         $currentKey = self::vectorToStr($current);
-    }
-    return $path;
-}
-
-    private function getNeighbors(Vector3 $pos): array {
-    $neighbors = [];
-    $directions = [
-        new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-        new Vector3(0, 0, 1), new Vector3(0, 0, -1)
-    ];
-
-    foreach ($directions as $dir) {
-        $neighbor = $pos->addVector($dir);
-        $block = $this->world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-        $blockBelow = $this->world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
-
-        if (!$block->isSolid() && $blockBelow->isSolid()) {
-            $neighbors[] = $neighbor;
+        while (isset($cameFrom[$currentKey])) {
+            $current = $cameFrom[$currentKey];
+            array_unshift($path, $current);
+            $currentKey = self::vectorToStr($current);
         }
+        return $path;
     }
 
-    return $neighbors;
-}
+    private function getNeighbors(World $world, Vector3 $pos): array {
+        $neighbors = [];
+        $directions = [
+            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1), new Vector3(0, 0, -1)
+        ];
+
+        foreach ($directions as $dir) {
+            $neighbor = $pos->addVector($dir);
+            $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+            $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
+
+            if (!$block->isSolid() && $blockBelow->isSolid()) {
+                $neighbors[] = $neighbor;
+            }
+        }
+
+        return $neighbors;
+    }
 }
