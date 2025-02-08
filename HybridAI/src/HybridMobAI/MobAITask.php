@@ -147,6 +147,9 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
+            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+                $this->checkForObstaclesAndJump($mob);
+            }), 2);
         }
     }
     }
