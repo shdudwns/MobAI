@@ -30,61 +30,87 @@ class EntityAI {
         return $this->enabled;
     }
 
-    public function findPathAsync(World $world, Vector3 $start, Vector3 $goal, string $algorithm, callable $callback): void {
+    public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
     $worldName = $world->getFolderName();
+    $startX = $start->x;
+    $startY = $start->y;
+    $startZ = $start->z;
+    $goalX = $goal->x;
+    $goalY = $goal->y;
+    $goalZ = $goal->z;
 
-    Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $start, $goal, $algorithm) extends AsyncTask {
+    $plugin = $this->plugin; // $plugin 인스턴스 캡처
+    $entityAI = $this;       // $this 캡처
+
+    Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin) extends AsyncTask {
         private string $worldName;
-        private float $startX, $startY, $startZ;
-        private float $goalX, $goalY, $goalZ;
+        private float $startX;
+        private float $startY;
+        private float $startZ;
+        private float $goalX;
+        private float $goalY;
+        private float $goalZ;
         private string $algorithm;
-        private ?array $path = null;
+        private $callback;
+        private EntityAI $entityAI;
+        private PluginBase $plugin;
 
-        public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
+        public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin) {
             $this->worldName = $worldName;
-            $this->startX = $start->x;
-            $this->startY = $start->y;
-            $this->startZ = $start->z;
-            $this->goalX = $goal->x;
-            $this->goalY = $goal->y;
-            $this->goalZ = $goal->z;
+            $this->startX = $startX;
+            $this->startY = $startY;
+            $this->startZ = $startZ;
+            $this->goalX = $goalX;
+            $this->goalY = $goalY;
+            $this->goalZ = $goalZ;
             $this->algorithm = $algorithm;
+            $this->callback = $callback;
+            $this->entityAI = $entityAI;
+            $this->plugin = $plugin;
         }
 
         public function onRun(): void {
-            $server = Server::getInstance();
-            $world = $server->getWorldManager()->getWorldByName($this->worldName);
-            if ($world === null) {
-                return;
+            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+            if ($world instanceof World) {
+                $start = new Vector3($this->startX, $this->startY, $this->startZ);
+                $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
+                $pathfinder = new Pathfinder($world);
+
+                $path = match ($this->algorithm) {
+                    "A*" => $pathfinder->findPathAStar($start, $goal),
+                    "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
+                    "Greedy" => $pathfinder->findPathGreedy($start, $goal),
+                    "BFS" => $pathfinder->findPathBFS($start, $goal),
+                    "DFS" => $pathfinder->findPathDFS($start, $goal),
+                    default => null,
+                };
+
+                $this->setResult($path);
+            } else {
+                $this->setResult(null);
             }
-
-            $start = new Vector3($this->startX, $this->startY, $this->startZ);
-            $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-            $pathfinder = new Pathfinder($world);
-
-            $this->path = match ($this->algorithm) {
-                "A*" => $pathfinder->findPathAStar($start, $goal),
-                "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
-                "Greedy" => $pathfinder->findPathGreedy($start, $goal),
-                "BFS" => $pathfinder->findPathBFS($start, $goal),
-                "DFS" => $pathfinder->findPathDFS($start, $goal),
-                default => null,
-            };
         }
 
         public function onCompletion(): void {
-            $server = Server::getInstance();
-            $plugin = $server->getPluginManager()->getPlugin("HybridAI");
-            if ($plugin instanceof Main && $this->path !== null) {
-                $plugin->getLogger()->info("✅ 경로 탐색 완료!");
-            }
-
-            if ($this->path !== null) {
-                ($this->callback)($this->path);
-            }
+            ($this->callback)($this->getResult());
+            $this->plugin->getLogger()->info("경로 탐색 완료!");
         }
     });
 }
+
+수정된 부분:
+ * $plugin과 $entityAI 캡처: findPathAsync 함수 내에서 $plugin 인스턴스와 $this (EntityAI 인스턴스)를 로컬 변수에 저장합니다.
+ * 생성자에 캡처한 변수 전달: 캡처한 $entityAI와 $plugin 변수를 익명 클래스의 생성자에 인자로 전달합니다.
+ * 생성자에서 속성에 할당: 익명 클래스 내에 $entityAI와 $plugin 속성을 추가하고, 생성자에서 전달받은 인스턴스를 이 속성들에 할당합니다.
+ * onRun() 함수 추가: 비동기 작업이 실제로 실행될 때 수행할 작업을 정의하는 onRun() 함수를 추가했습니다.
+ * onCompletion() 함수 수정: 캡처한 $plugin 인스턴스를 사용하여 로그를 출력하는 부분을 추가했습니다.
+핵심:
+ * AsyncTask 내에서 $this를 직접 사용할 수 없기 때문에, 필요한 데이터를 캡처하여 생성자를 통해 AsyncTask에 전달해야 합니다.
+ * onRun() 함수는 비동기 작업의 핵심 로직을 담당하며, onCompletion() 함수는 비동기 작업 완료 후 처리해야 할 작업을 담당합니다.
+참고:
+ * Pathfinder 클래스는 별도의 파일에 구현되어 있어야 합니다.
+ * MobAITask 클래스에서 EntityAI 객체를 생성할 때, Main 클래스의 인스턴스 ($this)를 EntityAI 생성자에 전달해야 합니다.
+
 
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         $pathfinder = new Pathfinder($world);
