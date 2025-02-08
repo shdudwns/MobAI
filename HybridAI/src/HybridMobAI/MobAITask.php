@@ -377,19 +377,4 @@ private function changeDirection(Living $mob): void {
 
     return false;
 }
-
-
-    switch ($block->getId()) {
-        case Block::SNOW_LAYER:
-        case Block::FENCE:
-        case Block::GLASS:
-        case Block::ITEM_FRAME: // 액자
-        case Block::FLOWER_POT: // 화분
-        case Block::COBWEB: // 거미줄
-            return true;
-        default:
-            return false;
-    }
-}
-
 }
