@@ -334,25 +334,12 @@ private function changeDirection(Living $mob): void {
 }
     
     private function isClimbable(Block $block): bool {
-    if ($block instanceof \pocketmine\block\Air) {
-        return false;
-    }
-
     $climbableBlocks = [
-        \pocketmine\block\SnowLayer::class,
-        \pocketmine\block\Fence::class,
-        \pocketmine\block\Glass::class,
-        \pocketmine\block\ItemFrame::class,
-        \pocketmine\block\FlowerPot::class,
-        \pocketmine\block\Cobweb::class,
+        "pocketmine:block:snow_layer",
+        "pocketmine:block:fence",
+        "pocketmine:block:glass",
+        "pocketmine:block:frame"
     ];
-
-    foreach ($climbableBlocks as $climbableBlockClass) {
-        if ($block instanceof $climbableBlockClass) {
-            return true;
-        }
-    }
-
-    return false;
+    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
 }
 }
