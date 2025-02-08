@@ -61,20 +61,20 @@ class MobAITask extends Task {
         // AI 활성화된 경우
         if (($player = $this->findNearestPlayer($mob)) !== null) {
             if ($this->entityAI->hasPath($mob)) {
-                // ✅ 경로가 있으면 따라가기
+                // 경로가 있으면 따라가기
                 $this->entityAI->moveAlongPath($mob);
             } else {
-                // ✅ 경로가 없으면 기본 AI 사용
+                // 경로가 없으면 경로 탐색
                 $this->entityAI->findPathAsync(
                     $mob->getWorld(),
-                    $mob->getPosition(),
-                    $player->getPosition(),
+                    $mob->getPosition(), // pocketmine Position 사용
+                    $player->getPosition(), // pocketmine Position 사용
                     "A*",
                     function (?array $path) use ($mob, $player) {
                         if ($path !== null) {
                             $this->entityAI->setPath($mob, $path);
                         } else {
-                            // ✅ 경로가 실패하면 기본 AI 사용
+                            // 경로 탐색 실패 시 플레이어에게 이동
                             $this->moveToPlayer($mob, $player);
                         }
                     }
@@ -90,6 +90,7 @@ class MobAITask extends Task {
     $this->checkForObstaclesAndJump($mob);
     $this->attackNearestPlayer($mob);
 }
+
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
