@@ -188,59 +188,28 @@ public function findPathDFS(Vector3 $start, Vector3 $goal): ?array {
 }
 }
 
-class PathfinderTask extends AsyncTask {
+class PathfinderTask {
     private string $worldName;
-    private float $startX, $startY, $startZ;
-    private float $goalX, $goalY, $goalZ;
+    private Vector3 $start;
+    private Vector3 $goal;
     private string $algorithm;
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
-    $this->worldName = $worldName;
-
-    // ✅ 만약 Position이 들어오면 예외 발생
-    if ($start instanceof Position || $goal instanceof Position) {
-        throw new \InvalidArgumentException("PathfinderTask: Position 객체가 전달됨! Vector3로 변환 필요. start: " . json_encode($start) . " goal: " . json_encode($goal));
+        $this->worldName = $worldName;
+        $this->start = new Vector3((float) $start->x, (float) $start->y, (float) $start->z);
+        $this->goal = new Vector3((float) $goal->x, (float) $goal->y, (float) $goal->z);
+        $this->algorithm = $algorithm;
     }
 
-    // ✅ 숫자 확인
-    foreach (['x', 'y', 'z'] as $key) {
-        if (!is_numeric($start->{$key}) || !is_numeric($goal->{$key})) {
-            throw new \InvalidArgumentException("PathfinderTask: 좌표 값이 숫자가 아닙니다. start: " . json_encode($start) . " goal: " . json_encode($goal));
-        }
-    }
-
-    $this->startX = (float) $start->x;
-    $this->startY = (float) $start->y;
-    $this->startZ = (float) $start->z;
-    $this->goalX = (float) $goal->x;
-    $this->goalY = (float) $goal->y;
-    $this->goalZ = (float) $goal->z;
-    $this->algorithm = $algorithm;
-}
-
-    private function logDebug(string $message, mixed $data = null): void {
-        $logMessage = "[" . date("Y-m-d H:i:s") . "] " . $message;
-        if ($data !== null) {
-            $logMessage .= " " . print_r($data, true);
-        }
-        $logMessage .= "\n";
-        file_put_contents("debug_log.txt", $logMessage, FILE_APPEND);
-    }
-
-    public function onRun(): void {
-        $start = new Vector3($this->startX, $this->startY, $this->startZ);
-        $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-
+    public function findPath(): ?array {
         $pathfinder = new Pathfinder();
-        $path = match ($this->algorithm) {
-            "A*" => $pathfinder->findPathAStar($start, $goal),
-            "BFS" => $pathfinder->findPathBFS($start, $goal),
-            "DFS" => $pathfinder->findPathDFS($start, $goal),
-            "Dijkstra" => $pathfinder->findPathDijkstra($start, $goal),
-            "Greedy" => $pathfinder->findPathGreedy($start, $goal),
+        return match ($this->algorithm) {
+            "A*" => $pathfinder->findPathAStar($this->start, $this->goal),
+            "BFS" => $pathfinder->findPathBFS($this->start, $this->goal),
+            "DFS" => $pathfinder->findPathDFS($this->start, $this->goal),
+            "Dijkstra" => $pathfinder->findPathDijkstra($this->start, $this->goal),
+            "Greedy" => $pathfinder->findPathGreedy($this->start, $this->goal),
             default => null
         };
-
-        $this->setResult($path);
     }
 }
