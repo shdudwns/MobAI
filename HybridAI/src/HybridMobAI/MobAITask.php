@@ -121,45 +121,45 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $angles = [$yaw, $yaw + 45, $yaw - 45];
+    $angles = [$yaw, $yaw + 45, $yaw - 90, $yaw + 90, $yaw + 135, $yaw - 135, $yaw + 180, $yaw - 180]; // 8방향 탐색
 
     $boundingBox = $mob->getBoundingBox();
+    if ($boundingBox === null) return;
 
-    if ($boundingBox === null) {
-        return; // or handle the error appropriately
-    }
-
-    // 수정된 부분: 속성에 직접 접근
     $xSize = $boundingBox->maxX - $boundingBox->minX;
     $zSize = $boundingBox->maxZ - $boundingBox->minZ;
-
-    $offset = max($xSize, $zSize) / 2; // Use the larger dimension for the offset, divide by 2 for radius. Adjust divisor as needed.
+    $offset = max($xSize, $zSize) / 2; // 몹 크기를 고려한 offset
 
     foreach ($angles as $angle) {
         $direction2D = VectorMath::getDirection2D($angle);
         $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontBlockPos = $position->addVector($directionVector->multiply($offset));
+        $frontBlockPos = $position->addVector($directionVector->multiply($offset)); // offset 적용
 
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
 
-        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
-
-        if ($heightDiff < 0.5) {
+        // Air 블록은 무시
+        if ($frontBlock instanceof \pocketmine\block\Air || $frontBlockAbove instanceof \pocketmine\block\Air) {
             continue;
         }
 
+        // 몹의 발 위치를 기준으로 높이 차이 계산
+        $heightDiff = $frontBlock->getPosition()->y - $position->y;
+
+        // 높이 차이가 0.5보다 작으면 무시
+        if ($heightDiff < 0.5) continue;
+
+        // 계단 또는 슬라브 블록 처리
         if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
             $this->stepUp($mob, $heightDiff);
             return;
         }
 
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
+        // 일반적인 블록 (점프)
+        if ($frontBlock->isSolid() && $frontBlockAbove->isTransparent() && $heightDiff <= 1) {
+            $this->jump($mob, $heightDiff);
+            return;
         }
     }
 }
@@ -350,12 +350,26 @@ private function changeDirection(Living $mob): void {
 }
     
     private function isClimbable(Block $block): bool {
+    if ($block instanceof \pocketmine\block\Air) {
+        return false;
+    }
+
     $climbableBlocks = [
-        "pocketmine:block:snow_layer",
-        "pocketmine:block:fence",
-        "pocketmine:block:glass",
-        "pocketmine:block:frame"
+        \pocketmine\block\SnowLayer::class,
+        \pocketmine\block\Fence::class,
+        \pocketmine\block\Glass::class,
+        \pocketmine\block\ItemFrame::class,
+        \pocketmine\block\FlowerPot::class,
+        \pocketmine\block\Cobweb::class,
     ];
-    return $block->isSolid() || in_array($block->getName(), $climbableBlocks);
+
+    foreach ($climbableBlocks as $climbableBlockClass) {
+        if ($block instanceof $climbableBlockClass) {
+            return true;
+        }
+    }
+
+    return false;
 }
+
 }
