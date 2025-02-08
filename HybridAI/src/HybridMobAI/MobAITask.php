@@ -132,7 +132,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     ];
 
     foreach ($directions as $dir) {
-        $frontBlockPos = $position->addVector($directionVector)->add($dir);
+        $frontBlockPos = $position->addVector($directionVector)->addVector($dir);
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
 
