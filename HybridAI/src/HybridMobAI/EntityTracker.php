@@ -3,11 +3,11 @@
 namespace HybridMobAI;
 
 use pocketmine\entity\Living;
-use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\world\World;
 
-class EntityTracker{
-  public function findNearestPlayer(Living $mob): ?Player {
+class EntityTracker {
+    public function findNearestPlayer(Living $mob): ?Player {
         $closestDistance = PHP_FLOAT_MAX;
         $nearestPlayer = null;
 
