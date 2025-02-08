@@ -188,7 +188,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
         ));
 
         // ✅ 2틱 간격으로 실행하여 연속된 계단 감지
-        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob);
             }
