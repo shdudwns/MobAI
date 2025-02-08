@@ -121,33 +121,65 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    $frontBlockPos = $position->addVector($directionVector);
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-    
-    $heightDiff = $frontBlock->getPosition()->y +1 - $position->y;
+    // 8방향 탐색 각도
+    $angles = [
+        $yaw,
+        $yaw + 45,
+        $yaw - 45,
+        $yaw + 90,
+        $yaw - 90,
+        $yaw + 135,
+        $yaw - 135,
+        $yaw + 180,
+        $yaw - 180,
+    ];
 
-    // ✅ 평지에서는 점프하지 않도록 수정
-    if ($heightDiff < 0.5) {
-        return;
-    }
+    $boundingBox = $mob->getBoundingBox();
+    if ($boundingBox === null) return;
 
-    // ✅ 계단 및 슬랩 감지
-    if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-        $this->stepUp($mob, $heightDiff);
-        return;
-    }
+    $xSize = $boundingBox->maxX - $boundingBox->minX;
+    $zSize = $boundingBox->maxZ - $boundingBox->minZ;
+    $offset = max($xSize, $zSize) / 2; // 몹 크기를 고려한 offset
 
-    // ✅ 일반 블록 점프 처리
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1) {
-            $this->jump($mob, $heightDiff);
+    foreach ($angles as $angle) {
+        $direction2D = VectorMath::getDirection2D($angle);
+        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+
+        $frontBlockPos = $position->addVector($directionVector->multiply($offset)); // offset 적용
+
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+        $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+
+        // Air 블록은 무시
+        if ($frontBlock instanceof \pocketmine\block\Air || $frontBlockAbove instanceof \pocketmine\block\Air) {
+            continue;
+        }
+
+        // 몹의 발 위치를 기준으로 높이 차이 계산
+        $heightDiff = $frontBlock->getPosition()->y - $position->y;
+
+        // 높이 차이가 0.5보다 작으면 무시
+        if ($heightDiff < 0.5) {
+            continue;
+        }
+
+        // 계단 및 슬랩 감지
+        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
+            return;
+        }
+
+        // 일반 블록 점프 처리
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1) {
+                $this->jump($mob, $heightDiff);
+                return;
+            }
         }
     }
 }
+
 
     
     private function checkFrontBlock(Living $mob): ?Block {
