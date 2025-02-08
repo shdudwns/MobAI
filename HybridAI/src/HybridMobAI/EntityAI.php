@@ -19,7 +19,7 @@ class EntityAI {
     public function __construct(PluginBase $plugin) {
         $this->plugin = $plugin;
         // ✅ Config에서 활성화된 알고리즘 목록 가져오기
-        $this->enabledAlgorithms = $plugin->getConfig()->get["pathfinding_priority"] ?? ["A*"];
+        $this->enabledAlgorithms = $plugin->getConfig()->get("AI")["pathfinding_priority"] ?? ["A*"];
     }
 
     public function setTarget(Living $mob, Vector3 $target): void {
