@@ -11,21 +11,15 @@ class Pathfinder {
     }
 
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $openSet = [$start];
-    $openSetHash = [self::vectorToStr($start) => true];
+    $openSet = new \SplPriorityQueue();
+    $openSet->insert($start, 0);
+
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
 
-    $maxDepth = 500;
-    $depth = 0;
-
-    while (!empty($openSet) && $depth < $maxDepth) {
-        // ✅ 기존 usort() 대신 array_multisort() 사용하여 정렬 최적화
-        $keys = array_map(fn($vec) => $fScore[self::vectorToStr($vec)], $openSet);
-        array_multisort($keys, SORT_ASC, $openSet);
-
-        $current = array_shift($openSet);
+    while (!$openSet->isEmpty()) {
+        $current = $openSet->extract();
         $currentKey = self::vectorToStr($current);
 
         if ($current->equals($goal)) {
@@ -36,22 +30,14 @@ class Pathfinder {
             $neighborKey = self::vectorToStr($neighbor);
             $tentativeGScore = $gScore[$currentKey] + 1;
 
-            // ✅ `in_array()` 대신 `isset()` 사용하여 탐색 속도 개선
             if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-
-                if (!isset($openSetHash[$neighborKey])) {
-                    $openSet[] = $neighbor;
-                    $openSetHash[$neighborKey] = true;
-                }
+                $openSet->insert($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에서 낮은 값이 높은 우선순위를 가짐
             }
         }
-
-        $depth++;
     }
-
     return null;
 }
     
