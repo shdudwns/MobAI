@@ -6,6 +6,7 @@ use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\entity\Living;
 use pocketmine\block\Block;
+use pocketmine\Server;
 
 class EntityAI {
     private bool $enabled = false; // AI 활성화 여부
