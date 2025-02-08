@@ -127,39 +127,36 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
     $angles = [$yaw, $yaw + 45, $yaw - 45];
-    
+
     foreach ($angles as $angle) {
-    $direction2D = VectorMath::getDirection2D($angle);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+        $direction2D = VectorMath::getDirection2D($angle);
+        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    $frontBlockX = (int)floor($position->x + $directionVector->x);
-    $frontBlockY = (int)$position->y;
-    $frontBlockZ = (int)floor($position->z + $directionVector->z);
+        $frontBlockPos = $position->addVector($directionVector);
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+        $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+        $heightDiff = $frontBlock->getPosition()->y+0.5 - $position->y;
 
-    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
+        // ✅ 평지에서는 계단으로 감지하지 않도록 수정
+        if ($heightDiff < 0) {
+            continue;
+        }
 
-    // ✅ 평지에서는 계단으로 감지하지 않도록 수정
-    if ($heightDiff < 0) {
-        return;
-    }
-
-    // ✅ 계단 감지
-    if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
-        $this->plugin->getLogger()->info("🔼 계단 감지 - 점프 실행");
-        $this->stepUp($mob, $heightDiff);
-        return;
-    }
-
-    // ✅ 일반 블록 점프 처리
-    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-        if ($heightDiff <= 1.5) {
-            $this->plugin->getLogger()->info("⬆️ 블록 점프 실행");
-            $this->jump($mob, $heightDiff);
+        // ✅ 계단 감지
+        if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
+            $this->plugin->getLogger()->info("🔼 계단 감지 - 점프 실행");
+            $this->stepUp($mob, $heightDiff);
             return;
         }
-    }
+
+        // ✅ 일반 블록 점프 처리
+        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+            if ($heightDiff <= 1.5) {
+                $this->plugin->getLogger()->info("⬆️ 블록 점프 실행");
+                $this->jump($mob, $heightDiff);
+                return;
+            }
+        }
     }
 }
     
@@ -190,7 +187,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
             $direction->z
         ));
 
-        // ✅ 연속된 계단을 감지하여 계속 이동하도록 함
+        // ✅ 2틱 간격으로 실행하여 연속된 계단 감지
         Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob);
