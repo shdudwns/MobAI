@@ -193,33 +193,23 @@ class PathfinderTask extends AsyncTask {
     private float $startX, $startY, $startZ;
     private float $goalX, $goalY, $goalZ;
     private string $algorithm;
-    public $callback;
-    private Main $plugin; // Main 플러그인 인스턴스 추가
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
-        $this->startX = (float)$start->x;
-        $this->startY = (float)$start->y;
-        $this->startZ = (float)$start->z;
-        $this->goalX = (float)$goal->x;
-        $this->goalY = (float)$goal->y;
-        $this->goalZ = (float)$goal->z;
+        $this->startX = (float) $start->x;
+        $this->startY = (float) $start->y;
+        $this->startZ = (float) $start->z;
+        $this->goalX = (float) $goal->x;
+        $this->goalY = (float) $goal->y;
+        $this->goalZ = (float) $goal->z;
         $this->algorithm = $algorithm;
     }
-    
+
     public function onRun(): void {
         $start = new Vector3($this->startX, $this->startY, $this->startZ);
         $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-        // World 객체 가져오기
-        $level = $this->plugin->getServer()->getWorldManager()->getWorldByName($this->worldName);
-        if ($level === null) {
-            $this->setResult(null); // 월드가 없으면 null 반환
-            return;
-        }
-
-        $pathfinder = new Pathfinder($level); // Pathfinder 생성 시 World 객체 전달
-
+        $pathfinder = new Pathfinder();
         $path = match ($this->algorithm) {
             "A*" => $pathfinder->findPathAStar($start, $goal),
             "BFS" => $pathfinder->findPathBFS($start, $goal),
@@ -230,16 +220,5 @@ class PathfinderTask extends AsyncTask {
         };
 
         $this->setResult($path);
-    }
-
-    public function onCompletion(Server $server): void {
-        $result = $this->getResult();
-        $callback = $this->callback;
-
-        if ($result !== null) {
-            $callback($result);
-        } else {
-            $callback(null);
-        }
     }
 }
