@@ -40,9 +40,16 @@ class EntityAI {
         $goalZ = $goal->z;
 
         $plugin = $this->plugin;
-        $entityAI = $this; // $this 캡쳐!
+        $entityAI = $this;
 
-        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin) extends AsyncTask {
+        // *** 캡처할 모든 데이터를 이 곳에서 캡처합니다. ***
+        $capturedThis = $this; // $this (EntityAI 인스턴스) 캡처
+        $capturedWorld = $world; // $world 캡처
+        $capturedStart = $start; // $start 캡처
+        $capturedGoal = $goal; // $goal 캡처
+        $capturedAlgorithm = $algorithm; // $algorithm 캡처
+
+        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin, $capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm) extends AsyncTask {
             private string $worldName;
             private float $startX;
             private float $startY;
@@ -52,10 +59,18 @@ class EntityAI {
             private float $goalZ;
             private string $algorithm;
             private $callback;
-            private EntityAI $entityAI; // 캡쳐한 $this 저장
+            private EntityAI $entityAI;
             private PluginBase $plugin;
 
-            public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin) {
+            // *** 캡처한 데이터를 저장할 속성을 추가합니다. ***
+            private EntityAI $capturedThis;
+            private World $capturedWorld;
+            private Position $capturedStart;
+            private Position $capturedGoal;
+            private string $capturedAlgorithm;
+
+
+            public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin, EntityAI $capturedThis, World $capturedWorld, Position $capturedStart, Position $capturedGoal, string $capturedAlgorithm) {
                 $this->worldName = $worldName;
                 $this->startX = $startX;
                 $this->startY = $startY;
@@ -65,8 +80,15 @@ class EntityAI {
                 $this->goalZ = $goalZ;
                 $this->algorithm = $algorithm;
                 $this->callback = $callback;
-                $this->entityAI = $entityAI; // 캡쳐한 $this 할당
+                $this->entityAI = $entityAI;
                 $this->plugin = $plugin;
+
+                // *** 캡처한 데이터를 속성에 저장합니다. ***
+                $this->capturedThis = $capturedThis;
+                $this->capturedWorld = $capturedWorld;
+                $this->capturedStart = $capturedStart;
+                $this->capturedGoal = $capturedGoal;
+                $this->capturedAlgorithm = $capturedAlgorithm;
             }
 
             public function onRun(): void {
@@ -94,12 +116,12 @@ class EntityAI {
 
             public function onCompletion(): void {
                 $result = $this->getResult();
-                ($this->callback)($result);
+
+                // *** 콜백 함수 호출 시 캡처한 데이터를 인자로 함께 전달합니다. ***
+                ($this->callback)($result, $this->capturedThis, $this->capturedWorld, $this->capturedStart, $this->capturedGoal, $this->capturedAlgorithm);
 
                 if ($result !== null) {
                     $this->plugin->getLogger()->info("경로 탐색 완료!");
-                    // $this 사용 예시 (캡쳐한 $entityAI 사용):
-                     $this->entityAI->setPath($someMob, $result); // someMob은 Living Entity
                 } else {
                     $this->plugin->getLogger()->info("경로를 찾을 수 없습니다.");
                 }
