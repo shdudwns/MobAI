@@ -31,7 +31,13 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-        // ... (변수 선언 및 초기화 - worldName, startX, startY, 등)
+        $worldName = $world->getFolderName();
+        $startX = $start->x;
+        $startY = $start->y;
+        $startZ = $start->z;
+        $goalX = $goal->x;
+        $goalY = $goal->y;
+        $goalZ = $goal->z;
 
         $plugin = $this->plugin;
         $entityAI = $this;
