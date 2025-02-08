@@ -120,37 +120,32 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $angles = [$yaw, $yaw + 45, $yaw - 45];
     
     foreach ($angles as $angle) {
-        $direction2D = VectorMath::getDirection2D($angle);
-        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+    $direction2D = VectorMath::getDirection2D($angle);
+    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-        $frontBlockX = (int)floor($position->x + $directionVector->x);
-        $frontBlockY = (int)$position->y;
-        $frontBlockZ = (int)floor($position->z + $directionVector->z);
+    $frontBlockX = (int)floor($position->x + $directionVector->x);
+    $frontBlockY = (int)$position->y;
+    $frontBlockZ = (int)floor($position->z + $directionVector->z);
 
-        $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-        $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
+    $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
+    $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
 
-        $heightDiff = $frontBlock->getPosition()->y - $position->y;
+    $heightDiff = $frontBlock->getPosition()->y + 0.5 - $position->y;
 
-        // ✅ 내려가는 경우 점프하지 않도록 수정
-        if ($heightDiff < 0) {
-            continue;
+    // ✅ 점프 조건 강화 (블록이 앞에 있고, 점프 가능한 경우)
+    if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
+        if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            $this->jump($mob, $heightDiff);
+            return;
         }
+    }
 
-        // ✅ 점프 조건 강화
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5 && $heightDiff > 0) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
+    // ✅ 계단 감지 (연속된 계단에서도 점프 가능하게 수정)
+    if ($this->isStairOrSlab($frontBlock)) {
+        if ($frontBlockAbove->isTransparent()) {
+            $this->stepUp($mob, $heightDiff);
         }
-
-        // ✅ 계단 감지
-        if ($this->isStairOrSlab($frontBlock)) {
-            if ($frontBlockAbove->isTransparent()) {
-                $this->stepUp($mob, $heightDiff);
-            }
-        }
+    }
     }
 }
     
