@@ -213,6 +213,10 @@ class PathfinderTask extends AsyncTask {
     $this->goalY = (float) $goal->y;
     $this->goalZ = (float) $goal->z;
     $this->algorithm = $algorithm;
+    $this->logDebug("✅ PathfinderTask float 변환 완료:", [
+            'startX' => $this->startX, 'startY' => $this->startY, 'startZ' => $this->startZ,
+            'goalX' => $this->goalX, 'goalY' => $this->goalY, 'goalZ' => $this->goalZ
+        ]);
 }
 
     private function logDebug(string $message, mixed $data = null): void {
