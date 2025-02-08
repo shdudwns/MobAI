@@ -139,7 +139,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         // ✅ 점프 조건 강화
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff > 0) {
+            if ($heightDiff <= 1.5 && $heightDiff > 0) {
                 $this->jump($mob, $heightDiff);
                 return;
             }
@@ -147,14 +147,16 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         // ✅ 계단 감지
         if ($this->isStairOrSlab($frontBlock)) {
-            $this->jump($mob, $heightDiff);
-            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+            if ($frontBlockAbove->isTransparent()) {
+                $this->stepUp($mob, $heightDiff);
+                Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
                 $this->checkForObstaclesAndJump($mob);
-            }), 2); // 2틱 후 다시 점프 체크
-            return;
+            }), 2);
+                return;
+            }
+        }
     }
 }
-    }
     private function checkFrontBlock(Living $mob): ?Block {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
@@ -181,13 +183,6 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
             0.6, // 계단을 오를 때 점프 강도를 높임
             $direction->z
         ));
-
-        // ✅ 계단 감지 로직을 개선하여 자연스럽게 연속된 계단을 오를 수 있도록 수정
-        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
-            if ($mob->isOnGround()) {
-                $this->checkForObstaclesAndJump($mob);
-            }
-        }), 2);
     }
 }
 private function isStairOrSlab(Block $block): bool {
