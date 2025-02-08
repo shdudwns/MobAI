@@ -49,7 +49,14 @@ class EntityAI {
         $capturedGoal = $goal; // $goal 캡처
         $capturedAlgorithm = $algorithm; // $algorithm 캡처
 
-        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callback, $entityAI, $plugin, $capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm) extends AsyncTask {
+        // *** 콜백 함수를 래핑하는 함수를 만듭니다. ***
+        $wrappedCallback = function($result) use ($capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm, $callback) {
+            // 이제 $capturedThis (및 기타 캡처된 데이터)를 안전하게 사용할 수 있습니다.
+            $callback($result, $capturedThis, $capturedWorld, $capturedStart, $capturedGoal, $capturedAlgorithm);
+        };
+
+
+        Server::getInstance()->getAsyncPool()->submitTask(new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $wrappedCallback, $entityAI, $plugin) extends AsyncTask {
             private string $worldName;
             private float $startX;
             private float $startY;
@@ -58,7 +65,7 @@ class EntityAI {
             private float $goalY;
             private float $goalZ;
             private string $algorithm;
-            private $callback;
+            private $wrappedCallback; // 래핑된 콜백 저장
             private EntityAI $entityAI;
             private PluginBase $plugin;
 
@@ -70,7 +77,7 @@ class EntityAI {
             private string $capturedAlgorithm;
 
 
-            public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $callback, EntityAI $entityAI, PluginBase $plugin, EntityAI $capturedThis, World $capturedWorld, Position $capturedStart, Position $capturedGoal, string $capturedAlgorithm) {
+            public function __construct(string $worldName, float $startX, float $startY, float $startZ, float $goalX, float $goalY, float $goalZ, string $algorithm, callable $wrappedCallback, EntityAI $entityAI, PluginBase $plugin) {
                 $this->worldName = $worldName;
                 $this->startX = $startX;
                 $this->startY = $startY;
@@ -79,7 +86,7 @@ class EntityAI {
                 $this->goalY = $goalY;
                 $this->goalZ = $goalZ;
                 $this->algorithm = $algorithm;
-                $this->callback = $callback;
+                $this->wrappedCallback = $wrappedCallback; // 래핑된 콜백 할당
                 $this->entityAI = $entityAI;
                 $this->plugin = $plugin;
 
@@ -117,8 +124,8 @@ class EntityAI {
             public function onCompletion(): void {
                 $result = $this->getResult();
 
-                // *** 콜백 함수 호출 시 캡처한 데이터를 인자로 함께 전달합니다. ***
-                ($this->callback)($result, $this->capturedThis, $this->capturedWorld, $this->capturedStart, $this->capturedGoal, $this->capturedAlgorithm);
+                // *** 래핑된 콜백 함수를 호출합니다. ***
+                ($this->wrappedCallback)($result);
 
                 if ($result !== null) {
                     $this->plugin->getLogger()->info("경로 탐색 완료!");
@@ -128,7 +135,6 @@ class EntityAI {
             }
         });
     }
-
     public function findPath(World $world, Vector3 $start, Vector3 $goal, string $algorithm): ?array {
         $pathfinder = new Pathfinder();
 
