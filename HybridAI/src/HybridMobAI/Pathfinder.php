@@ -195,26 +195,25 @@ class PathfinderTask extends AsyncTask {
     private string $algorithm;
 
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
-        $this->worldName = $worldName;
+    $this->worldName = $worldName;
 
-        // ✅ 변환 전 값 확인 후 로그 저장
-        $this->logDebug("📌 PathfinderTask 생성 - 원본 Start 값:", $start);
-        $this->logDebug("📌 PathfinderTask 생성 - 원본 Goal 값:", $goal);
-
-        $this->startX = (float) $start->x;
-        $this->startY = (float) $start->y;
-        $this->startZ = (float) $start->z;
-        $this->goalX = (float) $goal->x;
-        $this->goalY = (float) $goal->y;
-        $this->goalZ = (float) $goal->z;
-        $this->algorithm = $algorithm;
-
-        // ✅ 변환 후 로그 저장
-        $this->logDebug("✅ PathfinderTask float 변환 완료:", [
-            'startX' => $this->startX, 'startY' => $this->startY, 'startZ' => $this->startZ,
-            'goalX' => $this->goalX, 'goalY' => $this->goalY, 'goalZ' => $this->goalZ
-        ]);
+    // ✅ float 변환 전 확인
+    if (!is_numeric($start->x) || !is_numeric($start->y) || !is_numeric($start->z)) {
+        throw new \InvalidArgumentException("PathfinderTask: Start 좌표가 숫자가 아닙니다: " . json_encode($start));
     }
+
+    if (!is_numeric($goal->x) || !is_numeric($goal->y) || !is_numeric($goal->z)) {
+        throw new \InvalidArgumentException("PathfinderTask: Goal 좌표가 숫자가 아닙니다: " . json_encode($goal));
+    }
+
+    $this->startX = (float) $start->x;
+    $this->startY = (float) $start->y;
+    $this->startZ = (float) $start->z;
+    $this->goalX = (float) $goal->x;
+    $this->goalY = (float) $goal->y;
+    $this->goalZ = (float) $goal->z;
+    $this->algorithm = $algorithm;
+}
 
     private function logDebug(string $message, mixed $data = null): void {
         $logMessage = "[" . date("Y-m-d H:i:s") . "] " . $message;
