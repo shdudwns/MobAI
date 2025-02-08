@@ -184,7 +184,7 @@ class Pathfinder {
 
         // ✅ 추가: 점프할 수 있는 블록 탐색 (최대 2칸 높이)
         for ($i = 1; $i <= 2; $i++) {
-            $jumpPos = $neighbor->addVector(0, $i, 0);
+            $jumpPos = $neighbor->addVector(new Vector3(0, $i, 0));
             $jumpBlock = $world->getBlockAt((int)$jumpPos->x, (int)$jumpPos->y, (int)$jumpPos->z);
             $jumpBlockBelow = $world->getBlockAt((int)$jumpPos->x, (int)($jumpPos->y - 1), (int)$jumpPos->z);
 
