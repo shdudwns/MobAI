@@ -132,22 +132,15 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         $heightDiff = $frontBlock->getPosition()->y - $position->y;
 
-        // ✅ 내려가는 경우 점프하지 않음
-        if ($heightDiff < 0) {
-            continue;
-        }
-
-        // ✅ 계단, 슬라브 감지 -> 점프 처리
+        // ✅ 계단 감지 시 점프
         if ($this->isStairOrSlab($frontBlock)) {
-            if ($frontBlockAbove->isTransparent()) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
+            $this->jump($mob, $heightDiff);
+            return;
         }
 
-        // ✅ 블록이 있고, 위쪽이 비어있다면 점프
+        // ✅ 블록이 있고 위가 비어있으면 점프
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5 && $heightDiff > 0) {
+            if ($heightDiff > 0) {
                 $this->jump($mob, $heightDiff);
                 return;
             }
