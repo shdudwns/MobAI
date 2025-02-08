@@ -207,7 +207,7 @@ private function isStairOrSlab(Block $block): bool {
 
         // ✅ 몬스터가 플레이어를 정면으로 바라볼 때만 공격 가능
         $mobDirection = $mob->getDirectionVector();
-        $toPlayer = $nearestPlayer->getPosition()->subtract($mob->getPosition())->normalize();
+        $toPlayer = $nearestPlayer->getPosition()->subtractVector($mob->getPosition())->normalize();
         $dotProduct = $mobDirection->dot($toPlayer);
 
         // ✅ dotProduct가 0.7 이상이면 정면 방향
