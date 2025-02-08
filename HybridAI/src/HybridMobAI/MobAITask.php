@@ -48,9 +48,7 @@ class MobAITask extends Task {
             }
         }
     }
-
-    <?php
-
+    
 private function handleMobAI(Zombie $mob): void {
     if (!$this->aiEnabled) {
         // 기본 AI 사용
