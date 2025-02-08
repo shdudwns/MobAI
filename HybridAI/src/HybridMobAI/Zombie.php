@@ -56,4 +56,28 @@ class Zombie extends Living {
     public static function getNetworkTypeId(): string {
         return "minecraft:zombie";
     }
+    public function hasClearLineOfSight(Player $player): bool {
+    $mobPos = $this->getPosition();
+    $playerPos = $player->getPosition();
+
+    $world = $this->getWorld();
+    $steps = 10; // 시야 체크할 단계 수
+    $stepX = ($playerPos->x - $mobPos->x) / $steps;
+    $stepY = ($playerPos->y - $mobPos->y) / $steps;
+    $stepZ = ($playerPos->z - $mobPos->z) / $steps;
+
+    for ($i = 0; $i < $steps; $i++) {
+        $checkX = (int) floor($mobPos->x + ($stepX * $i));
+        $checkY = (int) floor($mobPos->y + ($stepY * $i));
+        $checkZ = (int) floor($mobPos->z + ($stepZ * $i));
+
+        $block = $world->getBlockAt($checkX, $checkY, $checkZ);
+
+        if (!$block->isTransparent()) {
+            return false; // 중간에 블록이 있으면 시야 차단
+        }
+    }
+
+    return true; // 모든 경로가 투명하면 시야 확보됨
+}
 }
