@@ -16,10 +16,9 @@ class VectorMath {
         return atan2($v->z, $v->x);
     }
 
-
     /**
-     * 벡터를 주어진 각도만큼 회전시킵니다 (Yaw, Pitch, Roll).
-     *  2D 회전만 사용하도록 수정.
+     * 벡터를 주어진 각도만큼 회전시킵니다 (Yaw).
+     *
      * @param Vector3 $vector
      * @param float $angle
      * @return Vector3
@@ -48,8 +47,6 @@ class VectorMath {
     public static function add(Vector3 $v1, Vector3 $v2): Vector3 {
         return new Vector3($v1->x + $v2->x, $v1->y + $v2->y, $v1->z + $v2->z);
     }
-
-
 
     /**
      * 벡터의 각 성분을 정수로 변환합니다.
