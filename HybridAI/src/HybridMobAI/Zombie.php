@@ -9,6 +9,7 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
+use pockdtmine\Player;
 
 class Zombie extends Living {
     private Main $plugin;
