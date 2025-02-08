@@ -6,6 +6,7 @@ use pocketmine\math\Vector3;
 use pocketmine\world\World;
 
 class Pathfinder {
+    private int $maxPathLength = 50; 
     private static function vectorToStr(Vector3 $vector): string {
         return "{$vector->x}:{$vector->y}:{$vector->z}";
     }
@@ -17,28 +18,28 @@ class Pathfinder {
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
+    $visitedNodes = 0; // 탐색한 노드 개수
 
-    while (!$openSet->isEmpty()) {
+    while (!$openSet->isEmpty() && $visitedNodes < $this->maxPathLength) {
         $current = $openSet->extract();
-        $currentKey = self::vectorToStr($current);
-
+        $visitedNodes++;
         if ($current->equals($goal)) {
             return $this->reconstructPath($cameFrom, $current);
         }
 
         foreach ($this->getNeighbors($world, $current) as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
-            $tentativeGScore = $gScore[$currentKey] + 1;
+            $tentativeGScore = $gScore[self::vectorToStr($current)] + 1;
 
             if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-                $openSet->insert($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에서 낮은 값이 높은 우선순위를 가짐
+                $openSet->insert($neighbor, -$fScore[$neighborKey]);
             }
         }
     }
-    return null;
+    return null; // 최대 탐색 노드 수 초과 시 경로 중단
 }
     
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
