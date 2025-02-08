@@ -52,7 +52,6 @@ class MobAITask extends Task {
 
 private function handleMobAI(Living $mob): void {
     if (!$this->aiEnabled) {
-        // 기본 AI 사용
         $nearestPlayer = $this->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $this->moveToPlayer($mob, $nearestPlayer);
@@ -60,38 +59,40 @@ private function handleMobAI(Living $mob): void {
             $this->moveRandomly($mob);
         }
     } else {
-        // ✅ AI 활성화된 경우 경로 탐색 주기 최적화
         $mobId = $mob->getId();
         $currentTick = Server::getInstance()->getTick();
 
-        $pathExists = $this->entityAI->hasPath($mob);
-        $updateInterval = $pathExists ? mt_rand(40, 60) : 20; // 기존 경로가 있으면 2~3초마다 갱신
+        $player = $this->findNearestPlayer($mob);
+        if ($player !== null) {
+            $previousTarget = $this->entityAI->getTarget($mob);
 
-        if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
-            $this->lastPathUpdate[$mobId] = $currentTick;
+            // ✅ 기존 경로가 있고, 플레이어 위치 변화가 크지 않으면 재탐색 X
+            if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
+                $this->entityAI->moveAlongPath($mob);
+                return;
+            }
 
-            if (($player = $this->findNearestPlayer($mob)) !== null) {
-                $thisPlugin = $this;
+            $this->entityAI->setTarget($mob, $player->getPosition());
+
+            // ✅ 경로 갱신 주기를 기존 20~60틱에서 40~80틱으로 늘려 성능 최적화
+            $updateInterval = $this->entityAI->hasPath($mob) ? mt_rand(40, 80) : 20;
+            if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > $updateInterval)) {
+                $this->lastPathUpdate[$mobId] = $currentTick;
 
                 $this->entityAI->findPathAsync(
                     $mob->getWorld(),
                     $mob->getPosition(),
                     $player->getPosition(),
                     "A*",
-                    function (?array $path) use ($mob, $thisPlugin, $player) {
+                    function (?array $path) use ($mob, $player) {
                         if ($path !== null) {
-                            $thisPlugin->entityAI->setPath($mob, $path);
+                            $this->entityAI->setPath($mob, $path);
                         } else {
-                            $thisPlugin->moveToPlayer($mob, $player);
+                            $this->moveToPlayer($mob, $player);
                         }
                     }
                 );
             }
-        }
-
-        // ✅ 경로를 따라 이동하는 로직 최적화
-        if ($this->entityAI->hasPath($mob)) {
-            $this->entityAI->moveAlongPath($mob);
         }
     }
 
