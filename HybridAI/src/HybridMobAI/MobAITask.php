@@ -138,7 +138,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     // ✅ 점프 조건 강화 (블록이 앞에 있고, 점프 가능한 경우)
     if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
-            $this->getLogger()->info("점프");
+            $this->plugin->getLogger()->info("점프");
             $this->jump($mob, $heightDiff);
             return;
         }
@@ -174,7 +174,7 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
         $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
-        $this->getLogger()->info("계단점프");
+        $this->plugin()->getLogger()->info("계단점프");
         $mob->setMotion(new Vector3(
             $direction->x,
             0.6, // 계단을 오를 때 점프 강도를 높임
