@@ -16,6 +16,7 @@ class EntityAI {
     private ?Vector3 $target = null;
     private array $entityPaths = [];
     private PluginBase $plugin;
+    private array $targets = [];
 
     public function __construct(PluginBase $plugin) {
         $this->plugin = $plugin;
@@ -27,6 +28,14 @@ class EntityAI {
 
     public function isEnabled(): bool {
         return $this->enabled;
+    }
+
+    public function setTarget(Living $mob, Vector3 $target): void {
+        $this->targets[$mob->getId()] = $target;
+    }
+    
+    public function getTarget(Living $mob): ?Vector3 {
+        return $this->targets[$mob->getId()] ?? null;
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
