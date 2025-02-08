@@ -139,6 +139,9 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
         if ($heightDiff <= 1.5 && $heightDiff > 0) {
             $this->jump($mob, $heightDiff);
+            Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+                $this->checkForObstaclesAndJump($mob);
+            }), 2);
             return;
         }
     }
@@ -146,10 +149,11 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     // ✅ 계단 감지 (연속된 계단에서도 점프 가능하게 수정)
     if ($this->isStairOrSlab($frontBlock)) {
         if ($frontBlockAbove->isTransparent()) {
-            $this->stepUp($mob, $heightDiff);
+            $this->jump($mob, $heightDiff);
             Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
                 $this->checkForObstaclesAndJump($mob);
             }), 2);
+            return;
         }
     }
     }
