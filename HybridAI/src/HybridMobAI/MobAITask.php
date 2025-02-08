@@ -113,48 +113,22 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $this->hasLanded[$mobId] = $isOnGround;
     }
 
-    private function checkForObstaclesAndJump(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $yaw = $mob->getLocation()->yaw;
-    $angles = [$yaw, $yaw + 45, $yaw - 45];
-    
-    foreach ($angles as $angle) {
-        $direction2D = VectorMath::getDirection2D($angle);
-        $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
+    private function stepUp(Living $mob, float $heightDiff): void {
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) {
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
 
-        $frontBlockX = (int)floor($position->x + $directionVector->x);
-        $frontBlockY = (int)$position->y;
-        $frontBlockZ = (int)floor($position->z + $directionVector->z);
+        $mob->setMotion(new Vector3(
+            $direction->x,
+            0.6, // 계단을 오를 때 점프 강도를 높임
+            $direction->z
+        ));
 
-        $frontBlock = $world->getBlockAt($frontBlockX, $frontBlockY, $frontBlockZ);
-        $frontBlockAbove = $world->getBlockAt($frontBlockX, $frontBlockY + 1, $frontBlockZ);
-
-        $heightDiff = $frontBlock->getPosition()->y - $position->y;
-
-        // ✅ 내려가는 경우 점프하지 않도록 수정
-        if ($heightDiff < 0) {
-            continue;
-        }
-
-        // ✅ 점프 조건 강화
-        if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
-            if ($heightDiff <= 1.5 && $heightDiff > 0) {
-                $this->jump($mob, $heightDiff);
-                return;
-            }
-        }
-
-        // ✅ 계단 감지
-        if ($this->isStairOrSlab($frontBlock)) {
-            if ($frontBlockAbove->isTransparent()) {
-                $this->stepUp($mob, $heightDiff);
-                Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob) {
+        // ✅ 계단 감지 로직을 개선하여 자연스럽게 연속된 계단을 오를 수 있도록 수정
+        Server::getInstance()->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
+            if ($mob->isOnGround()) {
                 $this->checkForObstaclesAndJump($mob);
-            }), 2);
-                return;
             }
-        }
+        }), 2);
     }
 }
     private function checkFrontBlock(Living $mob): ?Block {
