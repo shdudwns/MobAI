@@ -31,13 +31,7 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-        $worldName = $world->getFolderName();
-        $startX = $start->x;
-        $startY = $start->y;
-        $startZ = $start->z;
-        $goalX = $goal->x;
-        $goalY = $goal->y;
-        $goalZ = $goal->z;
+        // ... (변수 선언 및 초기화 - worldName, startX, startY, 등)
 
         $plugin = $this->plugin;
         $entityAI = $this;
@@ -65,29 +59,29 @@ class EntityAI {
                 }
 
                 public function onRun(): void {
-    $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-    if (!$world instanceof World) {
-        $this->setResult(null);
-        return;
-    }
+                    $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
+                    if (!$world instanceof World) {
+                        $this->setResult(null);
+                        return;
+                    }
 
-    $start = new Vector3($this->startX, $this->startY, $this->startZ);
-    $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
+                    $start = new Vector3($this->startX, $this->startY, $this->startZ);
+                    $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
 
-    $startX = (float) $start->x;
-    $startY = (float) $start->y;
-    $startZ = (float) $start->z;
-    $goalX = (float) $goal->x;
-    $goalY = (float) $goal->y;
-    $goalZ = (float) $goal->z;
+                    // PathfinderTask에 필요한 모든 좌표값을 float으로 형변환하여 전달
+                    $startX = (float) $start->x;
+                    $startY = (float) $start->y;
+                    $startZ = (float) $start->z;
+                    $goalX = (float) $goal->x;
+                    $goalY = (float) $goal->y;
+                    $goalZ = (float) $goal->z;
 
+                    $pathfinderTask = new PathfinderTask($this->worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $this->algorithm);
+                    $path = $pathfinderTask->findPath();
 
-    $pathfinderTask = new PathfinderTask($this->worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $this->algorithm);
-    $path = $pathfinderTask->findPath();
+                    $this->setResult($path);
 
-    $this->setResult($path);
-
-}
+                }
 
                 public function onCompletion(): void {
                     $result = $this->getResult();
