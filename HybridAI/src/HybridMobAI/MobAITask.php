@@ -157,7 +157,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         }
 
         // 몹의 발 위치를 기준으로 높이 차이 계산
-        $heightDiff = $frontBlock->getPosition()->y - $position->y;
+        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
 
         // 높이 차이가 0.5보다 작으면 무시
         if ($heightDiff < 0.5) {
