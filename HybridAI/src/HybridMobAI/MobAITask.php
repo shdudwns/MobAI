@@ -16,6 +16,7 @@ use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\entity\animation\ArmSwingAnimation;
 use pocketmine\block\Stair;
 use pocketmine\block\Slab;
+use pocketmine\world\Position;
 
 class MobAITask extends Task {
     private Main $plugin;
