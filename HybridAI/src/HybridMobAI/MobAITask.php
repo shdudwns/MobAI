@@ -179,19 +179,19 @@ private function calculateHeightDiff(Living $mob, Block $frontBlock): float {
 
     private function stepUp(Living $mob, float $heightDiff): void {
     if ($heightDiff > 0.5 && $heightDiff <= 1.5) {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.2);
+        $direction = $mob->getDirectionVector()->normalize()->multiply(0.15); // ✅ 일정한 수평 속도 유지
 
-        // ✅ 이동 속도 및 점프 곡선 조절
+        // ✅ 더 자연스러운 상승 속도 적용
         $mob->setMotion(new Vector3(
             $direction->x,
-            0.5 + ($heightDiff * 0.15), // 기존보다 부드럽게 상승
+            0.2 + ($heightDiff * 0.1), // 점프 높이를 조절하여 부드럽게 상승
             $direction->z
         ));
 
-        // ✅ 점프 후 속도를 조절하여 자연스럽게 이동
+        // ✅ 착지 후 부드러운 감속 적용
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
             if ($mob->isOnGround()) {
-                $mob->setMotion($mob->getMotion()->multiply(0.5)); // 착지 후 속도 줄이기
+                $mob->setMotion($mob->getMotion()->multiply(0.8)); // 서서히 감속하여 부드러운 착지
             }
         }), 2);
     }
