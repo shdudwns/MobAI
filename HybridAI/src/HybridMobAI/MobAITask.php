@@ -146,7 +146,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     // ✅ 계단 감지
     if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
         $this->plugin->getLogger()->info("🔼 계단 감지 - 점프 실행");
-        $this->stepUp($mob);
+        $this->stepUp($mob, $heightDiff);
         return;
     }
 
