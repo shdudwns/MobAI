@@ -41,8 +41,10 @@ class ObstacleDetector {
             // ✅ 1. 평지에서 점프 방지
             if ($heightDiff <= 0) continue;
 
-            // ✅ 2. 블록에서 내려올 때 점프 방지
-            if ($blockBelow->getPosition()->y > $position->y - 0.5) continue;
+            // ✅ 2. 블록에서 내려올 때 점프 방지 (더 정확한 조건)
+            if ($blockBelow->getPosition()->y > $position->y - 0.5 && !$this->isEdgeOfBlock($position, $frontBlockPos)) {
+                continue;
+            }
 
             // ✅ 3. 계단 및 연속 이동 지원
             if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
@@ -50,7 +52,7 @@ class ObstacleDetector {
                 return;
             }
 
-            // ✅ 4. 점프 가능한 일반 블록 감지
+            // ✅ 4. 점프 가능한 일반 블록 감지 (모서리 중앙 문제 해결)
             if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
                 if ($heightDiff <= 1.2) {
                     $this->jump($mob, $heightDiff);
@@ -110,5 +112,14 @@ class ObstacleDetector {
             $block instanceof Trapdoor || 
             $block->isSolid()
         );
+    }
+
+    private function isEdgeOfBlock(Vector3 $position, Vector3 $frontBlockPos): bool {
+        // ✅ 블록 모서리 중앙인지 확인
+        $xDiff = abs($position->x - $frontBlockPos->x);
+        $zDiff = abs($position->z - $frontBlockPos->z);
+
+        // 모서리 중앙이라면 true 반환
+        return ($xDiff > 0.3 && $xDiff < 0.7) || ($zDiff > 0.3 && $zDiff < 0.7);
     }
 }
