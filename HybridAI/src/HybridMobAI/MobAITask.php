@@ -122,7 +122,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $world = $mob->getWorld();
     $yaw = $mob->getLocation()->yaw;
 
-    // 8방향 탐색 (더욱 촘촘하게 장애물 확인)
+    // 8방향 탐색
     $angles = [$yaw, $yaw + 45, $yaw - 90, $yaw + 90, $yaw + 135, $yaw - 135, $yaw + 180, $yaw - 180];
 
     $boundingBox = $mob->getBoundingBox();
@@ -140,13 +140,16 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
 
-        $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
-
+        // Air 블록은 무시
         if ($frontBlock instanceof \pocketmine\block\Air || $frontBlockAbove instanceof \pocketmine\block\Air) {
-        continue;
-            }
-        // 높이 차이가 0.5보다 작으면 무시
-        if ($heightDiff < 0.5) continue;
+            continue;
+        }
+
+        // 몹의 발 위치를 기준으로 높이 차이 계산
+        $heightDiff = $frontBlock->getPosition()->y - $position->y;
+
+        // 높이 차이가 0보다 작거나 1.5보다 크면 무시 (점프 가능한 높이 범위 제한)
+        if ($heightDiff <= 0 || $heightDiff > 1.5) continue;
 
         // 계단 또는 슬라브 블록 처리
         if ($this->isStairOrSlab($frontBlock) && $frontBlockAbove->isTransparent()) {
@@ -154,7 +157,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
             return;
         }
 
-        // 특정 블록 (울타리, 유리, 액자) 처리
+        // 특정 블록 (울타리, 유리, 액자 등) 처리
         if ($this->isClimbable($frontBlock) && $frontBlockAbove->isTransparent()) {
             if ($heightDiff <= 1) {
                 $this->jump($mob, $heightDiff);
@@ -169,6 +172,7 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         }
     }
 }
+
 
     
     private function checkFrontBlock(Living $mob): ?Block {
