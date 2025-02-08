@@ -123,40 +123,51 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
-    $blockPos = $position->addVector($direction);
+    $blockPos = $position->addVector($direction); // addVector() 부분은 수정하지 않음
+
     $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
     $blockAbove = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z);
 
     $heightDiff = $block->getPosition()->y + 1 - $position->y - $mob->getEyeHeight();
 
-    // 평지 점프 방지
     if (abs($heightDiff) < self::EPSILON) {
         return;
     }
 
-    if ($this->isStairOrSlab($block) && $blockAbove->isTransparent()) { 
-        $this->stepUp($mob, $heightDiff); // 높이 차이를 고려
+    if ($this->isStairOrSlab($block) && $blockAbove->isTransparent()) {
+        $this->stepUp($mob, $heightDiff);
         return;
     }
 
     if ($this->isClimbable($block) && $blockAbove->isTransparent() && $heightDiff <= self::JUMP_HEIGHT) {
-        $this->jump($mob, $heightDiff); // 점프 높이를 고려
+        $this->jump($mob, $heightDiff);
         return;
     }
 }
 
 private function checkForObstaclesAndJump(Living $mob): void {
     $yaw = $mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $directionVector = new Vector3($direction2D->x, 0, $direction2D->y);
 
-    $this->checkForObstacle($mob, $directionVector); // 앞 블록 확인
+    $yawRadians = deg2rad($yaw);
+    $directionVector = new Vector3(cos($yawRadians), 0, sin($yawRadians));
 
+    $this->checkForObstacle($mob, $directionVector);
+
+    // rotateVector() 반환 값이 Vector3인지 확인
     $leftDir = VectorMath::rotateVector($directionVector, 90);
-    $rightDir = VectorMath::rotateVector($directionVector, -90);
+    if (!($leftDir instanceof Vector3)) {
+        error_log("Error: rotateVector() must return a Vector3 object.");
+        return;
+    }
 
-    $this->checkForObstacle($mob, $leftDir); // 왼쪽 블록 확인
-    $this->checkForObstacle($mob, $rightDir); // 오른쪽 블록 확인
+    $rightDir = VectorMath::rotateVector($directionVector, -90);
+    if (!($rightDir instanceof Vector3)) {
+        error_log("Error: rotateVector() must return a Vector3 object.");
+        return;
+    }
+
+    $this->checkForObstacle($mob, $leftDir);
+    $this->checkForObstacle($mob, $rightDir);
 }
     
     private function checkFrontBlock(Living $mob): ?Block {
