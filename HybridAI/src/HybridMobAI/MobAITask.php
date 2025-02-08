@@ -353,6 +353,11 @@ private function changeDirection(Living $mob): void {
 
     
     private function isClimbable(Block $block): bool {
+    // Air 블록은 등반 불가능
+    if ($block instanceof \pocketmine\block\Air) {
+        return false;
+    }
+
     switch ($block->getId()) {
         case Block::SNOW_LAYER:
         case Block::FENCE:
@@ -364,5 +369,6 @@ private function changeDirection(Living $mob): void {
         default:
             return false;
     }
-    }
+}
+
 }
