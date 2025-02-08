@@ -135,9 +135,9 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
         $frontBlockPos = $position->addVector($directionVector)->addVector($dir);
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
         $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
-
+        
         $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y - $mob->getEyeHeight(); // 정확한 높이 차이 계산
-
+        $heightDiff += 0.2;
         if ($heightDiff < 0.5) {
             continue; // 평지에서는 점프하지 않음
         }
