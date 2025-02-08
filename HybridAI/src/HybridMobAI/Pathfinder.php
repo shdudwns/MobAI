@@ -197,7 +197,10 @@ class PathfinderTask extends AsyncTask {
     public function __construct(string $worldName, Vector3 $start, Vector3 $goal, string $algorithm) {
         $this->worldName = $worldName;
 
-        // ✅ 모든 값이 `float`로 변환되도록 강제 적용
+        // ✅ 값 변환 전 디버깅
+        var_dump("📌 PathfinderTask 생성 - 원본 값:", $start, $goal);
+
+        // ✅ 강제 변환 (string이 들어가는 경우 방지)
         $this->startX = (float) $start->x;
         $this->startY = (float) $start->y;
         $this->startZ = (float) $start->z;
@@ -205,6 +208,9 @@ class PathfinderTask extends AsyncTask {
         $this->goalY = (float) $goal->y;
         $this->goalZ = (float) $goal->z;
         $this->algorithm = $algorithm;
+
+        // ✅ 변환 후 확인
+        var_dump("✅ PathfinderTask float 변환 완료:", $this->startX, $this->startY, $this->startZ, $this->goalX, $this->goalY, $this->goalZ);
     }
 
     public function onRun(): void {
