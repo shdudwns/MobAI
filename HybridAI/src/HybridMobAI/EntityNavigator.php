@@ -11,7 +11,7 @@ class EntityNavigator {
         $mobPos = $mob->getPosition();
         $playerPos = $player->getPosition();
     
-        $speed = 0.15;
+        $speed = 0.2;
         $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
         $currentMotion = $mob->getMotion();
     
