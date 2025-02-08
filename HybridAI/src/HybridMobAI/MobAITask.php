@@ -320,7 +320,7 @@ private function changeDirection(Living $mob): void {
         return;
     }
 }
-    public function jump(Living $mob, float $heightDiff = 1.0): void {
+    Public function jump(Living $mob, float $heightDiff = 1.0): void {
     // 낙하 속도 리셋 (너무 빠르게 낙하하지 않도록)
     if ($mob->getMotion()->y < -0.08) {
         $mob->setMotion(new Vector3(
