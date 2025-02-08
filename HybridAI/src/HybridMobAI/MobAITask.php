@@ -8,7 +8,6 @@ use pocketmine\Server;
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
-use pocketmine\math\VectorMath;
 use pocketmine\block\Block;
 use pocketmine\math\AxisAlignedBB as AABB;
 use pocketmine\event\entity\EntityDamageEvent;
