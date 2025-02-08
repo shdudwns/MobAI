@@ -13,6 +13,7 @@ use pocketmine\block\Block;
 use pocketmine\math\AxisAlignedBB as AABB;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\entity\animation\ArmSwingAnimation;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -200,12 +201,21 @@ private function isStairOrSlab(Block $block): bool {
     
     private function attackNearestPlayer(Zombie $mob): void {
     $nearestPlayer = $this->findNearestPlayer($mob);
-    if ($nearestPlayer !== null && $mob->getPosition()->distance($nearestPlayer->getPosition()) <= 1.5) {
-        $event = new EntityDamageByEntityEvent($mob, $nearestPlayer, EntityDamageEvent::CAUSE_ENTITY_ATTACK, 4);
-        $nearestPlayer->attack($event);
+    
+    if ($nearestPlayer !== null) {
+        $distance = $mob->getPosition()->distance($nearestPlayer->getPosition());
+
+        // ✅ 몬스터가 플레이어를 바라보고 있어야 공격 가능
+        if ($distance <= 1.5 && $mob->hasLineOfSight($nearestPlayer)) {
+            $damage = $this->plugin->getConfig()->get("attack_damage", 2); // 기본 데미지 2
+            $event = new EntityDamageByEntityEvent($mob, $nearestPlayer, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage);
+            $nearestPlayer->attack($event);
+
+            // ✅ 공격 애니메이션 실행
+            $mob->broadcastAnimation(new ArmSwingAnimation($mob));
+        }
     }
 }
-
     private function moveToPlayer(Zombie $mob, Player $player): void {
     $mobPos = $mob->getPosition();
     $playerPos = $player->getPosition();
