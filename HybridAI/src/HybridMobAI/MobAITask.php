@@ -95,6 +95,7 @@ private function handleMobAI(Living $mob): void {
                 $mob->getWorld(),
                 $mob->getPosition(),
                 $player->getPosition(),
+                "A*",
                 function (?array $path) use ($mob, $player, $ai, $navigator) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
