@@ -142,6 +142,9 @@ private function findBestPath(Zombie $mob, Vector3 $target): ?array {
 
         $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
 
+        if ($frontBlock instanceof \pocketmine\block\Air || $frontBlockAbove instanceof \pocketmine\block\Air) {
+        continue;
+            }
         // 높이 차이가 0.5보다 작으면 무시
         if ($heightDiff < 0.5) continue;
 
@@ -353,10 +356,28 @@ private function changeDirection(Living $mob): void {
 
     
     private function isClimbable(Block $block): bool {
-    // Air 블록은 등반 불가능
     if ($block instanceof \pocketmine\block\Air) {
         return false;
     }
+
+    $climbableBlocks = [
+        \pocketmine\block\SnowLayer::class,
+        \pocketmine\block\Fence::class,
+        \pocketmine\block\Glass::class,
+        \pocketmine\block\ItemFrame::class,
+        \pocketmine\block\FlowerPot::class,
+        \pocketmine\block\Cobweb::class,
+    ];
+
+    foreach ($climbableBlocks as $climbableBlockClass) {
+        if ($block instanceof $climbableBlockClass) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
     switch ($block->getId()) {
         case Block::SNOW_LAYER:
