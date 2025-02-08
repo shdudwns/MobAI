@@ -120,11 +120,11 @@ private function handleMobAI(Living $mob): void {
     $blockAtFeet = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
     $blockAtHead = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
-    if ($blockAtFeet->getId() === Block::WATER || $blockAtHead->getId() === Block::WATER) {
-        // ✅ 몬스터가 물속에 있으면 점프하며 이동 (수영 모션 구현)
+    if ($blockAtFeet->isTransparent() || $blockAtHead->isTransparent() || $blockAtFeet->getId() === Block::WATER || $blockAtHead->getId() === Block::WATER) {
+        // 물속 (또는 공중)에서 점프
         $mob->setMotion(new Vector3(
-            $mob->getMotion()->x * 0.9, 
-            0.3, // 수면 위로 이동하도록 점프
+            $mob->getMotion()->x * 0.9,
+            0.3,
             $mob->getMotion()->z * 0.9
         ));
     }
