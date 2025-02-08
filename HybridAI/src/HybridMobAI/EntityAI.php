@@ -30,7 +30,7 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-    $worldName = $world->getFolderName();
+    $worldName = $world->getFolderName(); // ❌ World 객체를 AsyncTask에 직접 전달할 수 없음 (비동기 스레드에서 사용 불가)
     $startX = $start->x;
     $startY = $start->y;
     $startZ = $start->z;
@@ -38,18 +38,13 @@ class EntityAI {
     $goalY = $goal->y;
     $goalZ = $goal->z;
 
-    // 클로저를 저장하는 ID 생성
     $callbackId = spl_object_hash((object) $callback);
     EntityAI::storeCallback($callbackId, $callback);
 
     $task = new class($worldName, $startX, $startY, $startZ, $goalX, $goalY, $goalZ, $algorithm, $callbackId) extends AsyncTask {
         private string $worldName;
-        private float $startX;
-        private float $startY;
-        private float $startZ;
-        private float $goalX;
-        private float $goalY;
-        private float $goalZ;
+        private float $startX, $startY, $startZ;
+        private float $goalX, $goalY, $goalZ;
         private string $algorithm;
         private string $callbackId;
 
@@ -72,37 +67,8 @@ class EntityAI {
         }
 
         public function onRun(): void {
-            $world = Server::getInstance()->getWorldManager()->getWorldByName($this->worldName);
-            if (!$world instanceof World) {
-                $this->setResult(null);
-                return;
-            }
-
-            $start = new Vector3($this->startX, $this->startY, $this->startZ);
-            $goal = new Vector3($this->goalX, $this->goalY, $this->goalZ);
-            $pathfinder = new Pathfinder();
-
-            switch ($this->algorithm) {
-                case "A*":
-                    $path = $pathfinder->findPathAStar($world, $start, $goal);
-                    break;
-                case "Dijkstra":
-                    $path = $pathfinder->findPathDijkstra($world, $start, $goal);
-                    break;
-                case "Greedy":
-                    $path = $pathfinder->findPathGreedy($world, $start, $goal);
-                    break;
-                case "BFS":
-                    $path = $pathfinder->findPathBFS($world, $start, $goal);
-                    break;
-                case "DFS":
-                    $path = $pathfinder->findPathDFS($world, $start, $goal);
-                    break;
-                default:
-                    $path = null;
-            }
-
-            $this->setResult(["path" => $path, "callbackId" => $this->callbackId]);
+            // ❌ 비동기 스레드에서는 Server::getInstance()를 사용할 수 없음
+            $this->setResult(["worldName" => $this->worldName, "startX" => $this->startX, "startY" => $this->startY, "startZ" => $this->startZ, "goalX" => $this->goalX, "goalY" => $this->goalY, "goalZ" => $this->goalZ, "algorithm" => $this->algorithm, "callbackId" => $this->callbackId]);
         }
 
         public function onCompletion(): void {
@@ -110,7 +76,37 @@ class EntityAI {
             if ($result !== null && isset($result["callbackId"])) {
                 $callback = EntityAI::getCallback($result["callbackId"]);
                 if ($callback !== null) {
-                    ($callback)($result["path"]);
+                    $world = Server::getInstance()->getWorldManager()->getWorldByName($result["worldName"]);
+                    if (!$world instanceof World) {
+                        $callback(null);
+                        return;
+                    }
+
+                    $start = new Vector3($result["startX"], $result["startY"], $result["startZ"]);
+                    $goal = new Vector3($result["goalX"], $result["goalY"], $result["goalZ"]);
+                    $pathfinder = new Pathfinder();
+
+                    switch ($result["algorithm"]) {
+                        case "A*":
+                            $path = $pathfinder->findPathAStar($world, $start, $goal);
+                            break;
+                        case "Dijkstra":
+                            $path = $pathfinder->findPathDijkstra($world, $start, $goal);
+                            break;
+                        case "Greedy":
+                            $path = $pathfinder->findPathGreedy($world, $start, $goal);
+                            break;
+                        case "BFS":
+                            $path = $pathfinder->findPathBFS($world, $start, $goal);
+                            break;
+                        case "DFS":
+                            $path = $pathfinder->findPathDFS($world, $start, $goal);
+                            break;
+                        default:
+                            $path = null;
+                    }
+
+                    $callback($path);
                 }
             }
         }
