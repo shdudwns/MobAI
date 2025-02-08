@@ -82,7 +82,8 @@ class ObstacleDetector {
         $extraJumpBoost = min(0.1 * $heightDiff, 0.2); // ✅ 너무 높게 점프하는 문제 방지
         $jumpForce = $baseJumpForce + $extraJumpBoost;
 
-        if ($mob->isOnGround() || $mob->getMotion()->y <= 0.1) {
+        // ✅ 점프 조건: 땅에 닿았을 때만 점프
+        if ($mob->isOnGround()) {
             $mob->setMotion(new Vector3(
                 $mob->getMotion()->x,
                 $jumpForce,
