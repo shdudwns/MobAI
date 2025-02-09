@@ -387,4 +387,15 @@ public function removePath(Living $mob): void {
         }
     }
 }
+    public function moveAlongPath(Living $mob): void {
+    $path = $this->getPath($mob);
+    if (empty($path)) return;
+
+    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    if ($nextPosition instanceof Vector3) {
+        $speed = 0.22;
+        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed));
+        $mob->lookAt($nextPosition);
+    }
+}
 }
