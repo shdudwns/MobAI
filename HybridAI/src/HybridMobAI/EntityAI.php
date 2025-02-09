@@ -137,24 +137,26 @@ class EntityAI {
 }
 
 public function avoidObstacle(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $yaw = (float)$mob->getLocation()->yaw;
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->y));
-        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+    $direction2D = VectorMath::getDirection2D($yaw);
+    $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->z));
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
-        if ($frontBlock->isSolid()) {
-            // 장애물 감지 → 우회 탐색
-            $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지, 우회 경로 찾는 중...");
-            $alternativeGoal = $position->addVector(new Vector3(mt_rand(-2, 2), 0, mt_rand(-2, 2)));
-            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                if ($path !== null) {
-                    $this->setPath($mob, $path);
-                }
-            });
-        }
+    $blockBB = $frontBlock->getBoundingBox();
+    if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
+        // 장애물 감지 → 우회 탐색
+        $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지, 우회 경로 찾는 중...");
+        $alternativeGoal = $position->addVector(new Vector3(mt_rand(-2, 2), 0, mt_rand(-2, 2)));
+        $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+            if ($path !== null) {
+                $this->setPath($mob, $path);
+            }
+        });
     }
+}
+
 
     public function escapePit(Living $mob): void {
         $position = $mob->getPosition();
