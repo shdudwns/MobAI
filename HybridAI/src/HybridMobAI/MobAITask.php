@@ -54,7 +54,7 @@ private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
     $detector = new ObstacleDetector($this->plugin);
-    $ai = new EntityAI($this->plugin);
+    $ai = new EntityAI($this->plugin, $this->aiEnabled);
 
     // ✅ 기본 AI: 플레이어 추적 또는 랜덤 이동
     if (!$this->aiEnabled) {
