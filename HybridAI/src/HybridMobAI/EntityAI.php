@@ -147,19 +147,19 @@ class EntityAI {
         return;
     }
 
-    // ✅ 몬스터 **눈높이 기준** 장애물 감지 (Raycasting)
+    // ✅ 몬스터 눈높이 기준 장애물 감지 (Raycasting)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2));
 
     $hitPos = $this->raycast($world, $start, $end, function(Block $block) {
-        return $this->isSolidBlock($block);
+        return $this->isSolidBlock($block); // ✅ 오직 단단한 블록만 감지
     });
 
     if ($hitPos instanceof Vector3) {
         $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
         if ($this->isSolidBlock($hitBlock)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지! 우회 시도...");
+            Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
             $this->initiatePathfind($mob, $position, $hitBlock, $world);
             return;
         }
@@ -169,11 +169,13 @@ class EntityAI {
     $frontBlockPos = $position->addVector($directionVector);
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
-    if ($this->isSolidBlock($frontBlock)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도...");
-        $this->initiatePathfind($mob, $position, $frontBlock, $world);
+    // ✅ 공기(Air) 또는 통과 가능한 블록이면 장애물로 인식하지 않음
+    if (!$this->isSolidBlock($frontBlock) || $frontBlock instanceof Air || $frontBlock->isTransparent()) {
         return;
     }
+
+    Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도... (" . $frontBlock->getName() . ")");
+    $this->initiatePathfind($mob, $position, $frontBlock, $world);
 }
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
@@ -282,18 +284,18 @@ private function isNonSolidBlock(Block $block): bool {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
-    // 아래 두 블록 검사
-    $blockBelow1 = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    // ✅ 현재 위치의 아래 블록 검사
+    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
     $blockBelow2 = $world->getBlockAt((int)$position->x, (int)$position->y - 2, (int)$position->z);
 
-    // ✅ 웅덩이 감지 (아래 두 블록이 Air인 경우)
-    if ($blockBelow1 instanceof Air && $blockBelow2 instanceof Air) {
-        Server::getInstance()->broadcastMessage(" [AI] 웅덩이에 빠짐! 탈출 시도...");
+    // ✅ 웅덩이 감지: 바닥이 없고, 주변이 벽으로 둘러싸여 있는 경우
+    if (!$blockBelow->isSolid() && !$blockBelow2->isSolid()) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 웅덩이에 빠짐! 탈출 시도...");
 
-        // ✅ 1. 주변 블록 탐색하여 한 칸짜리 블록 찾기
+        // ✅ 주변 블록 탐색하여 탈출 가능 지점 찾기
         $escapeGoal = $this->findEscapeBlock($world, $position);
         if ($escapeGoal !== null) {
-            Server::getInstance()->broadcastMessage(" [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
+            Server::getInstance()->broadcastMessage("🟢 [AI] 탈출 경로 발견! 이동 중...");
             $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
                 if ($path !== null) {
                     $this->setPath($mob, $path);
@@ -302,14 +304,13 @@ private function isNonSolidBlock(Block $block): bool {
             return;
         }
 
-        // ✅ 2. 탈출 경로를 찾지 못한 경우 점프 시도
-        Server::getInstance()->broadcastMessage("❌ [AI] 탈출 경로를 찾지 못함! 점프 시도");
+        // ✅ 탈출 경로를 찾지 못한 경우 점프 시도
+        Server::getInstance()->broadcastMessage("❌ [AI] 탈출 경로 없음! 점프 시도...");
         if ($mob->isOnGround()) {
             $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
         }
     }
 }
-
 /**
  * 주변 블록을 탐색하여 한 칸짜리 탈출 블록을 찾습니다.
  */
