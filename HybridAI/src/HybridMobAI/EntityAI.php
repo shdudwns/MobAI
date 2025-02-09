@@ -151,7 +151,7 @@ class EntityAI {
     $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
     // 1. Raycasting (우선 순위 높음)
-    $start = $position->addVector(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
+    $start = $position->add(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
     $end = $position->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
 
     $result = $this->raycast($world, $start, $end, function(Block $block) { // raycast 함수 호출
