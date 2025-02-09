@@ -174,46 +174,61 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): iterable
-    {
-        $directions = [
+    private function getNeighbors(World $world, Vector3 $pos): iterable {
+        $x = (int)$pos->x;
+        $y = (int)$pos->y;
+        $z = (int)$pos->z;
+
+        // 핵심 이동 방향 (상, 하, 좌, 우)
+        $coreDirections = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
             new Vector3(0, 0, 1), new Vector3(0, 0, -1),
-            new Vector3(0, 1, 0), new Vector3(0, -1, 0),
-            new Vector3(1, 0, 1), new Vector3(1, 0, -1),
-            new Vector3(-1, 0, 1), new Vector3(-1, 0, -1),
-            new Vector3(1, 1, 0), new Vector3(-1, 1, 0),
-            new Vector3(1, -1, 0), new Vector3(-1, -1, 0),
-            new Vector3(0, 1, 1), new Vector3(0, -1, 1),
-            new Vector3(0, 1, -1), new Vector3(0, -1, -1),
-            new Vector3(1, 1, 1), new Vector3(1, 1, -1), new Vector3(1, -1, 1), new Vector3(1, -1, -1),
-            new Vector3(-1, 1, 1), new Vector3(-1, 1, -1), new Vector3(-1, -1, 1), new Vector3(-1, -1, -1),
         ];
 
-        foreach ($directions as $dir) {
-            $neighbor = $this->getVector($pos->x + $dir->x, $pos->y + $dir->y, $pos->z + $dir->z); // Vector3 재사용
+        foreach ($coreDirections as $dir) {
+            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
             $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
             $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
+            if (!$block->isSolid() && $blockBelow->isSolid()) {
+                yield $neighbor;
+            }
+        }
 
-            if ($dir->y === 0) {
-                if (!$block->isSolid() && $blockBelow->isSolid()) {
-                    yield $neighbor;
-                }
-            } elseif ($dir->y === 1) {
+        // 수직 이동 (위, 아래) - 필요에 따라 활성화
+        $verticalDirections = [
+            new Vector3(0, 1, 0), new Vector3(0, -1, 0),
+        ];
+
+        foreach ($verticalDirections as $dir) {
+            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
+            if ($dir->y === 1) { // 위로 이동
                 $blockAbove = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y + 1), (int)$neighbor->z);
+                $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+
                 if (!$block->isSolid() && !$blockAbove->isSolid()) {
                     yield $neighbor;
                 }
-            } elseif ($dir->y === -1) {
+            } elseif ($dir->y === -1) { // 아래로 이동
+                $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
                 if (!$blockBelow->isSolid()) {
                     yield $neighbor;
                 }
-            } else {
-                $block1 = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-                $block2 = $world->getBlockAt((int)($neighbor->x), (int)($neighbor->y - 1), (int)$neighbor->z); // 수정
-                if (!$block1->isSolid() && $block2->isSolid()) {
-                    yield $neighbor;
-                }
+            }
+        }
+
+
+        // 대각선 이동 (x, z) - 필요에 따라 활성화 및 가중치 조절
+        $diagonalXZDirections = [
+            new Vector3(1, 0, 1), new Vector3(1, 0, -1),
+            new Vector3(-1, 0, 1), new Vector3(-1, 0, -1),
+        ];
+
+        foreach ($diagonalXZDirections as $dir) {
+            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
+            $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+            $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
+            if (!$block->isSolid() && $blockBelow->isSolid()) {
+                yield $neighbor;
             }
         }
     }
