@@ -141,11 +141,15 @@ class EntityAI {
     }
 
     public function avoidObstacle(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $yaw = (float)$mob->getLocation()->yaw;
-        $direction2D = VectorMath::getDirection2D($yaw);
-        $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->y));
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw; // yaw 값을 float으로 변환
+
+    if ($yaw !== null) { // yaw 값이 null이 아닌지 확인 (방어적 코딩)
+        $direction2D = VectorMath::getDirection2D($yaw); // Vector3 반환
+
+        // $direction2D는 Vector3이므로 $direction2D->z를 사용해야 함
+        $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->z)); 
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
         if ($frontBlock->isSolid()) {
@@ -158,6 +162,7 @@ class EntityAI {
                 }
             });
         }
+    }
     }
 
     public function escapePit(Living $mob): void {
