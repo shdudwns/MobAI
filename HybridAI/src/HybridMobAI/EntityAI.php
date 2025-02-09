@@ -141,63 +141,99 @@ public function avoidObstacle(Living $mob): void {
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
 
-    if ($yaw !== null) {
-        $angle = deg2rad($yaw);
-        $directionVector = new Vector3(cos($angle), 0, sin($angle));
-
-        $frontBlockPos = $position->addVector($directionVector);
-        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-
-        // 공기 블록이거나 통과 가능한 블록은 장애물로 처리하지 않음
-        if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
-           return;
-        }
-
-        $blockBB = $frontBlock->getBoundingBox();
-
-        if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
-            $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지, 우회 경로 찾는 중...");
-            $alternativeGoal = $position->addVector(new Vector3(mt_rand(-2, 2), 0, mt_rand(-2, 2)));
-            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                if ($path !== null) {
-                    $this->setPath($mob, $path);
-                }
-            });
-        }
-    } else {
-        $this->plugin->getLogger()->error("Yaw is null for mob: " . $mob->getId());
+    if ($yaw === null) {
+        $this->plugin->getLogger()->error("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
         return;
+    }
+
+    $angle = deg2rad($yaw);
+    $directionVector = new Vector3(cos($angle), 0, sin($angle));
+
+    // 정면 블록 탐지
+    $frontBlockPos = $position->addVector($directionVector);
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+
+    // ✅ 공기 및 투명 블록은 장애물로 처리하지 않음
+    if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
+        return;
+    }
+
+    // ✅ getBoundingBox()가 없는 블록 필터링 (Grass 등)
+    if (!method_exists($frontBlock, 'getBoundingBox')) {
+        return;
+    }
+
+    // ✅ 장애물 감지
+    $blockBB = $frontBlock->getBoundingBox();
+    if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
+        $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
+
+        // ✅ 5번까지 랜덤 방향으로 우회 시도
+        for ($i = 0; $i < 5; $i++) {
+            $offsetX = mt_rand(-3, 3);
+            $offsetZ = mt_rand(-3, 3);
+            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+            $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+
+            if (!$alternativeBlock->isSolid()) {
+                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                    if ($path !== null) {
+                        $this->setPath($mob, $path);
+                    }
+                });
+                return;
+            }
+        }
     }
 }
 
 
 
     public function escapePit(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
-        $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    
+    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
-        if ($blockAbove->isTransparent()) {
-            // 위로 점프 가능
-            $mob->setMotion(new Vector3(0, 0.5, 0));
-        } else {
-            // 주변 블록 탐색 후 탈출
-            $this->plugin->getLogger()->info("🔄 [AI] 구덩이 감지, 탈출 시도 중...");
-            for ($dx = -1; $dx <= 1; $dx++) {
-                for ($dz = -1; $dz <= 1; $dz++) {
-                    $newPos = $position->addVector(new Vector3($dx, 1, $dz));
-                    if ($world->getBlockAt((int)$newPos->x, (int)$newPos->y, (int)$newPos->z)->isTransparent()) {
-                        $this->findPathAsync($world, $position, $newPos, "BFS", function (?array $path) use ($mob) {
-                            if ($path !== null) {
-                                $this->setPath($mob, $path);
-                            }
-                        });
-                        return;
+    // ✅ 웅덩이 감지 (아래가 공기 또는 물이며, 위에 갇혀 있는 경우)
+    if ($blockBelow->isTransparent() && !$blockAbove->isTransparent()) {
+        $this->plugin->getLogger()->info("🌊 [AI] 웅덩이에 빠짐! 탈출 시도...");
+
+        // ✅ 1. 점프 가능 여부 확인 (단순 점프 탈출)
+        if ($mob->isOnGround()) {
+            $this->plugin->getLogger()->info("⬆️ [AI] 점프 시도");
+            $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
+            return;
+        }
+
+        // ✅ 2. 주변 블록 탐색하여 탈출 경로 찾기
+        for ($i = 0; $i < 5; $i++) {
+            $offsetX = mt_rand(-2, 2);
+            $offsetZ = mt_rand(-2, 2);
+            $escapeGoal = $position->addVector(new Vector3($offsetX, 1, $offsetZ));
+            $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
+
+            // ✅ 이동 가능한 곳 발견 시 경로 탐색 시작
+            if (!$escapeBlock->isSolid()) {
+                $this->plugin->getLogger()->info("🚀 [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
+
+                $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
+                    if ($path !== null) {
+                        $this->setPath($mob, $path);
                     }
-                }
+                });
+                return;
             }
         }
+
+        // ✅ 3. 모든 시도가 실패하면 제자리 점프 반복
+        $this->plugin->getLogger()->warning("❌ [AI] 탈출 실패! 제자리 점프 반복");
+        if ($mob->isOnGround()) {
+            $mob->setMotion(new Vector3(0, 0.4, 0));
+        }
     }
+}
     
 // ✅ 클로저 저장 및 호출을 위한 정적 변수 추가
 private static array $callbacks = [];
