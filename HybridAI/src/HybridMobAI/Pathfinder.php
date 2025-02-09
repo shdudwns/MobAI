@@ -160,19 +160,60 @@ class Pathfinder {
     }
 
     private function getNeighbors(World $world, Vector3 $pos): iterable {
-    $directions = [
-        new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-        new Vector3(0, 0, 1), new Vector3(0, 0, -1)
-    ];
+        $directions = [
+            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+            new Vector3(0, 0, 1), new Vector3(0, 0, -1),
+            new Vector3(0, 1, 0), // 위로 1칸
+            new Vector3(0, -1, 0), // 아래로 1칸
 
-    foreach ($directions as $dir) {
-        $neighbor = $pos->addVector($dir);
-        $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-        $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
+            // 대각선 (x, z)
+            new Vector3(1, 0, 1), new Vector3(1, 0, -1),
+            new Vector3(-1, 0, 1), new Vector3(-1, 0, -1),
 
-        if (!$block->isSolid() && $blockBelow->isSolid()) {
-            yield $neighbor; // ✅ 배열을 반환하지 않고 `yield` 사용하여 성능 최적화
+            // 대각선 (x, y) - 경사면 이동 고려
+            new Vector3(1, 1, 0), new Vector3(-1, 1, 0),
+            new Vector3(1, -1, 0), new Vector3(-1, -1, 0),
+
+            // 대각선 (y, z) - 경사면 이동 고려
+            new Vector3(0, 1, 1), new Vector3(0, -1, 1),
+            new Vector3(0, 1, -1), new Vector3(0, -1, -1),
+
+            // 대각선 (x, y, z) - 3차원 대각선
+            new Vector3(1, 1, 1), new Vector3(1, 1, -1), new Vector3(1, -1, 1), new Vector3(1, -1, -1),
+            new Vector3(-1, 1, 1), new Vector3(-1, 1, -1), new Vector3(-1, -1, 1), new Vector3(-1, -1, -1),
+
+        ];
+
+        foreach ($directions as $dir) {
+            $neighbor = $pos->addVector($dir);
+            $x = (int)$neighbor->x;
+            $y = (int)$neighbor->y;
+            $z = (int)$neighbor->z;
+
+            $block = $world->getBlockAt($x, $y, $z);
+            $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+
+
+            if ($dir->y === 0) { // 수평 이동
+                if (!$block->isSolid() && $blockBelow->isSolid()) {
+                    yield $neighbor;
+                }
+            } elseif ($dir->y === 1) { // 위로 이동
+                $blockAbove = $world->getBlockAt($x, $y + 1, $z); // 추가
+                if (!$block->isSolid() && !$blockAbove->isSolid()) { // 위, 아래 블럭이 비어있어야함
+                    yield $neighbor;
+                }
+            } elseif ($dir->y === -1) { // 아래로 이동
+                if (!$blockBelow->isSolid()) { // 아래 블럭이 비어있어야함
+                    yield $neighbor;
+                }
+            } else { // 대각선 이동
+                $block1 = $world->getBlockAt($x, $y, $z); // 대각선 위치 블럭
+                $block2 = $world->getBlockAt($x, $y-1, $z); // 대각선 아래 블럭
+                if(!$block1->isSolid() && $block2->isSolid()){ //대각선 위치 블럭이 비어있고, 대각선 아래 블럭이 solid여야함.
+                    yield $neighbor;
+                }
+            }
         }
     }
-}
 }
