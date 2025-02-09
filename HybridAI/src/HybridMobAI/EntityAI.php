@@ -284,6 +284,11 @@ private function isNonSolidBlock(Block $block): bool {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
+    // ✅ 착지 후에만 웅덩이 감지
+    if (!$mob->isOnGround()) {
+        return;
+    }
+
     // ✅ 현재 위치의 아래 블록 검사
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
     $blockBelow2 = $world->getBlockAt((int)$position->x, (int)$position->y - 2, (int)$position->z);
