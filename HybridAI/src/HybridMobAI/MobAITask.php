@@ -117,7 +117,7 @@ private function handleMobAI(Living $mob): void {
                         Server::getInstance()->broadcastMessage("✅ 경로 탐색 성공! 몬스터 {$mob->getId()} 목표로 이동 중...");
                     } else {
                         Server::getInstance()->broadcastMessage("⚠️ 경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도...");
-                        $ai->avoidObstacle($mob);
+                        //$ai->avoidObstacle($mob);
                     }
                 }
             );
