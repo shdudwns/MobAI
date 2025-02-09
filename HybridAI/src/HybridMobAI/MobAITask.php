@@ -85,11 +85,20 @@ private function handleMobAI(Living $mob): void {
         $ai->setTarget($mob, $player->getPosition());
 
         if ($ai->hasPath($mob)) {
+    $navigator->moveAlongPath($mob);
+} else {
+    $ai->avoidObstacle($mob, function() use ($ai, $mob, $navigator) {
+        if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
-            // ✅ 기존 moveToPlayer를 실행하지 않고 장애물 감지 후 탐색
-            $ai->avoidObstacle($mob);
+            $ai->escapePit($mob, function() use ($ai, $mob, $navigator) {
+                if ($ai->hasPath($mob)) {
+                    $navigator->moveAlongPath($mob);
+                }
+            });
         }
+    });
+}
 
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
