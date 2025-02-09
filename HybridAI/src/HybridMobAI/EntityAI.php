@@ -158,6 +158,11 @@ public function avoidObstacle(Living $mob): void {
         return;
     }
 
+    // ✅ getBoundingBox()가 없는 블록 필터링
+    if (!method_exists($frontBlock, 'getBoundingBox')) {
+        return;
+    }
+
     // ✅ 장애물 감지
     $blockBB = $frontBlock->getBoundingBox();
     if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
