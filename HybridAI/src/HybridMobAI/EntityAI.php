@@ -372,26 +372,19 @@ public function removePath(Living $mob): void {
     }
 
     public function onPathFound(Living $mob, ?array $path): void {
+    $navigator = new EntityNavigator();
+    $tracker = new EntityTracker();
+
     if ($path !== null) {
         $this->setPath($mob, $path);
         Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
-        (new EntityNavigator())->moveAlongPath($mob, $path);
+        $navigator->moveAlongPath($mob);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ 경로 탐색 실패! 기본 이동 유지...");
-        (new EntityNavigator())->moveToPlayer($mob, (new EntityTracker())->findNearestPlayer($mob));
-    }
-}
-    
-
-    public function moveAlongPath(Living $mob): void {
-    $path = $this->getPath($mob);
-    if (empty($path)) return;
-
-    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    if ($nextPosition instanceof Vector3) {
-        $speed = 0.22;
-        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed));
-        $mob->lookAt($nextPosition);
+        $nearestPlayer = $tracker->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
+        }
     }
 }
 }
