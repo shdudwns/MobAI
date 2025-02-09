@@ -76,7 +76,7 @@ public function reloadAISettings(): void {
         return $this->mobAITask;
     }
     /** ✅ 기본 좀비 스폰 시 커스텀 좀비로 교체 */
-    public function onEntitySpawn(EntitySpawnEvent $event): void {
+    /*public function onEntitySpawn(EntitySpawnEvent $event): void {
         $entity = $event->getEntity();
         if ($entity instanceof PmmpZombie) {
             $this->getScheduler()->scheduleDelayedTask(new ClosureTask(fn() => $this->replaceWithCustomZombie($entity)), 2);
@@ -98,7 +98,7 @@ public function reloadAISettings(): void {
             $nbt = CompoundTag::create();
             (new Zombie($location, $nbt, $this))->spawnToAll();
         }), 1);
-    }
+    }*/
 
     /** ✅ 엔티티가 공격받을 때 처리 */
     public function onEntityDamage(EntityDamageEvent $event): void {
@@ -171,12 +171,12 @@ private function applyKnockback(Living $mob, Player $damager): void {
     $mob->setMotion($knockbackDir);
 }
     /** ✅ 청크가 로드된 경우에만 좀비 스폰 */
-    public function spawnZombieAt(World $world, Vector3 $position): void {
+   /* public function spawnZombieAt(World $world, Vector3 $position): void {
         if (!$world->isChunkLoaded($position->getFloorX() >> 4, $position->getFloorZ() >> 4)) {
             return;
         }
 
         $location = new Location($position->x, $position->y, $position->z, $world, 0.0, 0.0);
         (new Zombie($location, CompoundTag::create(), $this))->spawnToAll();
-    }
+    } */
 }
