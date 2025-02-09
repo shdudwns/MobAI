@@ -12,9 +12,8 @@ class EntityNavigator {
     
     public function moveToPlayer(Living $mob, Player $player, bool $enabled): void {
     $ai = new EntityAI(Main::getInstance()); // AI 객체 생성
-    $navi = new EntityNavigator();
     if ($ai->isEnabled() && $ai->hasPath($mob)) {
-        $navi->moveAlongPath($mob);
+        $ai->moveAlongPath($mob);
         return;
     }
 
