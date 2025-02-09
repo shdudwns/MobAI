@@ -11,11 +11,28 @@ class EntityNavigator {
     private bool $enabled;
     
     public function moveToPlayer(Living $mob, Player $player, bool $enabled): void {
-    $ai = new EntityAI(Main::getInstance(), $enabled); // AI 객체 생성
-    if ($ai->isEnabled() && $ai->hasPath($mob)) {
-        $ai->moveAlongPath($mob);
-        return;
-    }
+    $ai = new EntityAI(Main::getInstance(), $enabled);
+    if ($ai->isEnabled()) {
+        if ($ai->hasPath($mob)) {
+            $ai->moveAlongPath($mob);
+            return;
+        }
+
+        // ✅ 새로운 경로가 없으면 경로 탐색 시도 후 이동
+        $ai->findPathAsync(
+            $mob->getWorld(),
+            $mob->getPosition(),
+            $player->getPosition(),
+            "A*",
+            function (?array $path) use ($mob, $ai) {
+                if (!empty($path)) {
+                    $ai->setPath($mob, $path);
+                    Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 새로운 경로 탐색 완료!");
+                    $ai->moveAlongPath($mob);
+                }
+            }
+        );
+    } else {
 
     // 기본 AI 이동 (직진)
     $mobPos = $mob->getPosition();
@@ -35,6 +52,7 @@ class EntityNavigator {
 
     $mob->setMotion($blendedMotion);
     $mob->lookAt($playerPos);
+    }
 }
     
     public function moveRandomly(Living $mob): void {
