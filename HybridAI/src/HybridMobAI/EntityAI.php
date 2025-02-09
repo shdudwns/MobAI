@@ -14,7 +14,7 @@ use pocketmine\math\VectorMath;
 use pocketmine\math\RaycastResult;
 
 class EntityAI {
-    private bool $enabled = false;
+    private bool $enabled;
     private array $path = [];
     private ?Vector3 $target = null;
     private array $entityPaths = [];
@@ -22,9 +22,10 @@ class EntityAI {
     private array $targets = [];
     private array $enabledAlgorithms;
 
-    public function __construct(PluginBase $plugin) {
+    public function __construct(PluginBase $plugin, bool $enabled) {
         $this->plugin = $plugin;
         $this->enabledAlgorithms = $plugin->getConfig()->get("AI")["pathfinding_priority"] ?? ["A*"];
+        $this->enabled = $plugin->getConfig()->get("AI")["pathfinding_priority"];
     }
 
     public function setEnabled(bool $enabled): void {
