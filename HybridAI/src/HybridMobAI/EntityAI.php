@@ -162,8 +162,15 @@ class EntityAI {
         if ($this->isSolidBlock($hitBlock)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
             $this->initiatePathfind($mob, $position, $hitBlock, $world, function (?array $path) use ($mob) {
-                $this->onPathFound($mob, $path); // ✅ 경로 탐색 후 즉시 이동
-            });
+                if (!empty($path)) {
+                    $this->setPath($mob, $path);
+                    $navigator = new EntityNavigator();
+                    Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 적용!");
+                    $navigator->moveAlongPath($mob);
+    } else {
+        Server::getInstance()->broadcastMessage("❌ [AI] 우회 실패! 기존 이동 유지...");
+    }
+});
             return;
         }
     }
