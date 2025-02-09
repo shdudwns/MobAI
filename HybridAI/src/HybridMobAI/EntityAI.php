@@ -22,7 +22,7 @@ class EntityAI {
 
     public function __construct(PluginBase $plugin) {
         $this->plugin = $plugin;
-        $this->enabledAlgorithms = $plugin->getConfig()->get("AI")["enabled_algorithms"] ?? ["A*"];
+        $this->enabledAlgorithms = $plugin->getConfig()->get("AI")["pathfinding_priority"] ?? ["A*"];
     }
 
     public function setEnabled(bool $enabled): void {
