@@ -158,11 +158,6 @@ public function avoidObstacle(Living $mob): void {
         return;
     }
 
-    // ✅ getBoundingBox()가 없는 블록 필터링 (Grass 등)
-    if (!method_exists($frontBlock, 'getBoundingBox')) {
-        return;
-    }
-
     // ✅ 장애물 감지
     $blockBB = $frontBlock->getBoundingBox();
     if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
@@ -175,7 +170,8 @@ public function avoidObstacle(Living $mob): void {
             $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
             $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
 
-            if (!$alternativeBlock->isSolid()) {
+            // ✅ 이동 가능한 블록인지 확인
+            if (!$alternativeBlock->isSolid() && $alternativeBlock->isTransparent()) {
                 $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
                     if ($path !== null) {
                         $this->setPath($mob, $path);
@@ -188,7 +184,6 @@ public function avoidObstacle(Living $mob): void {
 }
 
 
-
     public function escapePit(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
@@ -197,7 +192,7 @@ public function avoidObstacle(Living $mob): void {
     $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
     // ✅ 웅덩이 감지 (아래가 공기 또는 물이며, 위에 갇혀 있는 경우)
-    if ($blockBelow->isTransparent() && !$blockAbove->isTransparent()) {
+    if (($blockBelow instanceof Air || $blockBelow instanceof Water) && !$blockAbove->isTransparent()) {
         $this->plugin->getLogger()->info("🌊 [AI] 웅덩이에 빠짐! 탈출 시도...");
 
         // ✅ 1. 점프 가능 여부 확인 (단순 점프 탈출)
@@ -215,7 +210,7 @@ public function avoidObstacle(Living $mob): void {
             $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
 
             // ✅ 이동 가능한 곳 발견 시 경로 탐색 시작
-            if (!$escapeBlock->isSolid()) {
+            if (!$escapeBlock->isSolid() && $escapeBlock->isTransparent()) {
                 $this->plugin->getLogger()->info("🚀 [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
 
                 $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
