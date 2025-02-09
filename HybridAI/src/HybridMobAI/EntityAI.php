@@ -149,38 +149,37 @@ class EntityAI {
     $angle = deg2rad($yaw);
     $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
-    // 정면 블록 탐지 (1.5블록 앞까지 탐지)
-    $frontBlockPos = $position->addVector($directionVector->multiply(1.5));
+    // 정면 블록 탐지 (1블록 앞까지 탐지)
+    $frontBlockPos = $position->addVector($directionVector); // 탐지 거리 1로 변경
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
-    // ✅ 공기, 투명 블록, 특정 블록은 장애물로 처리하지 않음
-    if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
-        return;
-    }
+    // ✅ 불투명 블록만 장애물로 처리
+    if (!($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) && $frontBlock->isFullBlock()) { // isFullBlock() 추가
+        // ✅ 충돌 박스 null 체크
+        if ($frontBlock->getBoundingBox() !== null) { // getBoundingBox() null 체크
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
 
-    // ✅ 장애물 감지 (블록이 단단하거나, 플레이어가 통과할 수 없는 경우)
-    if ($frontBlock->isSolid() || $frontBlock->getCollisionBoxes() !== []) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
+            // ✅ 5번까지 랜덤 방향으로 우회 시도
+            for ($i = 0; $i < 5; $i++) {
+                $offsetX = mt_rand(-3, 3);
+                $offsetZ = mt_rand(-3, 3);
+                $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+                $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
 
-        // ✅ 5번까지 랜덤 방향으로 우회 시도
-        for ($i = 0; $i < 5; $i++) {
-            $offsetX = mt_rand(-3, 3);
-            $offsetZ = mt_rand(-3, 3);
-            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-            $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
-
-            // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
-            if ($alternativeBlock instanceof Air || $alternativeBlock->isTransparent()) {
-                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->setPath($mob, $path);
-                    }
-                });
-                return;
+                // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
+                if ($alternativeBlock instanceof Air || $alternativeBlock->isTransparent()) {
+                    $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                        if ($path !== null) {
+                            $this->setPath($mob, $path);
+                        }
+                    });
+                    return;
+                }
             }
         }
     }
 }
+
 
     public function escapePit(Living $mob): void {
         $position = $mob->getPosition();
