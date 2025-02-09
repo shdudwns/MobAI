@@ -36,6 +36,11 @@ class Pathfinder {
         while (!$openSet->isEmpty() && $visitedNodes < $this->maxPathLength) {
             $current = $openSet->extract();
             $visitedNodes++;
+            var_dump("Current node: ", $current); // 추가된 코드
+        var_dump("Open set: ", $openSet); // 추가된 코드
+        var_dump("Came from: ", $cameFrom); // 추가된 코드
+        var_dump("gScore: ", $gScore); // 추가된 코드
+        var_dump("fScore: ", $fScore); // 추가된 코드
             if ($current->equals($goal)) {
                 return $this->reconstructPath($cameFrom, $current);
             }
