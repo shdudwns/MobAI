@@ -174,21 +174,23 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): array
-{
+    private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0],
-        [0, 0, 1], [0, 0, -1],
-        [0, 1, 0], [0, -1, 0],
-        [1, 0, 1], [1, 0, -1],
-        [-1, 0, 1], [-1, 0, -1],
-        [1, 1, 0], [-1, 1, 0],
-        [1, -1, 0], [-1, -1, 0],
-        [0, 1, 1], [0, -1, 1],
-        [0, 1, -1], [0, -1, -1],
-        [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
-        [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
+        // ✅ 기본 수평 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
+
+        // ✅ 대각선 이동 (우회 가능)
+        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1],
+
+        // ✅ 위로 이동 (점프 가능할 경우만)
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
+
+        // ✅ 계단 오르기 (한 칸 위 대각선)
+        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1],
+
+        // ✅ 아래로 이동 (높이가 한 칸 차이일 때만)
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1]
     ];
 
     foreach ($directions as $dir) {
@@ -199,25 +201,8 @@ class Pathfinder {
         $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
         $blockBelow = $world->getBlockAt((int)$x, (int)($y - 1), (int)$z);
 
-        if ($dir[1] === 0) {
-            if (!$block->isSolid() && $blockBelow->isSolid()) {
-                $neighbors[] = $this->getVector($x, $y, $z);
-            }
-        } elseif ($dir[1] === 1) {
-            $blockAbove = $world->getBlockAt((int)$x, (int)($y + 1), (int)$z);
-            if (!$block->isSolid() && !$blockAbove->isSolid()) {
-                $neighbors[] = $this->getVector($x, $y, $z);
-            }
-        } elseif ($dir[1] === -1) {
-            if (!$blockBelow->isSolid()) {
-                $neighbors[] = $this->getVector($x, $y, $z);
-            }
-        } else {
-            $block1 = $world->getBlockAt((int)$x, (int)$y, (int)$z);
-            $block2 = $world->getBlockAt((int)$x, (int)($y - 1), (int)$z);
-            if (!$block1->isSolid() && $block2->isSolid()) {
-                $neighbors[] = $this->getVector($x, $y, $z);
-            }
+        if (!$block->isSolid() && $blockBelow->isSolid()) {
+            $neighbors[] = new Vector3($x, $y, $z);
         }
     }
 
