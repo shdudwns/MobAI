@@ -140,22 +140,36 @@ public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
-    $direction2D = VectorMath::getDirection2D($yaw);
-    $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->z));
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
-    $blockBB = $frontBlock->getBoundingBox();
-    if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
-        // 장애물 감지 → 우회 탐색
-        $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지, 우회 경로 찾는 중...");
-        $alternativeGoal = $position->addVector(new Vector3(mt_rand(-2, 2), 0, mt_rand(-2, 2)));
-        $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-            if ($path !== null) {
-                $this->setPath($mob, $path);
-            }
-        });
+    if ($yaw !== null) {
+        $angle = deg2rad($yaw);
+        $directionVector = new Vector3(cos($angle), 0, sin($angle));
+
+        $frontBlockPos = $position->addVector($directionVector);
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+
+        // 공기 블록이거나 통과 가능한 블록은 장애물로 처리하지 않음
+        if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
+           return;
+        }
+
+        $blockBB = $frontBlock->getBoundingBox();
+
+        if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
+            $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지, 우회 경로 찾는 중...");
+            $alternativeGoal = $position->addVector(new Vector3(mt_rand(-2, 2), 0, mt_rand(-2, 2)));
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
+                }
+            });
+        }
+    } else {
+        $this->plugin->getLogger()->error("Yaw is null for mob: " . $mob->getId());
+        return;
     }
 }
+
 
 
     public function escapePit(Living $mob): void {
