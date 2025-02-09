@@ -22,8 +22,10 @@ class Main extends PluginBase implements Listener {
 
     private ?MobAITask $mobAITask = null;
     private EntityAI $entityAI;
+    private static ?Main $instance = null;
     
     public function onEnable(): void {
+    self::$instance = $this;
     $this->saveDefaultConfig(); // config.yml 자동 생성
     $this->initializeConfig();
     $this->reloadAISettings();
@@ -65,6 +67,13 @@ class Main extends PluginBase implements Listener {
         return $this->entityAI;
     }
 
+    public static function getInstance(): Main {
+        if (self::$instance === null) {
+            throw new \RuntimeException("Main plugin instance is not initialized.");
+        }
+        return self::$instance;
+    }
+    
 public function reloadAISettings(): void {
     $config = $this->getConfig()->get("AI");
     $aiEnabled = $config["enabled"];
