@@ -10,6 +10,7 @@ use pocketmine\scheduler\AsyncTask;
 use pocketmine\world\Position;
 use pocketmine\plugin\PluginBase;
 use pocketmine\block\Block;
+use pocketmine\math\VectorMath;
 
 class EntityAI {
     private bool $enabled = false;
