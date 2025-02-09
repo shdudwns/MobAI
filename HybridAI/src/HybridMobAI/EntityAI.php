@@ -228,6 +228,25 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
 
     return null; // solid 블록에 부딪히지 않았습니다.
 }
+    private function initiatePathfind(Living $mob, Vector3 $position, Block $block, World $world){ // Add World $world parameter
+    // ✅ 5번까지 랜덤 방향으로 우회 시도
+    for ($i = 0; $i < 5; $i++) {
+        $offsetX = mt_rand(-3, 3);
+        $offsetZ = mt_rand(-3, 3);
+        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+        $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z); // Use $world
+
+        // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
+        if ($alternativeBlock instanceof Air || $alternativeBlock instanceof TallGrass || $alternativeBlock->isTransparent() || $this->isNonSolidBlock($alternativeBlock)) {
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob, $world) { // Use $world in closure as well!
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
+                }
+            });
+            return;
+        }
+    }
+}
 // Helper function to check if a block is solid for collision
 private function isSolidBlock(Block $block): bool {
     $solidBlockNames = [  // Use block names (strings) instead of IDs
