@@ -147,7 +147,7 @@ class EntityAI {
         return;
     }
 
-    // ✅ 몬스터의 **눈높이**에서 장애물 감지 (Raycasting)
+    // ✅ 몬스터 **눈높이 기준** 장애물 감지 (Raycasting)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2));
@@ -156,11 +156,13 @@ class EntityAI {
         return $this->isSolidBlock($block);
     });
 
-    // ✅ Raycasting이 장애물을 감지한 경우
     if ($hitPos instanceof Vector3) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지! 우회 시도...");
-        $this->initiatePathfind($mob, $position, $hitPos, $world);
-        return;
+        $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
+        if ($this->isSolidBlock($hitBlock)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지! 우회 시도...");
+            $this->initiatePathfind($mob, $position, $hitBlock, $world);
+            return;
+        }
     }
 
     // ✅ 직접 탐색 (Raycasting 실패 시)
@@ -169,11 +171,10 @@ class EntityAI {
 
     if ($this->isSolidBlock($frontBlock)) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도...");
-        $this->initiatePathfind($mob, $position, $frontBlockPos, $world);
+        $this->initiatePathfind($mob, $position, $frontBlock, $world);
         return;
     }
 }
-
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
     $dx = $end->x - $start->x;
