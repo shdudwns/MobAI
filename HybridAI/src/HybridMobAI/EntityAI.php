@@ -380,17 +380,20 @@ public function removePath(Living $mob): void {
 
     public function onPathFound(Living $mob, ?array $path): void {
     $navigator = new EntityNavigator();
+    $tracker = new EntityTracker();
 
     if (!empty($path)) {
         $this->setPath($mob, $path);
         Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
-
-        // ✅ 2틱 후 경로 이동 실행
-        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob, $navigator): void {
-            $navigator->moveAlongPath($mob);
-        }), 2);
+        $navigator->moveAlongPath($mob);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ 경로 탐색 실패! 기본 이동 유지...");
+        $nearestPlayer = $tracker->findNearestPlayer($mob);
+        if ($nearestPlayer !== null) {
+            $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
+        } else {
+            $navigator->moveRandomly($mob);
+        }
     }
 }
     public function moveAlongPath(Living $mob): void {
