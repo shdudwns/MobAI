@@ -147,19 +147,15 @@ class EntityAI {
         return;
     }
 
-    $angle = deg2rad($yaw);
-    $directionVector = new Vector3(cos($angle), 0, sin($angle));
+    $start = $position->add(0, $mob->getEyeHeight(), 0);
+    $end = $position->addVector($directionVector->multiply(2));
 
-    // 1. Raycasting (우선 순위 높음)
-    $start = $position->add(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
-    $end = $position->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
+    $result = $this->raycast($world, $start, $end, function(Block $block) {
+        return $this->isSolidBlock($block);
+    });
 
-    $result = $this->raycast($world, $start, $end, function(Block $block) { // raycast 함수 호출
-    return $this->isSolidBlock($block); // isSolidBlock() 함수를 사용하여 solid 블록만 고려
-});
-
-if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반환하고, 부딪히지 않은 경우 null을 반환합니다.
-    $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z); // 블록 가져오기
+    if ($result instanceof Vector3) {
+    $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z);
     Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
     $this->initiatePathfind($mob, $position, $block, $world); // 경로 탐색 시작
     return; // Raycast 성공 시 다른 검사 건너뛰기
@@ -168,25 +164,25 @@ if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반�
 
     // 2. 정면 블록 + 주변 블록 검사 (Raycasting 실패 시)
     $checkPositions = [
-    $position->addVector($directionVector), // 정면
-    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z), // 우측
-    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z), // 좌측
-    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z + 1), // 우측 대각선
-    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z - 1), // 우측 대각선
-    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z + 1), // 좌측 대각선
-    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z - 1), // 좌측 대각선
-];
-
-
+        $position->addVector($directionVector), // 정면
+        $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z), // 우측
+        $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z), // 좌측
+        $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z + 1), // 우측 대각선
+        $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z - 1), // 우측 대각선
+        $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z + 1), // 좌측 대각선
+        $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z - 1), // 좌측 대각선
+    ];
 
     foreach ($checkPositions as $checkPos) {
         $block = $world->getBlockAt((int)$checkPos->x, (int)$checkPos->y, (int)$checkPos->z);
 
+        // 공기 블록 또는 통과 가능한 블록은 건너뜀
         if ($block instanceof Air || $block instanceof TallGrass || $block->isTransparent() || $this->isNonSolidBlock($block)) {
             continue;
         }
 
-        if ($this->isSolidBlock($block) && $block->getBoundingBox() !== null && $block->getBoundingBox()->intersectsWith($mob->getBoundingBox())) {
+        // 충돌 상자가 null이 아니고, 좀비의 충돌 상자와 겹치는 경우에만 장애물로 인식
+        if ($this->isSolidBlock($block) && method_exists($block, 'getBoundingBox') && $block->getBoundingBox() !== null && $block->getBoundingBox()->intersectsWith($mob->getBoundingBox())) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 주변 블록 검사: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
             $this->initiatePathfind($mob, $position, $block, $world); // 경로 탐색 시작
             return; // 주변 블록 검사에서 장애물 발견 시 종료
