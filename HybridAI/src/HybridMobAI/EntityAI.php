@@ -150,21 +150,22 @@ class EntityAI {
     $angle = deg2rad($yaw);
     $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
-    $start = $position->add(0, $mob->getEyeHeight(), 0);
-    $end = $position->addVector($directionVector->multiply(2));
+    // 좀비의 눈높이에서 앞쪽 방향으로 광선 추적
+    $start = $position->add(new Vector3(0, $mob->getEyeHeight(), 0)); // Vector3 객체를 사용하여 좌표를 더합니다.
+    $end = $start->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
+
+    $this->plugin->getLogger()->debug("Raycasting from " . $start . " to " . $end); // 디버깅 정보 출력
 
     $result = $this->raycast($world, $start, $end, function(Block $block) {
         return $this->isSolidBlock($block);
     });
 
     if ($result instanceof Vector3) {
-    $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z);
-    Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
-    $this->initiatePathfind($mob, $position, $block, $world); // 경로 탐색 시작
-    return; // Raycast 성공 시 다른 검사 건너뛰기
+        $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z);
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
+        $this->initiatePathfind($mob, $position, $block, $world);
+        return;
     }
-
-
     // 2. 정면 블록 + 주변 블록 검사 (Raycasting 실패 시)
     $checkPositions = [
         $position->addVector($directionVector), // 정면
