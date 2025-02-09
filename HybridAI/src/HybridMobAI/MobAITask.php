@@ -57,6 +57,7 @@ private function handleMobAI(Living $mob): void {
     $ai = new EntityAI($this->plugin);
 
     if (!$this->aiEnabled) {
+        // ✅ 기본 AI: 플레이어 추적 또는 랜덤 이동
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $navigator->moveToPlayer($mob, $nearestPlayer);
@@ -64,6 +65,7 @@ private function handleMobAI(Living $mob): void {
             $navigator->moveRandomly($mob);
         }
         $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
+        $this->handleSwimming($mob);
         return;
     }
 
@@ -74,6 +76,7 @@ private function handleMobAI(Living $mob): void {
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
         if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
+            // ✅ 기존 경로 유지하면서 이동
             $ai->moveAlongPath($mob);
             return;
         }
@@ -89,30 +92,53 @@ private function handleMobAI(Living $mob): void {
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
 
-            $this->plugin->getLogger()->info("AI 경로 탐색 시작: {$mob->getId()} - 목표 {$player->getPosition()->x}, {$player->getPosition()->y}, {$player->getPosition()->z}");
+            // ✅ 최적의 알고리즘 선택
+            $algorithm = $this->selectBestAlgorithm($mob, $player);
+            $this->plugin->getLogger()->info("🧠 AI 경로 탐색 시작: 몬스터 ID:{$mob->getId()} | 알고리즘: $algorithm | 목표: {$player->getPosition()->x}, {$player->getPosition()->y}, {$player->getPosition()->z}");
 
             $ai->findPathAsync(
                 $mob->getWorld(),
                 $mob->getPosition(),
                 $player->getPosition(),
-                "A*",
-                function (?array $path) use ($mob, $player, $ai, $navigator) {
+                $algorithm,
+                function (?array $path) use ($mob, $player, $ai, $navigator, $detector) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
-                        $this->plugin->getLogger()->info("경로 탐색 성공! 몬스터 {$mob->getId()} 목표로 이동");
+                        $this->plugin->getLogger()->info("✅ 경로 탐색 성공! 몬스터 {$mob->getId()}가 목표로 이동 중...");
                     } else {
-                        $navigator->moveToPlayer($mob, $player);
-                        $this->plugin->getLogger()->info("경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도");
+                        $this->plugin->getLogger()->info("⚠️ 경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도...");
+                        $ai->avoidObstacle($mob);
                     }
                 }
             );
         }
     }
 
+    // ✅ 장애물 감지 및 점프
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
+
+    // ✅ 구덩이 탈출
+    $ai->escapePit($mob);
+
+    // ✅ 수영 기능 적용
     $this->handleSwimming($mob);
 }
 
+    private function selectBestAlgorithm(Living $mob, Player $player): string {
+    $distance = $mob->getPosition()->distance($player->getPosition());
+    $enabledAlgorithms = $this->plugin->getConfig()->get("AI")["pathfindingg_priority"] ?? ["A*"];
+
+    if ($distance > 30 && in_array("Dijkstra", $enabledAlgorithms)) {
+        return "Dijkstra"; // ✅ 먼 거리일 때 최적 알고리즘
+    } elseif ($distance < 10 && in_array("A*", $enabledAlgorithms)) {
+        return "A*"; // ✅ 가까운 거리일 때 A* 사용
+    } elseif (in_array("BFS", $enabledAlgorithms)) {
+        return "BFS"; // ✅ BFS 백업 알고리즘
+    }
+
+    return "A*"; // ✅ 기본값
+}
+    
 private function handleSwimming(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
