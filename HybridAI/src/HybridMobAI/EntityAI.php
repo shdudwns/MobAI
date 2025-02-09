@@ -161,7 +161,7 @@ class EntityAI {
 if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반환하고, 부딪히지 않은 경우 null을 반환합니다.
     $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z); // 블록 가져오기
     Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
-    $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
+    $this->initiatePathfind($mob, $position, $block, $world); // 경로 탐색 시작
     return; // Raycast 성공 시 다른 검사 건너뛰기
     }
 
