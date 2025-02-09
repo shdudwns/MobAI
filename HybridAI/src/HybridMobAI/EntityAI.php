@@ -147,6 +147,9 @@ class EntityAI {
         return;
     }
 
+    $angle = deg2rad($yaw);
+    $directionVector = new Vector3(cos($angle), 0, sin($angle));
+
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $end = $position->addVector($directionVector->multiply(2));
 
