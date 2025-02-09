@@ -8,10 +8,10 @@ use pocketmine\player\Player;
 
 class EntityNavigator {
 
-    private bool $enabled = true;
+    private bool $enabled;
     
     public function moveToPlayer(Living $mob, Player $player, bool $enabled): void {
-    $ai = new EntityAI(Main::getInstance()); // AI 객체 생성
+    $ai = new EntityAI(Main::getInstance(), $enabled); // AI 객체 생성
     if ($ai->isEnabled() && $ai->hasPath($mob)) {
         $ai->moveAlongPath($mob);
         return;
