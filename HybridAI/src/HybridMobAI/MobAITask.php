@@ -9,7 +9,7 @@ use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\math\VectorMath;
-use pocketmine\block\Block;
+use pocketmine\block\{Air, Block, TallGrass};
 use pocketmine\math\AxisAlignedBB as AABB;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -17,7 +17,6 @@ use pocketmine\entity\animation\ArmSwingAnimation;
 use pocketmine\block\Stair;
 use pocketmine\block\Slab;
 use pocketmine\world\Position;
-use pocketmine\block\Air;
 
 class MobAITask extends Task {
     private Main $plugin;
@@ -121,8 +120,18 @@ private function handleSwimming(Living $mob): void {
     $blockAtFeet = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
     $blockAtHead = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
-    // ✅ Air 블록이 아니고, 물 블록일 경우에만 점프 (수영) 모션 실행
-    if (!($blockAtFeet instanceof Air) && $blockAtFeet->getId() === Block::WATER || !($blockAtHead instanceof Air) && $blockAtHead->getId() === Block::WATER) {
+    // 1. 공기 블록 예외 처리
+    if ($blockAtFeet instanceof Air || $blockAtHead instanceof Air) {
+        return; // 공기 블록 위에서는 수영 동작 X
+    }
+
+    // 2. 잔디 블록 예외 처리 (필요에 따라)
+    if ($blockAtFeet instanceof TallGrass || $blockAtHead instanceof TallGrass) {
+        return; // 잔디 블록 위에서는 수영 동작 X (원하는 경우)
+    }
+
+    // 3. 물 블록에서만 수영 동작
+    if ($blockAtFeet->getId() === Block::WATER || $blockAtHead->getId() === Block::WATER) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x * 0.9,
             0.3, // 수면 위로 이동하도록 점프
@@ -130,7 +139,6 @@ private function handleSwimming(Living $mob): void {
         ));
     }
 }
-
     private function isCollidingWithBlock(Living $mob, Block $block): bool {
     $mobAABB = $mob->getBoundingBox();
     $blockAABB = new AABB(
