@@ -143,7 +143,7 @@ class EntityAI {
     public function avoidObstacle(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
-        $yaw = $mob->getLocation()->yaw;
+        $yaw = (float)$mob->getLocation()->yaw;
         $direction2D = VectorMath::getDirection2D($yaw);
         $frontBlockPos = $position->addVector(new Vector3($direction2D->x, 0, $direction2D->y));
         $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
