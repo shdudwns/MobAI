@@ -352,15 +352,6 @@ public static function storeCallback(string $id, callable $callback): void {
 public static function getCallback(string $id): ?callable {
     return self::$callbacks[$id] ?? null;
 }
-    public function findPath(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $enabledAlgorithms = $this->plugin->getConfig()->get("pathfinding")["enabled_algorithms"];
-
-    if (in_array("A*", $enabledAlgorithms)) {
-        return (new Pathfinder())->findPathAStar($world, $start, $goal);
-    }
-
-    return null; // A*만 사용하도록 설정
-}
 
 public function getPath(Living $mob): ?array {
     return $this->entityPaths[$mob->getId()] ?? null;
@@ -378,6 +369,18 @@ public function removePath(Living $mob): void {
     public function hasPath(Living $mob): bool {
         return isset($this->entityPaths[$mob->getId()]);
     }
+
+    public function onPathFound(Living $mob, ?array $path): void {
+    if ($path !== null) {
+        $this->setPath($mob, $path);
+        Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
+        (new EntityNavigator())->moveAlongPath($mob, $path);
+    } else {
+        Server::getInstance()->broadcastMessage("⚠️ 경로 탐색 실패! 기본 이동 유지...");
+        (new EntityNavigator())->moveToPlayer($mob, (new EntityTracker())->findNearestPlayer($mob));
+    }
+}
+    
 
     public function moveAlongPath(Living $mob): void {
         if (!isset($this->entityPaths[$mob->getId()]) || empty($this->entityPaths[$mob->getId()])) {
