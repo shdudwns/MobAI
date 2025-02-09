@@ -8,25 +8,33 @@ use pocketmine\player\Player;
 
 class EntityNavigator {
     public function moveToPlayer(Living $mob, Player $player): void {
-        $mobPos = $mob->getPosition();
-        $playerPos = $player->getPosition();
-    
-        $speed = 0.25;
-        $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
-        $currentMotion = $mob->getMotion();
-    
-        $inertiaFactor = 0.6; 
-
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
-            $currentMotion->y,
-            ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
-        );
-
-        $mob->setMotion($blendedMotion);
-        $mob->lookAt($playerPos);
+    $ai = new EntityAI(Main::getInstance()); // AI 객체 생성
+    $navi = new EntityNavigator();
+    if ($ai->isEnabled() && $ai->hasPath($mob)) {
+        $navi->moveAlongPath($mob);
+        return;
     }
 
+    // 기본 AI 이동 (직진)
+    $mobPos = $mob->getPosition();
+    $playerPos = $player->getPosition();
+
+    $speed = 0.25;
+    $motion = $playerPos->subtractVector($mobPos)->normalize()->multiply($speed);
+    $currentMotion = $mob->getMotion();
+
+    $inertiaFactor = 0.6; 
+
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($motion->x * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($motion->z * (1 - $inertiaFactor))
+    );
+
+    $mob->setMotion($blendedMotion);
+    $mob->lookAt($playerPos);
+}
+    
     public function moveAlongPath(Living $mob, array $path): void {
         if (empty($path)) return;
 
