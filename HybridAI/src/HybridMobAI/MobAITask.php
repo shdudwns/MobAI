@@ -124,6 +124,7 @@ private function handleMobAI(Living $mob): void {
         }
     });
 
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
     // ✅ 수영 기능 적용
     $this->handleSwimming($mob);
 }
