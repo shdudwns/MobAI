@@ -383,14 +383,14 @@ public function removePath(Living $mob): void {
     
 
     public function moveAlongPath(Living $mob): void {
-        if (!isset($this->entityPaths[$mob->getId()]) || empty($this->entityPaths[$mob->getId()])) {
-            return;
-        }
+    $path = $this->getPath($mob);
+    if (empty($path)) return;
 
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-        if ($nextPosition instanceof Vector3) {
-            $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply(0.2));
-            $mob->lookAt($nextPosition);
-        }
+    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    if ($nextPosition instanceof Vector3) {
+        $speed = 0.22;
+        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed));
+        $mob->lookAt($nextPosition);
     }
+}
 }
