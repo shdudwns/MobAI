@@ -136,12 +136,25 @@ class EntityAI {
         }
 
         private function savePathToFile(string $worldName, Vector3 $start, Vector3 $goal, ?array $path): void {
-            $filePath = "path_results/{$worldName}_path_result.txt";
-            $content = "Start: {$start->x}, {$start->y}, {$start->z}\n";
-            $content .= "Goal: {$goal->x}, {$goal->y}, {$goal->z}\n";
-            $content .= "Path: " . ($path !== null ? json_encode($path) : "No path found") . "\n";
-            file_put_contents($filePath, $content, FILE_APPEND);
-        }
+    // 디렉토리 경로 설정
+    $directoryPath = "path_results";
+    
+    // 디렉토리가 존재하지 않으면 생성
+    if (!is_dir($directoryPath)) {
+        mkdir($directoryPath, 0777, true); // 재귀적으로 디렉토리 생성
+    }
+
+    // 파일 경로 설정
+    $filePath = "{$directoryPath}/{$worldName}_path_result.txt";
+    
+    // 파일 내용 작성
+    $content = "Start: {$start->x}, {$start->y}, {$start->z}\n";
+    $content .= "Goal: {$goal->x}, {$goal->y}, {$goal->z}\n";
+    $content .= "Path: " . ($path !== null ? json_encode($path) : "No path found") . "\n";
+    
+    // 파일에 내용 저장
+    file_put_contents($filePath, $content, FILE_APPEND);
+}
     };
 
     Server::getInstance()->getAsyncPool()->submitTask($task);
