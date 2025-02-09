@@ -45,7 +45,6 @@ class EntityAI {
     }
 
     public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
-    // ✅ Vector3 → Position 변환 (오류 수정)
     $goalPosition = new Position($goal->x, $goal->y, $goal->z, $world);
 
     $worldName = $world->getFolderName();
@@ -85,7 +84,6 @@ class EntityAI {
         }
 
         public function onRun(): void {
-            // ❌ 비동기 스레드에서는 Server::getInstance()를 사용할 수 없음
             $this->setResult([
                 "worldName" => $this->worldName,
                 "startX" => $this->startX, "startY" => $this->startY, "startZ" => $this->startZ,
@@ -129,9 +127,20 @@ class EntityAI {
                             $path = null;
                     }
 
+                    // 경로 탐색 결과를 파일로 저장
+                    $this->savePathToFile($result["worldName"], $start, $goal, $path);
+
                     $callback($path);
                 }
             }
+        }
+
+        private function savePathToFile(string $worldName, Vector3 $start, Vector3 $goal, ?array $path): void {
+            $filePath = "path_results/{$worldName}_path_result.txt";
+            $content = "Start: {$start->x}, {$start->y}, {$start->z}\n";
+            $content .= "Goal: {$goal->x}, {$goal->y}, {$goal->z}\n";
+            $content .= "Path: " . ($path !== null ? json_encode($path) : "No path found") . "\n";
+            file_put_contents($filePath, $content, FILE_APPEND);
         }
     };
 
