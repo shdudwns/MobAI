@@ -168,14 +168,15 @@ if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반�
 
     // 2. 정면 블록 + 주변 블록 검사 (Raycasting 실패 시)
     $checkPositions = [
-        $position->addVector($directionVector), // 정면
-        $position->addVector($directionVector->add(new Vector3(1, 0, 0))), // 우측
-        $position->addVector($directionVector->add(new Vector3(-1, 0, 0))), // 좌측
-        $position->addVector($directionVector->add(new Vector3(1, 0, 1))), // 우측 대각선
-        $position->addVector($directionVector->add(new Vector3(1, 0, -1))), // 우측 대각선
-        $position->addVector($directionVector->add(new Vector3(-1, 0, 1))), // 좌측 대각선
-        $position->addVector($directionVector->add(new Vector3(-1, 0, -1))), // 좌측 대각선
-    ];
+    $position->addVector($directionVector), // 정면
+    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z), // 우측
+    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z), // 좌측
+    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z + 1), // 우측 대각선
+    $position->add($directionVector->x + 1, $directionVector->y, $directionVector->z - 1), // 우측 대각선
+    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z + 1), // 좌측 대각선
+    $position->add($directionVector->x - 1, $directionVector->y, $directionVector->z - 1), // 좌측 대각선
+];
+
 
 
     foreach ($checkPositions as $checkPos) {
