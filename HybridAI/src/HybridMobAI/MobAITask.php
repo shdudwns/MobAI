@@ -94,7 +94,7 @@ private function handleMobAI(Living $mob): void {
 
             // ✅ 최적의 알고리즘 선택
             $algorithm = $this->selectBestAlgorithm($mob, $player);
-            $this->plugin->getLogger()->info("🧠 AI 경로 탐색 시작: 몬스터 ID:{$mob->getId()} | 알고리즘: $algorithm | 목표: {$player->getPosition()->x}, {$player->getPosition()->y}, {$player->getPosition()->z}");
+            //$this->plugin->getLogger()->info("🧠 AI 경로 탐색 시작: 몬스터 ID:{$mob->getId()} | 알고리즘: $algorithm | 목표: {$player->getPosition()->x}, {$player->getPosition()->y}, {$player->getPosition()->z}");
 
             $ai->findPathAsync(
                 $mob->getWorld(),
@@ -104,9 +104,9 @@ private function handleMobAI(Living $mob): void {
                 function (?array $path) use ($mob, $player, $ai, $navigator, $detector) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
-                        $this->plugin->getLogger()->info("✅ 경로 탐색 성공! 몬스터 {$mob->getId()}가 목표로 이동 중...");
+                        //$this->plugin->getLogger()->info("✅ 경로 탐색 성공! 몬스터 {$mob->getId()}가 목표로 이동 중...");
                     } else {
-                        $this->plugin->getLogger()->info("⚠️ 경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도...");
+                        //$this->plugin->getLogger()->info("⚠️ 경로 없음! 몬스터 {$mob->getId()} 장애물 감지 후 우회 시도...");
                         $ai->avoidObstacle($mob);
                     }
                 }
