@@ -182,50 +182,61 @@ class EntityAI {
 
 
     public function escapePit(Living $mob): void {
-        $position = $mob->getPosition();
-        $world = $mob->getWorld();
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
 
-        $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
-        $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+    // 아래 두 블록 검사
+    $blockBelow1 = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    $blockBelow2 = $world->getBlockAt((int)$position->x, (int)$position->y - 2, (int)$position->z);
 
-        // ✅ 웅덩이 감지 (아래가 Air 또는 Water 이고, 위에 막혀 있는 경우)
-        if (($blockBelow instanceof Air || $blockBelow instanceof Water) && !$blockAbove->isTransparent()) {
-            $this->plugin->getLogger()->info(" [AI] 웅덩이에 빠짐! 탈출 시도...");
+    // ✅ 웅덩이 감지 (아래 두 블록이 Air인 경우)
+    if ($blockBelow1 instanceof Air && $blockBelow2 instanceof Air) {
+        Server::getInstance()->broadcastMessage(" [AI] 웅덩이에 빠짐! 탈출 시도...");
 
-            // ✅ 1. 점프 가능 여부 확인 (단순 점프 탈출)
-            if ($mob->isOnGround()) {
-                $this->plugin->getLogger()->info("⬆️ [AI] 점프 시도");
-                $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
-                return;
-            }
-
-            // ✅ 2. 주변 블록 탐색하여 탈출 경로 찾기 (시도 횟수 증가)
-            for ($i = 0; $i < 10; $i++) { // 최대 10번 시도
-                $offsetX = mt_rand(-2, 2);
-                $offsetZ = mt_rand(-2, 2);
-                $escapeGoal = $position->addVector(new Vector3($offsetX, 1, $offsetZ));
-                $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
-
-                // ✅ 이동 가능한 곳 발견 시 경로 탐색 시작 (Air 블록만 허용)
-                if ($escapeBlock instanceof Air) {
-                    $this->plugin->getLogger()->info(" [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
-
-                    $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
-                        if ($path !== null) {
-                            $this->setPath($mob, $path);
-                        }
-                    });
-                    return;
+        // ✅ 1. 주변 블록 탐색하여 한 칸짜리 블록 찾기
+        $escapeGoal = $this->findEscapeBlock($world, $position);
+        if ($escapeGoal !== null) {
+            Server::getInstance()->broadcastMessage(" [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
+            $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
                 }
-            }
+            });
+            return;
+        }
 
-            // ✅ 3. 모든 시도가 실패하면 제자리 점프 반복 (횟수 및 간격 조정 가능)
-            $this->plugin->getLogger()->warning("❌ [AI] 탈출 실패! 제자리 점프 반복");
-            if ($mob->isOnGround()) {
-                $mob->setMotion(new Vector3(0, 0.4, 0)); // 점프
+        // ✅ 2. 탈출 경로를 찾지 못한 경우 점프 시도
+        Server::getInstance()->broadcastMessage("❌ [AI] 탈출 경로를 찾지 못함! 점프 시도");
+        if ($mob->isOnGround()) {
+            $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
+        }
+    }
+}
+
+/**
+ * 주변 블록을 탐색하여 한 칸짜리 탈출 블록을 찾습니다.
+ */
+private function findEscapeBlock(World $world, Vector3 $position): ?Vector3 {
+    $searchRadius = 3; // 탐색 반경
+    for ($x = -$searchRadius; $x <= $searchRadius; $x++) {
+        for ($z = -$searchRadius; $z <= $searchRadius; $z++) {
+            if ($x === 0 && $z === 0) continue; // 현재 위치는 제외
+
+            // 한 칸 위 블록 검사
+            $escapeGoal = $position->addVector(new Vector3($x, 1, $z));
+            $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
+
+            // 아래 블록이 단단한지 확인
+            $blockBelow = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y - 1, (int)$escapeGoal->z);
+
+            // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용 + 아래 블록이 단단한지)
+            if (($escapeBlock instanceof Air || $escapeBlock->isTransparent()) && $blockBelow->isSolid()) {
+                return $escapeGoal;
             }
         }
     }
+    return null; // 탈출 블록을 찾지 못한 경우
+}
 
     
 // ✅ 클로저 저장 및 호출을 위한 정적 변수 추가
