@@ -151,18 +151,18 @@ class EntityAI {
     $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
     // 1. Raycasting (우선 순위 높음)
-    $start = $position->add(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
+    $start = $position->addVector(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
     $end = $position->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
 
-    $result = $world->raycast($start, $end, function(Block $block) {
-        return $this->isSolidBlock($block); // isSolidBlock() 함수를 사용하여 solid 블록만 고려
-    });
+    $result = $this->raycast($world, $start, $end, function(Block $block) { // raycast 함수 호출
+    return $this->isSolidBlock($block); // isSolidBlock() 함수를 사용하여 solid 블록만 고려
+});
 
-    if ($result instanceof RaycastResult) {
-        $block = $result->getHitBlock();
-        Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
-        $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
-        return; // Raycast 성공 시 다른 검사 건너뛰기
+if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반환하고, 부딪히지 않은 경우 null을 반환합니다.
+    $block = $world->getBlockAt((int)$result->x, (int)$result->y, (int)$result->z); // 블록 가져오기
+    Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
+    $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
+    return; // Raycast 성공 시 다른 검사 건너뛰기
     }
 
 
@@ -195,6 +195,39 @@ class EntityAI {
 
 }
 
+    
+private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
+    $dx = $end->x - $start->x;
+    $dy = $end->y - $start->y;
+    $dz = $end->z - $start->z;
+
+    $length = sqrt($dx * $dx + $dy * $dy + $dz * $dz);
+    if ($length === 0) {
+        return null;
+    }
+
+    $dx /= $length;
+    $dy /= $length;
+    $dz /= $length;
+
+    $x = $start->x;
+    $y = $start->y;
+    $z = $start->z;
+
+    for ($i = 0; $i <= $length; $i += 0.5) { // 정밀도 vs 성능을 위해 스텝 크기(0.5)를 조정합니다.
+        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
+
+        if ($filter($block)) {
+            return new Vector3((int)$x, (int)$y, (int)$z); // 블록의 정수 좌표를 반환합니다.
+        }
+
+        $x += $dx * 0.5;
+        $y += $dy * 0.5;
+        $z += $dz * 0.5;
+    }
+
+    return null; // solid 블록에 부딪히지 않았습니다.
+}
 // Helper function to check if a block is solid for collision
 private function isSolidBlock(Block $block): bool {
     $solidBlocks = [
