@@ -33,7 +33,7 @@ class MobAITask extends Task {
     $this->plugin = $plugin;
     $this->aiEnabled = $aiEnabled;
     $this->algorithmPriority = $algorithmPriority;
-    $this->entityAI = new EntityAI($plugin);
+    $this->entityAI = new EntityAI($this->plugin, $this->aiEnabled);
     }
 
     public function onRun(): void {
@@ -54,7 +54,7 @@ private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
     $detector = new ObstacleDetector($this->plugin);
-    $ai = new EntityAI($this->plugin);
+    $ai = new EntityAI($this->plugin, $this->aiEnabled);
 
     if (!$this->aiEnabled) {
         // 기본 AI 동작
