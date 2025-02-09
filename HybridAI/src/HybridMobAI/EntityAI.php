@@ -154,7 +154,7 @@ class EntityAI {
     $start = $position->addVector(new Vector3(0, $mob->getEyeHeight(), 0)); // Vector3 객체를 사용하여 좌표를 더합니다.
     $end = $start->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
 
-    Server::getInstance()->broadcastMessage("Raycasting from " . $start . " to " . $end); // 디버깅 정보 출력
+    //Server::getInstance()->broadcastMessage("Raycasting from " . $start . " to " . $end); // 디버깅 정보 출력
 
     $result = $this->raycast($world, $start, $end, function(Block $block) {
         return $this->isSolidBlock($block);
