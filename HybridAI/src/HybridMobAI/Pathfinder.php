@@ -6,7 +6,7 @@ use pocketmine\math\Vector3;
 use pocketmine\world\World;
 
 class Pathfinder {
-    private int $maxPathLength = 200; 
+    private int $maxPathLength = 100; 
     private static function vectorToStr(Vector3 $vector): string {
         return "{$vector->x}:{$vector->y}:{$vector->z}";
     }
