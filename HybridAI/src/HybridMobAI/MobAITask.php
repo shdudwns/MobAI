@@ -60,7 +60,7 @@ private function handleMobAI(Living $mob): void {
         // 기본 AI 동작
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
-            $navigator->moveToPlayer($mob, $nearestPlayer);
+            $navigator->moveToPlayer($mob, $nearestPlayer, $aiEnabled);
         } else {
             $navigator->moveRandomly($mob);
         }
@@ -125,7 +125,6 @@ private function handleMobAI(Living $mob): void {
     }
 
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
-    $ai->escapePit($mob);
     $this->handleSwimming($mob);
 }
 
