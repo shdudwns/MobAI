@@ -37,16 +37,6 @@ class EntityNavigator {
     $mob->lookAt($playerPos);
 }
     
-    public function moveAlongPath(Living $mob, array $path): void {
-        if (empty($path)) return;
-
-        $nextPosition = array_shift($path);
-        if ($nextPosition instanceof Vector3) {
-            $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply(0.2));
-            $mob->lookAt($nextPosition);
-        }
-    }
-
     public function moveRandomly(Living $mob): void {
         $directionVectors = [
             new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
