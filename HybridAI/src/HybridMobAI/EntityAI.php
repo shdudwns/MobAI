@@ -230,34 +230,33 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
 }
 // Helper function to check if a block is solid for collision
 private function isSolidBlock(Block $block): bool {
-    $solidBlocks = [
-        "Stone", "Dirt", "Cobblestone", "Log", "Planks", "Brick", "Sandstone",
-        "Obsidian", "Bedrock", "IronBlock", "GoldBlock", "DiamondBlock",
-        "Concrete", "ConcretePowder",
-        // ... other solid blocks
+    $solidBlockNames = [  // Use block names (strings) instead of IDs
+        "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
+        "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
+        "concrete", "concrete_powder",  // ... other solid blocks
     ];
 
-    $nonSolidBlocks = [
-        "Grass", "TallGrass", "Snow", "Carpet", "Flower", "RedFlower", "YellowFlower",
-        "Mushroom", "Wheat", "Carrot", "Potato", "Beetroot", "NetherWart",
-        "SugarCane", "Cactus", "Reed", "Vine", "LilyPad",
-        "Door", "Trapdoor", "Fence", "FenceGate", "Wall",
-        "GlassPane", "IronBars", "Cauldron", "BrewingStand", "EnchantingTable",
-        "Workbench", "Furnace", "Chest", "TrappedChest", "Dispenser", "Dropper",
-        "Hopper", "Anvil", "Beacon", "DaylightDetector", "NoteBlock",
-        "Piston", "StickyPiston", "Lever", "Button", "PressurePlate",
-        "RedstoneTorch", "RedstoneWire", "Repeater", "Comparator",
-        "Sign", "WallSign", "Painting", "ItemFrame",
-        "Dirt", // Example: if you don't want dirt to be solid (adjust as needed)
+    $nonSolidBlockNames = [
+        "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
+        "mushroom", "wheat", "carrot", "potato", "beetroot", "nether_wart",
+        "sugar_cane", "cactus", "reed", "vine", "lily_pad",
+        "door", "trapdoor", "fence", "fence_gate", "wall",
+        "glass_pane", "iron_bars", "cauldron", "brewing_stand", "enchanting_table",
+        "workbench", "furnace", "chest", "trapped_chest", "dispenser", "dropper",
+        "hopper", "anvil", "beacon", "daylight_detector", "note_block",
+        "piston", "sticky_piston", "lever", "button", "pressure_plate",
+        "redstone_torch", "redstone_wire", "repeater", "comparator",
+        "sign", "wall_sign", "painting", "item_frame",
+        // ... other non-solid blocks
     ];
 
-    $blockName = strtolower($block->getName()); // 블록 이름을 소문자로 변환하여 비교
+    $blockName = strtolower($block->getName()); // Get the block name (string), convert to lowercase
 
-    if (in_array($blockName, $nonSolidBlocks)) {
-        return false;
+    if (in_array($blockName, $nonSolidBlockNames)) {
+        return false; // Definitely not solid
     }
 
-    return in_array($blockName, $solidBlocks);
+    return true;
 }
 
 private function isNonSolidBlock(Block $block): bool {
