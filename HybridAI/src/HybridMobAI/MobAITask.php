@@ -87,7 +87,7 @@ private function handleMobAI(Living $mob): void {
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
-            $navigator->moveToPlayer($mob, $nearestPlayer, $aiEnabled);
+            $navigator->moveToPlayer($mob, $player, $aiEnabled);
         }
 
         // ✅ 경로 갱신 주기 (20~40틱 사이 업데이트)
