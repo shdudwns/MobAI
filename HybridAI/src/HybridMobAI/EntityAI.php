@@ -185,6 +185,7 @@ class EntityAI {
                 }
             }
         }
+    }
     
 // ✅ 클로저 저장 및 호출을 위한 정적 변수 추가
 private static array $callbacks = [];
