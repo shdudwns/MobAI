@@ -295,33 +295,33 @@ private function isNonSolidBlock(Block $block): bool {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
 
-    // ✅ 착지 후에만 웅덩이 감지
     if (!$mob->isOnGround()) {
         return;
     }
 
-    // ✅ 웅덩이 감지: 바닥이 없고, 주변이 벽으로 둘러싸여 있는 경우
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
     $blockBelow2 = $world->getBlockAt((int)$position->x, (int)$position->y - 2, (int)$position->z);
 
     if (!$blockBelow->isSolid() && !$blockBelow2->isSolid()) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 웅덩이에 빠짐! 탈출 시도...");
 
-        // ✅ 탈출 가능 지점 탐색
         $escapeGoal = $this->findEscapeBlock($world, $position);
         if ($escapeGoal !== null) {
             Server::getInstance()->broadcastMessage("🟢 [AI] 탈출 경로 발견! 이동 중...");
             $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
-                $this->onPathFound($mob, $path);
+                if (!empty($path)) {
+                    $this->setPath($mob, $path);
+                    (new EntityNavigator())->moveAlongPath($mob);
+                } else {
+                    Server::getInstance()->broadcastMessage("❌ [AI] 탈출 실패! 점프 시도...");
+                    $mob->setMotion(new Vector3(0, 0.5, 0));
+                }
             });
             return;
         }
 
-        // ✅ 탈출 경로를 찾지 못한 경우 점프 시도
         Server::getInstance()->broadcastMessage("❌ [AI] 탈출 경로 없음! 점프 시도...");
-        if ($mob->isOnGround()) {
-            $mob->setMotion(new Vector3(0, 0.5, 0));
-        }
+        $mob->setMotion(new Vector3(0, 0.5, 0));
     }
 }
 /**
