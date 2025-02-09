@@ -142,7 +142,7 @@ class EntityAI {
     $yaw = (float)$mob->getLocation()->yaw;
 
     if ($yaw === null) {
-        $this->plugin->broadcastMessage("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
+        Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
@@ -160,7 +160,7 @@ class EntityAI {
 
     // ✅ 장애물 감지 (블록이 단단하거나, 플레이어가 통과할 수 없는 경우)
     if ($frontBlock->isSolid() || $frontBlock->getCollisionBoxes() !== []) {
-        $this->plugin->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
 
         // ✅ 5번까지 랜덤 방향으로 우회 시도
         for ($i = 0; $i < 5; $i++) {
