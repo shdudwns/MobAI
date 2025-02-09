@@ -174,62 +174,53 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): iterable {
-        $x = (int)$pos->x;
-        $y = (int)$pos->y;
-        $z = (int)$pos->z;
+    private function getNeighbors(World $world, Vector3 $pos): array
+{
+    $neighbors = [];
+    $directions = [
+        [1, 0, 0], [-1, 0, 0],
+        [0, 0, 1], [0, 0, -1],
+        [0, 1, 0], [0, -1, 0],
+        [1, 0, 1], [1, 0, -1],
+        [-1, 0, 1], [-1, 0, -1],
+        [1, 1, 0], [-1, 1, 0],
+        [1, -1, 0], [-1, -1, 0],
+        [0, 1, 1], [0, -1, 1],
+        [0, 1, -1], [0, -1, -1],
+        [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1],
+        [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1],
+    ];
 
-        // 핵심 이동 방향 (상, 하, 좌, 우)
-        $coreDirections = [
-            new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
-            new Vector3(0, 0, 1), new Vector3(0, 0, -1),
-        ];
+    foreach ($directions as $dir) {
+        $x = $pos->x + $dir[0];
+        $y = $pos->y + $dir[1];
+        $z = $pos->z + $dir[2];
 
-        foreach ($coreDirections as $dir) {
-            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
-            $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-            $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
+        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
+        $blockBelow = $world->getBlockAt((int)$x, (int)($y - 1), (int)$z);
+
+        if ($dir[1] === 0) {
             if (!$block->isSolid() && $blockBelow->isSolid()) {
-                yield $neighbor;
+                $neighbors[] = $this->getVector($x, $y, $z);
             }
-        }
-
-        // 수직 이동 (위, 아래) - 필요에 따라 활성화
-        $verticalDirections = [
-            new Vector3(0, 1, 0), new Vector3(0, -1, 0),
-        ];
-
-        foreach ($verticalDirections as $dir) {
-            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
-            if ($dir->y === 1) { // 위로 이동
-                $blockAbove = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y + 1), (int)$neighbor->z);
-                $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-
-                if (!$block->isSolid() && !$blockAbove->isSolid()) {
-                    yield $neighbor;
-                }
-            } elseif ($dir->y === -1) { // 아래로 이동
-                $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
-                if (!$blockBelow->isSolid()) {
-                    yield $neighbor;
-                }
+        } elseif ($dir[1] === 1) {
+            $blockAbove = $world->getBlockAt((int)$x, (int)($y + 1), (int)$z);
+            if (!$block->isSolid() && !$blockAbove->isSolid()) {
+                $neighbors[] = $this->getVector($x, $y, $z);
             }
-        }
-
-
-        // 대각선 이동 (x, z) - 필요에 따라 활성화 및 가중치 조절
-        $diagonalXZDirections = [
-            new Vector3(1, 0, 1), new Vector3(1, 0, -1),
-            new Vector3(-1, 0, 1), new Vector3(-1, 0, -1),
-        ];
-
-        foreach ($diagonalXZDirections as $dir) {
-            $neighbor = $this->getVector($x + $dir->x, $y + $dir->y, $z + $dir->z);
-            $block = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-            $blockBelow = $world->getBlockAt((int)$neighbor->x, (int)($neighbor->y - 1), (int)$neighbor->z);
-            if (!$block->isSolid() && $blockBelow->isSolid()) {
-                yield $neighbor;
+        } elseif ($dir[1] === -1) {
+            if (!$blockBelow->isSolid()) {
+                $neighbors[] = $this->getVector($x, $y, $z);
+            }
+        } else {
+            $block1 = $world->getBlockAt((int)$x, (int)$y, (int)$z);
+            $block2 = $world->getBlockAt((int)$x, (int)($y - 1), (int)$z);
+            if (!$block1->isSolid() && $block2->isSolid()) {
+                $neighbors[] = $this->getVector($x, $y, $z);
             }
         }
     }
+
+    return $neighbors;
+}
 }
