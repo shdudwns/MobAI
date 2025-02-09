@@ -235,14 +235,46 @@ private function isSolidBlock(Block $block): bool {
         "Stone", "Dirt", "Cobblestone", "Log", "Planks", "Brick", "Sandstone",
         "Obsidian", "Bedrock", "IronBlock", "GoldBlock", "DiamondBlock",
         "Concrete", "ConcretePowder",
-        // Add other blocks that *should* stop the AI here. Be specific!
-        // Example: if you want packed ice to be a solid block:
-        // "PackedIce",
+        // ... other solid blocks
+    ];
+
+    $nonSolidBlocks = [
+        "Grass", "TallGrass", "Snow", "Carpet", "Flower", "RedFlower", "YellowFlower",
+        "Mushroom", "Wheat", "Carrot", "Potato", "Beetroot", "NetherWart",
+        "SugarCane", "Cactus", "Reed", "Vine", "LilyPad",
+        "Door", "Trapdoor", "Fence", "FenceGate", "Wall",
+        "GlassPane", "IronBars", "Cauldron", "BrewingStand", "EnchantingTable",
+        "Workbench", "Furnace", "Chest", "TrappedChest", "Dispenser", "Dropper",
+        "Hopper", "Anvil", "Beacon", "DaylightDetector", "NoteBlock",
+        "Piston", "StickyPiston", "Lever", "Button", "PressurePlate",
+        "RedstoneTorch", "RedstoneWire", "Repeater", "Comparator",
+        "Sign", "WallSign", "Painting", "ItemFrame",
+        "Dirt", // Example: if you don't want dirt to be solid (adjust as needed)
     ];
 
     $blockName = $block->getName();
 
-    return in_array($blockName, $solidBlocks);
+    // 1. Check if it's explicitly non-solid:
+    if (in_array($blockName, $nonSolidBlocks)) {
+        return false;
+    }
+
+    // 2. Check if it's explicitly solid:
+    if (in_array($blockName, $solidBlocks)) {
+        return true;
+    }
+
+    // 3. Default behavior (handle unknown blocks):
+    // Options:
+    // a) Treat as solid (safer):
+    return true;
+
+    // b) Treat as non-solid (more permissive):
+    // return false;
+
+    // c) Log a warning (for debugging):
+    // $this->plugin->getLogger()->warning("Unknown block type: " . $blockName . ". Defaulting to SOLID.");
+    // return true; // Or return false, depending on your preference.
 }
 
 private function isNonSolidBlock(Block $block): bool {
