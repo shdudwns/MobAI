@@ -7,7 +7,10 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 
 class EntityNavigator {
-    public function moveToPlayer(Living $mob, Player $player): void {
+
+    private bool $enabled = true;
+    
+    public function moveToPlayer(Living $mob, Player $player, bool $enabled): void {
     $ai = new EntityAI(Main::getInstance()); // AI 객체 생성
     $navi = new EntityNavigator();
     if ($ai->isEnabled() && $ai->hasPath($mob)) {
