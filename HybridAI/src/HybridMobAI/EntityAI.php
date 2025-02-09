@@ -44,7 +44,7 @@ class EntityAI {
         return $this->targets[$mob->getId()] ?? null;
     }
 
-    public function findPathAsync(World $world, Position $start, Vector3 $goal, string $algorithm, callable $callback): void {
+    public function findPathAsync(World $world, Position $start, Position $goal, string $algorithm, callable $callback): void {
     // ✅ Vector3 → Position 변환 (오류 수정)
     $goalPosition = new Position($goal->x, $goal->y, $goal->z, $world);
 
@@ -373,18 +373,17 @@ public function removePath(Living $mob): void {
 
     public function onPathFound(Living $mob, ?array $path): void {
     $navigator = new EntityNavigator();
-    $tracker = new EntityTracker();
 
-    if ($path !== null) {
+    if (!empty($path)) {
         $this->setPath($mob, $path);
         Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
-        $navigator->moveAlongPath($mob);
+
+        // ✅ 2틱 후 경로 이동 실행
+        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob, $navigator): void {
+            $navigator->moveAlongPath($mob);
+        }), 2);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ 경로 탐색 실패! 기본 이동 유지...");
-        $nearestPlayer = $tracker->findNearestPlayer($mob);
-        if ($nearestPlayer !== null) {
-            $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
-        }
     }
 }
     public function moveAlongPath(Living $mob): void {
