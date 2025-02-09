@@ -141,8 +141,6 @@ class EntityAI {
         Server::getInstance()->getAsyncPool()->submitTask($task);
     }
 
-    똑같아
-
 public function avoidObstacle(Living $mob): void {
         $position = $mob->getPosition();
         $world = $mob->getWorld();
