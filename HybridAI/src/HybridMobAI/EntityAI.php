@@ -136,104 +136,104 @@ class EntityAI {
     Server::getInstance()->getAsyncPool()->submitTask($task);
 }
 
-public function avoidObstacle(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    $yaw = (float)$mob->getLocation()->yaw;
+    public function avoidObstacle(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+        $yaw = (float)$mob->getLocation()->yaw;
 
-    if ($yaw === null) {
-        $this->plugin->getLogger()->error("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
-        return;
-    }
-
-    $angle = deg2rad($yaw);
-    $directionVector = new Vector3(cos($angle), 0, sin($angle));
-
-    // 정면 블록 탐지
-    $frontBlockPos = $position->addVector($directionVector);
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-
-    // ✅ 공기 및 투명 블록은 장애물로 처리하지 않음
-    if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
-        return;
-    }
-
-    // ✅ getBoundingBox()가 없는 블록 필터링
-    if (!method_exists($frontBlock, 'getBoundingBox')) {
-        return;
-    }
-
-    // ✅ 장애물 감지
-    $blockBB = $frontBlock->getBoundingBox();
-    if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
-        $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
-
-        // ✅ 5번까지 랜덤 방향으로 우회 시도
-        for ($i = 0; $i < 5; $i++) {
-            $offsetX = mt_rand(-3, 3);
-            $offsetZ = mt_rand(-3, 3);
-            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-            $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
-
-            // ✅ 이동 가능한 블록인지 확인
-            if (!$alternativeBlock->isSolid() && $alternativeBlock->isTransparent()) {
-                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->setPath($mob, $path);
-                    }
-                });
-                return;
-            }
-        }
-    }
-}
-
-
-    public function escapePit(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-    
-    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
-    $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
-
-    // ✅ 웅덩이 감지 (아래가 공기 또는 물이며, 위에 갇혀 있는 경우)
-    if (($blockBelow instanceof Air || $blockBelow instanceof Water) && !$blockAbove->isTransparent()) {
-        $this->plugin->getLogger()->info("🌊 [AI] 웅덩이에 빠짐! 탈출 시도...");
-
-        // ✅ 1. 점프 가능 여부 확인 (단순 점프 탈출)
-        if ($mob->isOnGround()) {
-            $this->plugin->getLogger()->info("⬆️ [AI] 점프 시도");
-            $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
+        if ($yaw === null) {
+            $this->plugin->getLogger()->error("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
             return;
         }
 
-        // ✅ 2. 주변 블록 탐색하여 탈출 경로 찾기
-        for ($i = 0; $i < 5; $i++) {
-            $offsetX = mt_rand(-2, 2);
-            $offsetZ = mt_rand(-2, 2);
-            $escapeGoal = $position->addVector(new Vector3($offsetX, 1, $offsetZ));
-            $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
+        $angle = deg2rad($yaw);
+        $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
-            // ✅ 이동 가능한 곳 발견 시 경로 탐색 시작
-            if (!$escapeBlock->isSolid() && $escapeBlock->isTransparent()) {
-                $this->plugin->getLogger()->info("🚀 [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
+        // 정면 블록 탐지
+        $frontBlockPos = $position->addVector($directionVector);
+        $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
 
-                $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->setPath($mob, $path);
-                    }
-                });
-                return;
+        // ✅ 공기 및 투명 블록은 장애물로 처리하지 않음
+        if ($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) {
+            return;
+        }
+
+        // ✅ getBoundingBox()가 없는 블록 필터링
+        if (!method_exists($frontBlock, 'getBoundingBox')) {
+            return;
+        }
+
+        // ✅ 장애물 감지
+        $blockBB = $frontBlock->getBoundingBox();
+        if ($blockBB !== null && $blockBB->intersectsWith($mob->getBoundingBox())) {
+            $this->plugin->getLogger()->info("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
+
+            // ✅ 5번까지 랜덤 방향으로 우회 시도
+            for ($i = 0; $i < 5; $i++) {
+                $offsetX = mt_rand(-3, 3);
+                $offsetZ = mt_rand(-3, 3);
+                $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+                $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+
+                // ✅ 이동 가능한 블록인지 확인 (Air 블록만 허용) + getBoundingBox() 확인
+                if ($alternativeBlock instanceof Air && method_exists($alternativeBlock, 'getBoundingBox')) {
+                    $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                        if ($path !== null) {
+                            $this->setPath($mob, $path);
+                        }
+                    });
+                    return;
+                }
             }
         }
+    }
 
-        // ✅ 3. 모든 시도가 실패하면 제자리 점프 반복
-        $this->plugin->getLogger()->warning("❌ [AI] 탈출 실패! 제자리 점프 반복");
-        if ($mob->isOnGround()) {
-            $mob->setMotion(new Vector3(0, 0.4, 0));
+    public function escapePit(Living $mob): void {
+        $position = $mob->getPosition();
+        $world = $mob->getWorld();
+
+        $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+        $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+
+        // ✅ 웅덩이 감지 (아래가 Air 또는 Water 이고, 위에 막혀 있는 경우)
+        if (($blockBelow instanceof Air || $blockBelow instanceof Water) && !$blockAbove->isTransparent()) {
+            $this->plugin->getLogger()->info(" [AI] 웅덩이에 빠짐! 탈출 시도...");
+
+            // ✅ 1. 점프 가능 여부 확인 (단순 점프 탈출)
+            if ($mob->isOnGround()) {
+                $this->plugin->getLogger()->info("⬆️ [AI] 점프 시도");
+                $mob->setMotion(new Vector3(0, 0.5, 0)); // 점프
+                return;
+            }
+
+            // ✅ 2. 주변 블록 탐색하여 탈출 경로 찾기 (시도 횟수 증가)
+            for ($i = 0; $i < 10; $i++) { // 최대 10번 시도
+                $offsetX = mt_rand(-2, 2);
+                $offsetZ = mt_rand(-2, 2);
+                $escapeGoal = $position->addVector(new Vector3($offsetX, 1, $offsetZ));
+                $escapeBlock = $world->getBlockAt((int)$escapeGoal->x, (int)$escapeGoal->y, (int)$escapeGoal->z);
+
+                // ✅ 이동 가능한 곳 발견 시 경로 탐색 시작 (Air 블록만 허용)
+                if ($escapeBlock instanceof Air) {
+                    $this->plugin->getLogger()->info(" [AI] 탈출 경로 설정: " . json_encode([$escapeGoal->x, $escapeGoal->y, $escapeGoal->z]));
+
+                    $this->findPathAsync($world, $position, $escapeGoal, "A*", function (?array $path) use ($mob) {
+                        if ($path !== null) {
+                            $this->setPath($mob, $path);
+                        }
+                    });
+                    return;
+                }
+            }
+
+            // ✅ 3. 모든 시도가 실패하면 제자리 점프 반복 (횟수 및 간격 조정 가능)
+            $this->plugin->getLogger()->warning("❌ [AI] 탈출 실패! 제자리 점프 반복");
+            if ($mob->isOnGround()) {
+                $mob->setMotion(new Vector3(0, 0.4, 0)); // 점프
+            }
         }
     }
-}
+
     
 // ✅ 클로저 저장 및 호출을 위한 정적 변수 추가
 private static array $callbacks = [];
