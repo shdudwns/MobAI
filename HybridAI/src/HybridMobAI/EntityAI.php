@@ -11,6 +11,7 @@ use pocketmine\world\Position;
 use pocketmine\plugin\PluginBase;
 use pocketmine\block\Block;
 use pocketmine\math\VectorMath;
+use pocketmine\math\RaycastResult;
 
 class EntityAI {
     private bool $enabled = false;
@@ -149,33 +150,102 @@ class EntityAI {
     $angle = deg2rad($yaw);
     $directionVector = new Vector3(cos($angle), 0, sin($angle));
 
-    // 정면 블록 탐지 (1블록 앞까지 탐지)
-    $frontBlockPos = $position->addVector($directionVector); // 탐지 거리 1로 변경
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    // 1. Raycasting (우선 순위 높음)
+    $start = $position->add(0, $mob->getEyeHeight(), 0); // 눈높이에서 시작
+    $end = $position->addVector($directionVector->multiply(2)); // 2블록 앞까지 추적
 
-    // ✅ 불투명 블록만 장애물로 처리
-    if (!($frontBlock instanceof Air || $frontBlock instanceof TallGrass || $frontBlock->isTransparent()) && $frontBlock->isFullBlock()) { // isFullBlock() 추가
-        // ✅ 충돌 박스 null 체크
-        if ($frontBlock->getBoundingBox() !== null) { // getBoundingBox() null 체크
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 우회 경로 탐색 중...");
+    $result = $world->raycast($start, $end, function(Block $block) {
+        return $this->isSolidBlock($block); // isSolidBlock() 함수를 사용하여 solid 블록만 고려
+    });
 
-            // ✅ 5번까지 랜덤 방향으로 우회 시도
-            for ($i = 0; $i < 5; $i++) {
-                $offsetX = mt_rand(-3, 3);
-                $offsetZ = mt_rand(-3, 3);
-                $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-                $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+    if ($result instanceof RaycastResult) {
+        $block = $result->getHitBlock();
+        Server::getInstance()->broadcastMessage("⚠️ [AI] Raycast: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
+        $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
+        return; // Raycast 성공 시 다른 검사 건너뛰기
+    }
 
-                // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
-                if ($alternativeBlock instanceof Air || $alternativeBlock->isTransparent()) {
-                    $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                        if ($path !== null) {
-                            $this->setPath($mob, $path);
-                        }
-                    });
-                    return;
+
+    // 2. 정면 블록 + 주변 블록 검사 (Raycasting 실패 시)
+    $checkPositions = [
+        $position->addVector($directionVector), // 정면
+        $position->addVector($directionVector->add(new Vector3(1, 0, 0))), // 우측
+        $position->addVector($directionVector->add(new Vector3(-1, 0, 0))), // 좌측
+        $position->addVector($directionVector->add(new Vector3(1, 0, 1))), // 우측 대각선
+        $position->addVector($directionVector->add(new Vector3(1, 0, -1))), // 우측 대각선
+        $position->addVector($directionVector->add(new Vector3(-1, 0, 1))), // 좌측 대각선
+        $position->addVector($directionVector->add(new Vector3(-1, 0, -1))), // 좌측 대각선
+    ];
+
+
+    foreach ($checkPositions as $checkPos) {
+        $block = $world->getBlockAt((int)$checkPos->x, (int)$checkPos->y, (int)$checkPos->z);
+
+        if ($block instanceof Air || $block instanceof TallGrass || $block->isTransparent() || $this->isNonSolidBlock($block)) {
+            continue;
+        }
+
+        if ($this->isSolidBlock($block) && $block->getBoundingBox() !== null && $block->getBoundingBox()->intersectsWith($mob->getBoundingBox())) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 주변 블록 검사: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
+            $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
+            return; // 주변 블록 검사에서 장애물 발견 시 종료
+        }
+    }
+
+
+}
+
+// Helper function to check if a block is solid for collision
+private function isSolidBlock(Block $block): bool {
+    $solidBlocks = [
+        "Stone", "Dirt", "Cobblestone", "Log", "Planks", "Brick", "Sandstone",
+        "Obsidian", "Bedrock", "IronBlock", "GoldBlock", "DiamondBlock",
+        "Concrete", "ConcretePowder",
+        // Add other blocks that *should* stop the AI here. Be specific!
+        // Example: if you want packed ice to be a solid block:
+        // "PackedIce",
+    ];
+
+    $blockName = $block->getName();
+
+    return in_array($blockName, $solidBlocks);
+}
+
+private function isNonSolidBlock(Block $block): bool {
+    $nonSolidBlocks = [
+        "Grass", "TallGrass", "Snow", "Carpet", "Flower", "RedFlower", "YellowFlower",
+        "Mushroom", "Wheat", "Carrot", "Potato", "Beetroot", "NetherWart",
+        "SugarCane", "Cactus", "Reed", "Vine", "LilyPad",
+        "Door", "Trapdoor", "Fence", "FenceGate", "Wall",
+        "GlassPane", "IronBars", "Cauldron", "BrewingStand", "EnchantingTable",
+        "Workbench", "Furnace", "Chest", "TrappedChest", "Dispenser", "Dropper",
+        "Hopper", "Anvil", "Beacon", "DaylightDetector", "NoteBlock",
+        "Piston", "StickyPiston", "Lever", "Button", "PressurePlate",
+        "RedstoneTorch", "RedstoneWire", "Repeater", "Comparator",
+        "Sign", "WallSign", "Painting", "ItemFrame",
+    ];
+
+    $blockName = $block->getName();
+
+    return in_array($blockName, $nonSolidBlocks);
+}
+
+private function initiatePathfind(Living $mob, Vector3 $position, Block $block){
+    // ✅ 5번까지 랜덤 방향으로 우회 시도
+    for ($i = 0; $i < 5; $i++) {
+        $offsetX = mt_rand(-3, 3);
+        $offsetZ = mt_rand(-3, 3);
+        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+        $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+
+        // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
+        if ($alternativeBlock instanceof Air || $alternativeBlock->isTransparent() || $this->isNonSolidBlock($alternativeBlock)) {
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
                 }
-            }
+            });
+            return;
         }
     }
 }
