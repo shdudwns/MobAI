@@ -188,7 +188,7 @@ if ($result instanceof Vector3) { // Raycast는 부딪힌 경우 Vector3를 반�
 
         if ($this->isSolidBlock($block) && $block->getBoundingBox() !== null && $block->getBoundingBox()->intersectsWith($mob->getBoundingBox())) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 주변 블록 검사: 장애물 감지됨! 우회 경로 탐색 중... (Block: " . $block->getName() . ")");
-            $this->initiatePathfind($mob, $position, $block); // 경로 탐색 시작
+            $this->initiatePathfind($mob, $position, $block, $world); // 경로 탐색 시작
             return; // 주변 블록 검사에서 장애물 발견 시 종료
         }
     }
@@ -296,7 +296,7 @@ private function isNonSolidBlock(Block $block): bool {
     return in_array($blockName, $nonSolidBlocks);
 }
 
-private function initiatePathfind(Living $mob, Vector3 $position, Block $block){
+private function initiatePathfind(Living $mob, Vector3 $position, Block $block, World $world){
     // ✅ 5번까지 랜덤 방향으로 우회 시도
     for ($i = 0; $i < 5; $i++) {
         $offsetX = mt_rand(-3, 3);
@@ -306,7 +306,7 @@ private function initiatePathfind(Living $mob, Vector3 $position, Block $block){
 
         // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
         if ($alternativeBlock instanceof Air || $alternativeBlock->isTransparent() || $this->isNonSolidBlock($alternativeBlock)) {
-            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) { 
                 if ($path !== null) {
                     $this->setPath($mob, $path);
                 }
