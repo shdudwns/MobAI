@@ -207,16 +207,16 @@ class Pathfinder {
  */
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
-    $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
+    $logData = "📌 Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
 
     $directions = [
         // ✅ 기본 수평 이동
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
         
-        // ✅ 대각선 이동 추가
+        // ✅ 대각선 이동 (더 자연스럽게 이동)
         [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], 
         
-        // ✅ 점프 가능 여부 확인
+        // ✅ 점프 가능 여부 확인 (1칸 높이 이동)
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
 
         // ✅ 계단형 점프 (한 칸 위로 올라가는 대각선)
@@ -243,17 +243,17 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
         // ✅ 2. 발밑 블록이 단단해야 이동 가능
         if (!$this->isSolidBlock($blockBelow)) {
-            $logData .= "❌ Skipping - No solid block below at ({$x}, {$y - 1}, {$z}) → {$blockBelow->getName()}\n";
+            $logData .= "❌ Skipping (No solid block below) at ({$x}, {$y - 1}, {$z}): {$blockBelow->getName()}\n";
             continue;
         }
 
         // ✅ 3. 머리 위 공간이 2칸 이상 있어야 이동 가능
         if ($this->isSolidBlock($blockAbove)) {
-            $logData .= "❌ Skipping - Block Above is solid at ({$x}, {$y + 1}, {$z}) → {$blockAbove->getName()}\n";
+            $logData .= "❌ Skipping (Block above is solid) at ({$x}, {$y + 1}, {$z}): {$blockAbove->getName()}\n";
             continue;
         }
 
-        // ✅ 4. 유효한 블록 추가
+        // ✅ 4. 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) → {$block->getName()}\n";
     }
