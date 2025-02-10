@@ -237,9 +237,9 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
     // ✅ 탐색된 `neighbors` 값 디버깅 메시지 출력
     Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: {$pos->x}, {$pos->y}, {$pos->z}");
-    foreach ($neighbors as $neighbor) {
+   /* foreach ($neighbors as $neighbor) {
         Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: {$neighbor->x}, {$neighbor->y}, {$neighbor->z}");
-    }
+    }*/
 
     return $neighbors;
 }
