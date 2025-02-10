@@ -184,7 +184,7 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): array {
+    private function getNeighbors(World $world, Vector3 $pos, Living $mob): array {
     $neighbors = [];
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
@@ -201,7 +201,7 @@ class Pathfinder {
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
         // ✅ 발 밑이 Air라도, 한 칸 아래 블록이 Solid면 이동 가능
-        if ($blockBelow instanceof Air && !$blockBelow->isSolid()) {
+        if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
             continue;
         }
@@ -212,11 +212,49 @@ class Pathfinder {
             continue;
         }
 
+        // ✅ 장애물 여부 판단
+        if ($this->isSolidBlock($block) || $this->isSolidBlock($blockAbove)) {
+            Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
+            continue;
+        }
+
         // ✅ 이동 가능한 블록으로 추가
         $neighbors[] = new Vector3($x, $y, $z);
     }
 
     Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
+
+    // ✅ 이동 가능한 이웃이 없으면 장애물 회피 실행
+    if (empty($neighbors)) {
+        $this->avoidObstacle($mob);
+    }
+
     return $neighbors;
+}
+    private function isSolidBlock(Block $block): bool {
+    $nonObstacleBlocks = [ 
+        "grass", "dirt", "stone", "sand", "gravel", "clay", "coarse_dirt",
+        "podzol", "red_sand", "mycelium", "snow", "sandstone", "andesite",
+        "diorite", "granite", "netherrack", "end_stone", "terracotta", "concrete",
+    ];
+
+    $obstacleBlocks = [ 
+        "fence", "fence_gate", "wall", "cobweb", "water", "lava", "magma_block",
+        "soul_sand", "honey_block", "nether_wart_block", "scaffolding", "cactus"
+    ];
+
+    $blockName = strtolower($block->getName());
+
+    // ✅ 이동 가능한 블록이면 false 반환 (장애물 아님)
+    if (in_array($blockName, $nonObstacleBlocks)) {
+        return false;
+    }
+
+    // ✅ 장애물 블록이면 true 반환
+    if (in_array($blockName, $obstacleBlocks) || $block->isSolid()) {
+        return true;
+    }
+
+    return false;
 }
 }
