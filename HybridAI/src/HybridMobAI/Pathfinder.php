@@ -49,7 +49,6 @@ class Pathfinder {
 
         if (isset($closedSet[$currentKey])) continue;
     $closedSet[$currentKey] = true;
-    }
         $currentData = $openSet->extract();
         $current = $currentData['vector'];
         $currentKey = self::vectorToStr($current);
