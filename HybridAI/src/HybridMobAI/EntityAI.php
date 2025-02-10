@@ -438,16 +438,17 @@ public function removePath(Living $mob): void {
 
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     if ($nextPosition instanceof Vector3) {
-        $speed = 0.18; // ✅ 속도 조정
+        $speed = 0.22; // ✅ 속도 증가
         $direction = $nextPosition->subtractVector($mob->getPosition());
 
-        // ✅ 이동 거리가 너무 작으면 강제로 이동
-        if ($direction->lengthSquared() < 0.01) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리가 너무 짧아 강제 이동!");
+        // ✅ 이동 거리가 너무 짧으면 무시 (0.5 블록 이하일 경우)
+        if ($direction->lengthSquared() < 0.25) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 짧음 - 강제 이동 적용!");
             $mob->teleport($nextPosition);
             return;
         }
 
+        // ✅ 이동 방향 설정
         $motion = $direction->normalize()->multiply($speed);
         $mob->setMotion($motion);
 
@@ -455,19 +456,25 @@ public function removePath(Living $mob): void {
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
         
         // ✅ 몬스터가 바라볼 방향 설정
-        $mob->lookAt($nextPosition);
+        $this->lookAt($mob, $nextPosition);
     }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
     $dz = $target->z - $mob->getPosition()->z;
+    $dy = $target->y - $mob->getPosition()->y; // ✅ 높이 차이 계산
 
-    // ✅ Yaw 계산 (고개를 밑으로 안 떨구도록 보정)
+    // ✅ Yaw 계산
     $yaw = rad2deg(atan2(-$dx, $dz));
 
-    // ✅ Pitch 값 수정 (고개를 밑으로 내리지 않도록 보정)
-    $pitch = 0;
+    // ✅ Pitch 계산 (너무 극단적으로 밑을 쳐다보지 않도록 제한)
+    $distanceXZ = sqrt($dx * $dx + $dz * $dz);
+    $pitch = rad2deg(atan2(-$dy, $distanceXZ));
 
-    $mob->setRotation($yaw, $pitch); // ✅ Pitch를 0으로 설정하여 밑을 안 쳐다보게 함
+    // ✅ Pitch 제한 (-45도 ~ 45도)
+    $pitch = max(-45, min(45, $pitch));
+
+    // ✅ 방향 설정
+    $mob->setRotation($yaw, $pitch);
 }
 }
