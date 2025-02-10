@@ -210,8 +210,17 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
 
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 점프 가능 여부 확인
+        // ✅ 기본 수평 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
+        
+        // ✅ 대각선 이동 추가
+        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], 
+        
+        // ✅ 점프 가능 여부 확인
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
+
+        // ✅ 계단형 점프 (한 칸 위로 올라가는 대각선)
+        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1] 
     ];
 
     foreach ($directions as $dir) {
@@ -223,21 +232,22 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 블록 정보 디버깅 로그 추가
+        // ✅ 블록 정보 로그 추가
         $logData .= "🔍 Checking Block at ({$x}, {$y}, {$z}) → {$block->getName()}\n";
 
-        // ✅ 1. 공기(Air) 블록이지만, 이동이 가능한 경우 예외 처리
-        if ($block instanceof Air) {
+        // ✅ 1. 공기(Air) 블록을 제외 (단, 통과 가능한 경우 예외)
+        if ($block instanceof Air && !$this->isPassableBlock($block)) {
+            $logData .= "⚠️ Skipping Air Block at ({$x}, {$y}, {$z})\n";
             continue;
         }
 
-        // ✅ 2. 발밑 블록이 단단한지 확인 (몬스터가 서 있을 수 있는 블록)
+        // ✅ 2. 발밑 블록이 단단해야 이동 가능
         if (!$this->isSolidBlock($blockBelow)) {
             $logData .= "❌ Skipping - No solid block below at ({$x}, {$y - 1}, {$z}) → {$blockBelow->getName()}\n";
             continue;
         }
 
-        // ✅ 3. 머리 위 공간 확인 (2칸 이상 공간 필요)
+        // ✅ 3. 머리 위 공간이 2칸 이상 있어야 이동 가능
         if ($this->isSolidBlock($blockAbove)) {
             $logData .= "❌ Skipping - Block Above is solid at ({$x}, {$y + 1}, {$z}) → {$blockAbove->getName()}\n";
             continue;
@@ -248,7 +258,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) → {$block->getName()}\n";
     }
 
-    // ✅ 파일로 로그 저장
+    // ✅ 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
 
     return $neighbors;
