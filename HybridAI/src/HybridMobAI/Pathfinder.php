@@ -189,7 +189,7 @@ class Pathfinder {
     private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
     ];
 
@@ -202,9 +202,15 @@ class Pathfinder {
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 발 밑이 Air라도, 한 칸 아래 블록이 Solid면 이동 가능
+        // ✅ 현재 몬스터의 발밑 블록인지 체크 (발밑 블록은 장애물이 아님)
+        if ($blockBelow->getPosition()->equals($pos->floor())) {
+            Server::getInstance()->broadcastMessage("✅ [AI] 현재 위치 블록 제외 (이동 가능): {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+            continue;
+        }
+
+        // ✅ 발 밑이 공기(Air)라면 이동 가능 여부 확인
         if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가 (밑이 공기): {$blockBelow->getName()} at {$x}, {$y}, {$z}");
             continue;
         }
 
@@ -226,37 +232,28 @@ class Pathfinder {
 
     Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
 
-    // ✅ 이동 가능한 이웃이 없으면 장애물 회피 실행
-    /*if (empty($neighbors)) {
-        $this->avoidObstacle($mob);
-    }*/
-
     return $neighbors;
 }
     private function isSolidBlock(Block $block): bool {
-    $nonObstacleBlocks = [ 
-        "grass", "dirt", "stone", "sand", "gravel", "clay", "coarse_dirt",
-        "podzol", "red_sand", "mycelium", "snow", "sandstone", "andesite",
-        "diorite", "granite", "netherrack", "end_stone", "terracotta", "concrete",
+    $solidBlockNames = [
+        "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
+        "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
+        "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
     ];
 
-    $obstacleBlocks = [ 
-        "fence", "fence_gate", "wall", "cobweb", "water", "lava", "magma_block",
-        "soul_sand", "honey_block", "nether_wart_block", "scaffolding", "cactus"
+    // ✅ 몬스터가 걸을 수 있는 블록인지 확인 (잔디, 계단, 반블록 등)
+    $walkableBlockNames = [
+        "grass", "gravel", "sand", "stair", "slab", "path", "carpet"
     ];
 
     $blockName = strtolower($block->getName());
 
-    // ✅ 이동 가능한 블록이면 false 반환 (장애물 아님)
-    if (in_array($blockName, $nonObstacleBlocks)) {
+    // ✅ 이동 가능한 블록인지 확인
+    if (in_array($blockName, $walkableBlockNames)) {
         return false;
     }
 
-    // ✅ 장애물 블록이면 true 반환
-    if (in_array($blockName, $obstacleBlocks) || $block->isSolid()) {
-        return true;
-    }
-
-    return false;
+    // ✅ 장애물 블록인지 확인
+    return in_array($blockName, $solidBlockNames);
 }
 }
