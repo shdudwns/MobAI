@@ -246,10 +246,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
             }
         }
 
-        Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: " . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z);
-foreach ($neighbors as $neighbor) {
-    Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
-}
+        Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors));
 
         // 5. 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
