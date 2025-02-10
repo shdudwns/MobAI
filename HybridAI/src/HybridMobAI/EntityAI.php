@@ -411,10 +411,16 @@ public function removePath(Living $mob): void {
 
     if (!empty($path)) {
         $this->setPath($mob, $path);
-        Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
+        Server::getInstance()->broadcastMessage("✅ [AI] 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
+
+        // ✅ 경로 좌표 출력
+        foreach ($path as $step) {
+            Server::getInstance()->broadcastMessage("🛤️ 경로 좌표: {$step->x}, {$step->y}, {$step->z}");
+        }
+
         $navigator->moveAlongPath($mob);
     } else {
-        Server::getInstance()->broadcastMessage("⚠️ 경로 탐색 실패! 기본 이동 유지...");
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 탐색 실패! 기본 이동 유지...");
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
