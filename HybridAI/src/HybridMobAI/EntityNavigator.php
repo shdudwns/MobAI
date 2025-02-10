@@ -5,6 +5,7 @@ namespace HybridMobAI;
 use pocketmine\entity\Living;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\Server;
 
 class EntityNavigator {
 
