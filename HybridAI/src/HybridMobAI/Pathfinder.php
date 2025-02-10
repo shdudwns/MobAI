@@ -184,7 +184,7 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos, Living $mob): array {
+    private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
