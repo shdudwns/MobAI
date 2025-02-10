@@ -221,26 +221,31 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
         $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
 
-        // ✅ 발밑 블록이 공기(Air)거나 너무 얇은 경우 (바닥이 없는 경우 이동 불가)
-        if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
-            if ($blockBelow2 instanceof Air || !$blockBelow2->isSolid()) {
-                $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+        // ✅ 1. 발밑 블록 감지 오류 해결 (blockBelow가 Air라도 아래 블록이 Solid면 이동 가능)
+        if ($blockBelow instanceof Air && !$blockBelow2->isSolid()) {
+            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+            continue;
+        }
+
+        // ✅ 2. 1칸 블록 위 점프 가능하도록 수정 (2칸 이상 블록만 장애물로 판정)
+        if ($this->isSolidBlock($block)) {
+            if (!$this->isSolidBlock($blockAbove)) {
+                $logData .= "✅ Jumpable Block: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
+                $neighbors[] = new Vector3($x, $y + 1, $z);
+                continue;
+            } else {
+                $logData .= "❌ Block Too High (Obstacle): ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
                 continue;
             }
         }
 
-        // ✅ 머리 위 블록이 이동을 막는 경우 (단순한 잔디 블록 제외)
-        if ($this->isSolidBlock($blockAbove) && !$this->isPassableBlock($blockAbove)) {
-            $logData .= "❌ Block Above Solid: ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+        // ✅ 3. 머리 위 장애물 감지 정확성 개선
+        if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            $logData .= "❌ Block Above Solid (Blocked): ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
             continue;
         }
 
-        if ($this->isSolidBlock($blockAbove2) && !$this->isPassableBlock($blockAbove2)) {
-            $logData .= "❌ Block Above2 Solid: ({$x}, " . ($y + 2) . ", {$z}) - " . $blockAbove2->getName() . "\n";
-            continue;
-        }
-
-        // ✅ 공기 블록 제외 (Air 블록은 이동 가능 블록으로 인식하지 않음)
+        // ✅ 4. 공기(Air) 블록은 이동 가능 블록에서 제외
         if ($block instanceof Air) {
             continue;
         }
