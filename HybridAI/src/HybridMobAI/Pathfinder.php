@@ -49,10 +49,12 @@ class Pathfinder {
         $currentKey = self::vectorToStr($current);
         $visitedNodes++;
 
+        // ✅ 이미 방문한 노드는 다시 탐색하지 않도록 함
         if (isset($closedSet[$currentKey])) continue;
         $closedSet[$currentKey] = true;
 
-        if ($current->equals($goal)) {
+        // ✅ 목적지 근처인지 빠르게 확인하여 조기 종료
+        if ($current->distanceSquared($goal) <= 2) {
             $logData .= "✅ 경로 발견! 방문 노드 수: {$visitedNodes}\n";
             file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
             return $this->reconstructPath($cameFrom, $current);
@@ -60,8 +62,11 @@ class Pathfinder {
 
         $neighbors = $this->getNeighbors($world, $current);
 
-        // ✅ 탐색 노드 개수를 줄이기 위해 랜덤 섞기 + 최대 4개만 추가
-        shuffle($neighbors);
+        // ✅ 탐색 범위를 줄이기 위해 이웃 노드를 정렬 후 최대 4개만 선택
+        usort($neighbors, function ($a, $b) use ($goal) {
+            return $a->distanceSquared($goal) <=> $b->distanceSquared($goal);
+        });
+
         $neighbors = array_slice($neighbors, 0, 4);
 
         foreach ($neighbors as $neighbor) {
@@ -85,7 +90,7 @@ class Pathfinder {
     file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
     
     return null;
-}   
+}
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
@@ -205,12 +210,8 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
 
     $directions = [
-    [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-    [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기
-    [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프
-    [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], // 대각선 (같은 높이)
-    [1, -1, 1], [1, -1, -1], [-1, -1, 1], [-1, -1, -1], // 대각선 (아래)
-    [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1]  // 대각선 (위)
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 점프 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
@@ -219,37 +220,22 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $z = (int) $pos->z + $dir[2];
 
         $block = $world->getBlockAt($x, $y, $z);
-        $blockBelow = $world->getBlockAt($x, $y - 1, $z);
-        $blockBelow2 = $world->getBlockAt($x, $y - 2, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // 머리 위 추가 검사
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
 
-        // ✅ 1. 공기(Air) 블록은 무조건 제외
-        if ($block instanceof Air) {
+        // ✅ 1. 공기(Air) 블록 제외
+        if ($block instanceof Air) continue;
+
+        // ✅ 2. 1칸 블록 위 점프 가능 (머리 위 공간 확인)
+        if ($this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
+            $logData .= "✅ Jumpable Block: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
+            $neighbors[] = new Vector3($x, $y + 1, $z);
             continue;
         }
 
-        // ✅ 2. 발밑 블록이 Solid가 아니면 이동 불가 (예외: blockBelow2가 Solid면 가능)
-        if ($blockBelow instanceof Air && $blockBelow2 instanceof Air) {
-            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
-            continue;
-        }
-
-        // ✅ 3. 1칸 블록 위 점프 가능 (머리 위 공간이 있어야 함)
-        if ($this->isSolidBlock($block)) {
-            if (!$this->isSolidBlock($blockAbove)) {
-                $logData .= "✅ Jumpable Block: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
-                $neighbors[] = new Vector3($x, $y + 1, $z);
-                continue;
-            } else {
-                $logData .= "❌ Block Too High (Obstacle): ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
-                continue;
-            }
-        }
-
-        // ✅ 4. 머리 위 장애물 감지 (이동 가능하려면 2칸 이상 공간 필요)
-        if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
-            $logData .= "❌ Block Above Solid (Blocked): ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+        // ✅ 3. 2칸 이상의 장애물 감지
+        if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
+            $logData .= "❌ Block Too High (Obstacle): ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
             continue;
         }
 
@@ -258,7 +244,6 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
 
-    // 파일로 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
 
     return $neighbors;
