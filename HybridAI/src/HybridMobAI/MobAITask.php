@@ -112,10 +112,10 @@ private function handleMobAI(Living $mob): void {
 
     // ✅ 장애물 감지 및 우회
     $ai->avoidObstacle($mob, function () use ($ai, $mob, $navigator) {
-        if ($ai->hasPath($mob)) {
-            $navigator->moveAlongPath($mob);
-        }
-    });
+    if ($ai->hasPath($mob)) {
+        $navigator->moveAlongPath($mob);
+    }
+});
 
     // ✅ 웅덩이 감지 및 탈출
     $ai->escapePit($mob, function () use ($ai, $mob, $navigator) {
