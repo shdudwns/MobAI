@@ -27,7 +27,7 @@ class Pathfinder {
     }
 
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $openSet = new PriorityQueue();
+    $openSet = new \PriorityQueue();
     $closedSet = [];
 
     $cameFrom = [];
