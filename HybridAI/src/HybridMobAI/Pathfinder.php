@@ -226,7 +226,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         }
 
         // 2. 현재 위치한 블록이 Solid인지 확인 (발밑 블록)
-        $currentBlock = $world->getBlockAt($pos->x, $pos->y, $pos->z);
+        $currentBlock = $world->getBlockAt($x, $y, $z);
         if (!$this->isSolidBlock($currentBlock)) { // SolidBlock이 아니면 탐색 중지
             $logData .= "❌ Current Block Not Solid: ({$x}, {$y}, {$z}) - " . $currentBlock->getName() . "\n";
             continue;
