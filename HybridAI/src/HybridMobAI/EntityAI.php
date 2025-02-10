@@ -407,19 +407,15 @@ public function removePath(Living $mob): void {
     public function onPathFound(Living $mob, ?array $path): void {
     $navigator = new EntityNavigator();
     $tracker = new EntityTracker();
-
-    if (!empty($path)) {
+    if ($path !== null && count($path) > 0) {
         $this->setPath($mob, $path);
-        Server::getInstance()->broadcastMessage("✅ [AI] 몬스터 {$mob->getId()} 경로 탐색 성공! 이동 시작...");
+        Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 완료! 이동 시작...");
 
-        // ✅ 경로 좌표 출력
-        foreach ($path as $step) {
-            Server::getInstance()->broadcastMessage("🛤️ 경로 좌표: {$step->x}, {$step->y}, {$step->z}");
-        }
-
+        // 🚀 경로가 설정되었으므로 즉시 이동 시작
         $navigator->moveAlongPath($mob);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 탐색 실패! 기본 이동 유지...");
+        $tracker = new EntityTracker();
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
@@ -434,9 +430,25 @@ public function removePath(Living $mob): void {
 
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     if ($nextPosition instanceof Vector3) {
-        $speed = 0.22;
-        $mob->setMotion($nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed));
+        $speed = 0.18; // ✅ 속도 조정 (너무 크면 순간이동처럼 됨)
+        $motion = $nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed);
+
+        // ✅ 이동 방향 적용
+        $mob->setMotion($motion);
+
+        // ✅ 몬스터가 바라볼 방향 설정
         $mob->lookAt($nextPosition);
+        
+        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
     }
+}
+    public function lookAt(Vector3 $target): void {
+    $dx = $target->x - $this->getPosition()->x;
+    $dz = $target->z - $this->getPosition()->z;
+
+    // ✅ Yaw 계산 (고개를 밑으로 안 떨구도록 보정)
+    $yaw = rad2deg(atan2(-$dx, $dz));
+
+    $this->setRotation($yaw, 0); // ✅ Pitch를 0으로 설정하여 밑을 안 쳐다보게 함
 }
 }
