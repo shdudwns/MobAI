@@ -28,7 +28,7 @@ class EntityNavigator {
             function (?array $path) use ($mob, $ai) {
                 if (!empty($path)) {
                     $ai->setPath($mob, $path);
-                    Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 새로운 경로 탐색 완료!");
+                    //Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 새로운 경로 탐색 완료!");
                     $ai->moveAlongPath($mob);
                 }
             }
