@@ -50,8 +50,9 @@ class Pathfinder {
         $currentKey = self::vectorToStr($current);
         $visitedNodes++;
 
-        if (isset($closedSet[$currentKey])) continue; // 이미 처리된 노드 건너뜀
-        $closedSet[$currentKey] = true; // 닫힌 목록에 추가
+        // ✅ 이미 방문한 노드이면 건너뛰기
+        if (isset($closedSet[$currentKey])) continue;
+        $closedSet[$currentKey] = true;
 
         if ($current->equals($goal)) {
             Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
@@ -60,6 +61,8 @@ class Pathfinder {
 
         foreach ($this->getNeighbors($world, $current) as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
+            if (isset($closedSet[$neighborKey])) continue; // ✅ 이미 방문한 노드는 건너뜀
+
             $tentativeGScore = $gScore[$currentKey] + 1;
 
             if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
@@ -73,7 +76,7 @@ class Pathfinder {
 
     Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
     return null;
-}    
+}
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
@@ -210,46 +213,35 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
         $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
-        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // 추가적인 머리 위 블록 검사
 
-        // 이동 가능한 블록 체크 (공기가 아닌 경우만)
-        if ($blockBelow === null || $this->isWalkableBlock($blockBelow)) {
-            // 머리 위 공간 검사 (3칸)
-            if (!$this->isSolidBlock($blockAbove) && !$this->isSolidBlock($blockAbove2) && !$this->isSolidBlock($blockAbove3)) {
-                // 장애물 여부 판단 (isSolidBlock 체크)
-                if ($this->isSolidBlock($block)) {
-                    // 장애물이지만 걸어갈 수 있는 블록인 경우
-                    if ($this->isWalkableBlock($block)) {
-                        $neighbors[] = new Vector3($x, $y, $z); // 이동 가능한 블록으로 추가
-                    } else {
-                        continue; // 이동 불가능한 장애물은 건너뜀
-                    }
-                } else {
-                    // 장애물이 아닌 경우
-                    $neighbors[] = new Vector3($x, $y, $z);
-                }
-            }
+        // ✅ 머리 위 공간 검사 (2칸 확보 필요)
+        if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2)) {
+            continue;
+        }
+
+        // ✅ 장애물 감지 (벽, 2칸 이상 블록이 장애물)
+        if ($this->isObstacle($block)) {
+            continue;
+        }
+
+        // ✅ 일반적인 이동 가능 블록 체크
+        if (!$this->isSolidBlock($block) && $this->isWalkableBlock($blockBelow)) {
+            $neighbors[] = new Vector3($x, $y, $z);
         }
     }
 
     return $neighbors;
 }
 
-/**
- * 이동 가능한 노드인지 확인
- */
-private function isWalkable(World $world, Vector3 $pos): bool {
-    $block = $world->getBlockAt($pos->x, $pos->y, $pos->z);
-
-    // 이동 가능한 블록인지 확인 (예: 공기, 풀 등)
-    $walkableBlockNames = [
-        "grass", "gravel", "sand", "stair", "slab", "path", "carpet",
-        "farmland", "snow_layer", "soul_sand", "grass_path" // 추가적인 이동 가능 블록
+    private function isObstacle(Block $block): bool {
+    $obstacleBlocks = [
+        "fence", "wall", "iron_door", "wooden_door", "trapdoor",
+        "cactus", "fire", "lava", "water"
     ];
 
     $blockName = strtolower($block->getName());
 
-    return in_array($blockName, $walkableBlockNames);
+    return in_array($blockName, $obstacleBlocks) || $this->isSolidBlock($block);
 }
 
 private function isSolidBlock(Block $block): bool {
