@@ -9,7 +9,7 @@ use pocketmine\block\Block;
 use pocketmine\block\Air;
 
 class Pathfinder {
-    private int $maxPathLength = 5000;
+    private int $maxPathLength = 500;
     private array $vectorPool = [];
     private static function vectorToStr(Vector3 $vector): string {
         return "{$vector->x}:{$vector->y}:{$vector->z}";
