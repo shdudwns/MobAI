@@ -50,6 +50,7 @@ class Pathfinder {
         $closedSet[$currentKey] = true;
 
         if ($current->equals($goal)) {
+            Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
             return $this->reconstructPath($cameFrom, $current);
         }
 
