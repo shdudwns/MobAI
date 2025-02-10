@@ -46,7 +46,7 @@ class Pathfinder {
             return null;
         }
 
-        $current = $openSet->pop(); // 우선순위 큐에서 노드 추출
+        $current = $openSet->extract(); // 우선순위 큐에서 노드 추출
         $currentKey = self::vectorToStr($current);
         $visitedNodes++;
 
