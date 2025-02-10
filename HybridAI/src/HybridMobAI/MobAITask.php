@@ -96,7 +96,7 @@ private function handleMobAI(Living $mob): void {
                 function (?array $path) use ($mob, $ai, $navigator) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
-                        $navigator->moveAlongPath($mob);
+                        $ai->moveAlongPath($mob);
                     } else {
                         Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음");
                     }
