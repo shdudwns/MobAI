@@ -231,23 +231,6 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 }
 
 /**
- * 월드 경계 내에 있는지 확인
- */
-private function isWithinWorldBounds(Vector3 $pos): bool {
-    $world = Server::getInstance()->getWorldManager()->getDefaultWorld();
-    $minX = 0;
-    $maxX = $world->getMaxX();
-    $minY = 0;
-    $maxY = $world->getMaxY();
-    $minZ = 0;
-    $maxZ = $world->getMaxZ();
-
-    return $pos->x >= $minX && $pos->x <= $maxX &&
-           $pos->y >= $minY && $pos->y <= $maxY &&
-           $pos->z >= $minZ && $pos->z <= $maxZ;
-}
-
-/**
  * 이동 가능한 노드인지 확인
  */
 private function isWalkable(World $world, Vector3 $pos): bool {
