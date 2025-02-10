@@ -56,7 +56,6 @@ private function handleMobAI(Living $mob): void {
     $detector = new ObstacleDetector($this->plugin);
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
 
-    // ✅ 기본 AI: 플레이어 추적 또는 랜덤 이동
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
@@ -83,14 +82,13 @@ private function handleMobAI(Living $mob): void {
 
         $ai->setTarget($mob, $player->getPosition());
 
-        // ✅ 기존 경로가 있으면 적용, 없으면 기본 이동 유지
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
 
-        // ✅ 경로 갱신 주기 (20~40틱 사이 업데이트)
+        // ✅ 탐색 주기를 40틱 이상으로 제한 (2초에 한 번)
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
 
@@ -104,28 +102,25 @@ private function handleMobAI(Living $mob): void {
                 $player->getPosition(),
                 $algorithm,
                 function (?array $path) use ($mob, $ai, $navigator) {
-                    $ai->onPathFound($mob, $path);
+                    if ($path !== null) {
+                        $ai->setPath($mob, $path);
+                        $navigator->moveAlongPath($mob);
+                    } else {
+                        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음: 장애물 회피 시도");
+                        $ai->avoidObstacle($mob);
+                    }
                 }
             );
         }
     }
 
-    // ✅ 장애물 감지 및 우회
-    $ai->avoidObstacle($mob, function () use ($ai, $mob, $navigator) {
-    if ($ai->hasPath($mob)) {
-        $navigator->moveAlongPath($mob);
-    }
-});
+    // ✅ 장애물 감지 및 우회 (이제 내부에서 `findPathAsync()` 호출 X)
+    //$ai->avoidObstacle($mob);
 
-    // ✅ 웅덩이 감지 및 탈출
-    $ai->escapePit($mob, function () use ($ai, $mob, $navigator) {
-        if ($ai->hasPath($mob)) {
-            $navigator->moveAlongPath($mob);
-        }
-    });
+    // ✅ 웅덩이 감지 및 탈출 (이제 내부에서 `findPathAsync()` 호출 X)
+    //$ai->escapePit($mob);
 
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
-    // ✅ 수영 기능 적용
     $this->handleSwimming($mob);
 }
 
