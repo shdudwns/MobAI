@@ -225,9 +225,9 @@ class Pathfinder {
     Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
 
     // ✅ 이동 가능한 이웃이 없으면 장애물 회피 실행
-    if (empty($neighbors)) {
+    /*if (empty($neighbors)) {
         $this->avoidObstacle($mob);
-    }
+    }*/
 
     return $neighbors;
 }
