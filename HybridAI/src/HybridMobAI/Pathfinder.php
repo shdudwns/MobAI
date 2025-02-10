@@ -228,7 +228,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         // 2. 현재 위치한 블록이 Solid인지 확인 (발밑 블록)
         $currentBlock = $world->getBlockAt($pos->x, $pos->y, $pos->z);
         if (!$this->isSolidBlock($currentBlock)) { // SolidBlock이 아니면 탐색 중지
-            $logData .= "❌ Current Block Not Solid: ({$pos->x}, {$pos->y}, {$pos->z}) - " . $currentBlock->getName() . "\n";
+            $logData .= "❌ Current Block Not Solid: ({$x}, {$y}, {$z}) - " . $currentBlock->getName() . "\n";
             continue;
         }
 
@@ -250,6 +250,11 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
+
+    Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: " . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z);
+foreach ($neighbors as $neighbor) {
+    Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
+}
 
     // 파일로 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
