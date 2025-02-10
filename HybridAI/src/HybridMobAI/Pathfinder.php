@@ -29,14 +29,12 @@ class Pathfinder {
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $closedSet = [];
-
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
     $visitedNodes = 0;
 
-    $startKey = self::vectorToStr($start);
-    $openSet->insert($start, -$fScore[$startKey]); // 초기 노드 추가
+    $openSet->insert($start, -$fScore[self::vectorToStr($start)]);
 
     Server::getInstance()->broadcastMessage("🔍 [AI] A* 탐색 시작: {$start->x}, {$start->y}, {$start->z} → {$goal->x}, {$goal->y}, {$goal->z}");
 
@@ -46,11 +44,11 @@ class Pathfinder {
             return null;
         }
 
-        $current = $openSet->extract(); // 우선순위 큐에서 노드 추출
+        $current = $openSet->extract();
         $currentKey = self::vectorToStr($current);
         $visitedNodes++;
 
-        // ✅ 이미 방문한 노드이면 건너뛰기
+        // ✅ 이미 방문한 노드는 무시
         if (isset($closedSet[$currentKey])) continue;
         $closedSet[$currentKey] = true;
 
@@ -61,7 +59,7 @@ class Pathfinder {
 
         foreach ($this->getNeighbors($world, $current) as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
-            if (isset($closedSet[$neighborKey])) continue; // ✅ 이미 방문한 노드는 건너뜀
+            if (isset($closedSet[$neighborKey])) continue;
 
             $tentativeGScore = $gScore[$currentKey] + 1;
 
@@ -69,7 +67,7 @@ class Pathfinder {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-                $openSet->insert($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에 추가
+                $openSet->insert($neighbor, -$fScore[$neighborKey]);
             }
         }
     }
@@ -199,9 +197,9 @@ class Pathfinder {
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1] // 내려가기 가능 여부 확인
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 한 칸 내려가기
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 한 칸 점프
     ];
 
     foreach ($directions as $dir) {
@@ -212,24 +210,31 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
 
-        // ✅ 머리 위 공간 검사 (2칸 확보 필요)
-        if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2)) {
+        // ✅ 머리 위 공간이 비어 있어야 이동 가능
+        if ($this->isSolidBlock($blockAbove)) {
             continue;
         }
 
-        // ✅ 장애물 감지 (벽, 2칸 이상 블록이 장애물)
+        // ✅ 한 칸 내려가는 경우 (바닥이 있어야 함)
+        if ($dir[1] === -1 && !$this->isSolidBlock($blockBelow)) {
+            continue;
+        }
+
+        // ✅ 한 칸 점프하는 경우 (현재 위치에서 점프 가능해야 함)
+        if ($dir[1] === 1 && $this->isSolidBlock($block)) {
+            continue;
+        }
+
+        // ✅ 장애물 감지 (벽, 2칸 이상 블록)
         if ($this->isObstacle($block)) {
             continue;
         }
 
-        // ✅ 일반적인 이동 가능 블록 체크
-        if (!$this->isSolidBlock($block) && $this->isWalkableBlock($blockBelow)) {
-            $neighbors[] = new Vector3($x, $y, $z);
-        }
+        // ✅ 이동 가능한 블록 추가
+        $neighbors[] = new Vector3($x, $y, $z);
     }
-
+    Server::getInstance()->broadcastMessage($neighbors);
     return $neighbors;
 }
 
