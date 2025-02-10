@@ -212,8 +212,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부 확인
-        [1, 1, 1], [-1, 1, -1], [-1, 1, 1], [1, 1, -1], // 대각선 점프
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1] // 내려가기 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
@@ -224,40 +223,30 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
 
-        // ✅ 1. 공기(Air) 블록은 제외
+        // ✅ 공중 블록이면 제외
         if ($block instanceof Air) {
             continue;
         }
 
-        // ✅ 2. 발밑 블록이 Solid가 아니면 이동 불가
+        // ✅ 발밑 블록이 단단하지 않으면 제외
         if (!$this->isSolidBlock($blockBelow)) {
-            $logData .= "❌ Skipping: No solid block below at ({$x}, " . ($y - 1) . ", {$z}) → " . $blockBelow->getName() . "\n";
+            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
             continue;
         }
 
-        // ✅ 3. 머리 위 블록이 있을 경우 이동 불가
-        if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2)) {
-            $logData .= "❌ Skipping: Block above at ({$x}, " . ($y + 1) . ", {$z}) → " . $blockAbove->getName() . "\n";
-            continue;
-        }
-
-        // ✅ 4. 점프 가능한 블록 (한 칸 블록이면 이동 가능)
+        // ✅ 1칸 점프 가능하도록 수정 (머리 위 공간 확보 필요)
         if ($this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
             $neighbors[] = new Vector3($x, $y + 1, $z);
-            $logData .= "✅ Jumpable Block: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
             continue;
         }
 
-        // ✅ 5. 최종 이동 가능 블록 추가
+        // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
 
-    // 파일로 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
-
     return $neighbors;
 }
     
