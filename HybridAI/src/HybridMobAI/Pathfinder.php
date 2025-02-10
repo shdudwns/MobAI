@@ -47,6 +47,9 @@ class Pathfinder {
             return null;
         }
 
+        if (isset($closedSet[$currentKey])) continue;
+    $closedSet[$currentKey] = true;
+    }
         $currentData = $openSet->extract();
         $current = $currentData['vector'];
         $currentKey = self::vectorToStr($current);
@@ -204,8 +207,7 @@ class Pathfinder {
     }
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
-    // 유클리드 거리 사용
-    return sqrt(pow($a->x - $b->x, 2) + pow($a->y - $b->y, 2) + pow($a->z - $b->z, 2));
+    return abs($a->x - $b->x) + abs($a->y - $b->y) + abs($a->z - $b->z);
 }
 
 /**
