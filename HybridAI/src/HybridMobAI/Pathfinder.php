@@ -167,13 +167,6 @@ class Pathfinder {
         return null;
     }
 
-    private function heuristic(Vector3 $a, Vector3 $b): float {
-    $dx = abs($a->x - $b->x);
-    $dy = abs($a->y - $b->y);
-    $dz = abs($a->z - $b->z);
-    return ($dx + $dz) + ($dy * 2); // ✅ 높이(y) 차이에 더 높은 가중치 부여
-}
-
     private function reconstructPath(array $cameFrom, Vector3 $current): array
     {
         $path = [$current];
