@@ -188,7 +188,6 @@ class EntityAI {
         $hitBlock = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y, (int) $hitPos->z);
         $blockAbove = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y + 1, (int) $hitPos->z);
 
-        // ✅ 앞 블록이 장애물이고, 위에도 블록이 있다면 몬스터가 점프할 수 없음 → 장애물 감지
         if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
             $this->initiatePathfind($mob, $position, $hitBlock, $world, function (?array $path) use ($mob) {
