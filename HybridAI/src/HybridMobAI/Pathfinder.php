@@ -7,7 +7,7 @@ use pocketmine\world\World;
 use pocketmine\Server;
 
 class Pathfinder {
-    private int $maxPathLength = 500;
+    private int $maxPathLength = 5000;
     private array $vectorPool = [];
     private static function vectorToStr(Vector3 $vector): string {
         return "{$vector->x}:{$vector->y}:{$vector->z}";
@@ -35,8 +35,8 @@ class Pathfinder {
         $visitedNodes = 0;
 
         while (!$openSet->isEmpty()) {
-    if ($visitedNodes >= $this->maxPathLength) {
-        Server::getInstance()->broadcastMessage("❌ A* 탐색 중단: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+    if ($visitedNodes >= ($this->maxPathLength + ($this->maxPathLength * 0.5))) {
+        Server::getInstance()->broadcastMessage("❌ A* 탐색 중단: 탐색 노드 초과 ({$visitedNodes})");
         return null;
     }
             $current = $openSet->extract();
@@ -159,13 +159,12 @@ class Pathfinder {
         return null;
     }
 
-    private function heuristic(Vector3 $a, Vector3 $b): float
-    {
-        $dx = abs($a->x - $b->x);
-        $dy = abs($a->y - $b->y);
-        $dz = abs($a->z - $b->z);
-        return $dx + $dy + $dz; // 맨해튼 거리 사용
-    }
+    private function heuristic(Vector3 $a, Vector3 $b): float {
+    $dx = abs($a->x - $b->x);
+    $dy = abs($a->y - $b->y);
+    $dz = abs($a->z - $b->z);
+    return ($dx + $dz) + ($dy * 2); // ✅ 높이(y) 차이에 더 높은 가중치 부여
+}
 
     private function reconstructPath(array $cameFrom, Vector3 $current): array
     {
@@ -185,38 +184,32 @@ class Pathfinder {
         // ✅ 기본 수평 이동
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
 
-        // ✅ 대각선 이동 (우회 가능)
-        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1],
+        // ✅ 위로 이동 (한 칸 장애물 넘기)
+        [0, 1, 0],
 
-        // ✅ 위로 이동 (점프 가능할 경우만)
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
-
-        // ✅ 계단 오르기 (한 칸 위 대각선)
-        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1],
-
-        // ✅ 아래로 이동 (높이가 한 칸 차이일 때만)
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1]
+        // ✅ 아래로 이동 (한 칸 높이 차이 허용)
+        [0, -1, 0]
     ];
 
     foreach ($directions as $dir) {
-    $x = (int) $pos->x + $dir[0];
-    $y = (int) $pos->y + $dir[1];
-    $z = (int) $pos->z + $dir[2];
+        $x = (int) $pos->x + $dir[0];
+        $y = (int) $pos->y + $dir[1];
+        $z = (int) $pos->z + $dir[2];
 
-    $block = $world->getBlockAt($x, $y, $z);
-    $blockBelow = $world->getBlockAt($x, $y - 1, $z);
-    $blockAbove = $world->getBlockAt($x, $y + 1, $z); // 머리 위 블록 체크
+        $block = $world->getBlockAt($x, $y, $z);
+        $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+        $blockAbove = $world->getBlockAt($x, $y + 1, $z); // 머리 위 블록 체크
 
-    // ✅ 장애물 위로 이동할 수 있는 경우 추가
-    if ($block->isSolid() && !$blockAbove->isSolid()) {
-        $neighbors[] = new Vector3($x, $y + 1, $z);
+        // ✅ 장애물 위로 이동 가능 여부 확인
+        if ($dir[1] === 1 && $block->isSolid() && !$blockAbove->isSolid()) {
+            $neighbors[] = new Vector3($x, $y + 1, $z);
+        }
+
+        // ✅ 일반적인 이동 가능 여부 확인
+        if (!$block->isSolid() && $blockBelow->isSolid()) {
+            $neighbors[] = new Vector3($x, $y, $z);
+        }
     }
-    
-    // ✅ 일반적인 이동 가능 여부 확인
-    if (!$block->isSolid() && $blockBelow->isSolid()) {
-        $neighbors[] = new Vector3($x, $y, $z);
-    }
-}
 
     return $neighbors;
 }
