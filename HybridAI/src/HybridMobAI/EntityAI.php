@@ -168,14 +168,14 @@ class EntityAI {
     public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $yaw = (float)$mob->getLocation()->yaw;
+    $yaw = (float) $mob->getLocation()->yaw;
 
     if ($yaw === null) {
         Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
-    // ✅ 몬스터 눈높이 기준 장애물 감지 (광선 추적)
+    // ✅ 몬스터의 정면을 검사 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2));
@@ -185,8 +185,11 @@ class EntityAI {
     });
 
     if ($hitPos instanceof Vector3) {
-        $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
-        if ($this->isSolidBlock($hitBlock)) {
+        $hitBlock = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y, (int) $hitPos->z);
+        $blockAbove = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y + 1, (int) $hitPos->z);
+
+        // ✅ 앞 블록이 장애물이고, 위에도 블록이 있다면 몬스터가 점프할 수 없음 → 장애물 감지
+        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
             $this->initiatePathfind($mob, $position, $hitBlock, $world, function (?array $path) use ($mob) {
                 if (!empty($path)) {
@@ -194,10 +197,10 @@ class EntityAI {
                     $navigator = new EntityNavigator();
                     Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 적용!");
                     $navigator->moveAlongPath($mob);
-    } else {
-        Server::getInstance()->broadcastMessage("❌ [AI] 우회 실패! 기존 이동 유지...");
-    }
-});
+                } else {
+                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 실패! 기존 이동 유지...");
+                }
+            });
             return;
         }
     }
@@ -269,33 +272,30 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
 }
 // Helper function to check if a block is solid for collision
 private function isSolidBlock(Block $block): bool {
-    $solidBlockNames = [  // Use block names (strings) instead of IDs
-        "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
-        "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
-        "concrete", "concrete_powder",  // ... other solid blocks
+    $nonObstacleBlocks = [ 
+        "grass", "dirt", "stone", "sand", "gravel", "clay", "coarse_dirt",
+        "podzol", "red_sand", "mycelium", "snow", "sandstone", "andesite",
+        "diorite", "granite", "netherrack", "end_stone", "terracotta", "concrete",
     ];
 
-    $nonSolidBlockNames = [
-        "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
-        "mushroom", "wheat", "carrot", "potato", "beetroot", "nether_wart",
-        "sugar_cane", "cactus", "reed", "vine", "lily_pad",
-        "door", "trapdoor", "fence", "fence_gate", "wall",
-        "glass_pane", "iron_bars", "cauldron", "brewing_stand", "enchanting_table",
-        "workbench", "furnace", "chest", "trapped_chest", "dispenser", "dropper",
-        "hopper", "anvil", "beacon", "daylight_detector", "note_block",
-        "piston", "sticky_piston", "lever", "button", "pressure_plate",
-        "redstone_torch", "redstone_wire", "repeater", "comparator",
-        "sign", "wall_sign", "painting", "item_frame",
-        // ... other non-solid blocks
+    $obstacleBlocks = [ 
+        "fence", "fence_gate", "wall", "cobweb", "water", "lava", "magma_block",
+        "soul_sand", "honey_block", "nether_wart_block", "scaffolding", "cactus"
     ];
 
-    $blockName = strtolower($block->getName()); // Get the block name (string), convert to lowercase
+    $blockName = strtolower($block->getName());
 
-    if (in_array($blockName, $nonSolidBlockNames)) {
-        return false; // Definitely not solid
+    // ✅ 이동 가능한 블록이면 false 반환 (장애물 아님)
+    if (in_array($blockName, $nonObstacleBlocks)) {
+        return false;
     }
 
-    return true;
+    // ✅ 장애물 블록이면 true 반환
+    if (in_array($blockName, $obstacleBlocks) || $block->isSolid()) {
+        return true;
+    }
+
+    return false;
 }
 
 private function isNonSolidBlock(Block $block): bool {
