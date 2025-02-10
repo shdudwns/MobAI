@@ -234,7 +234,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
     }
-    Server::getInstance()->broadcastMessage($neighbors);
+    Server::getInstance()->broadcastMessage("앞에 블록수: {$neighbors}");
     return $neighbors;
 }
 
