@@ -27,13 +27,16 @@ class Pathfinder {
     }
 
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $openSet = new \SplPriorityQueue();
-    $openSet->insert($start, 0);
+    $openSet = new PriorityQueue();
+    $closedSet = [];
 
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
     $visitedNodes = 0;
+
+    $startKey = self::vectorToStr($start);
+    $openSet->push($start, -$fScore[$startKey]); // 초기 노드 추가
 
     Server::getInstance()->broadcastMessage("🔍 [AI] A* 탐색 시작: {$start->x}, {$start->y}, {$start->z} → {$goal->x}, {$goal->y}, {$goal->z}");
 
@@ -43,8 +46,12 @@ class Pathfinder {
             return null;
         }
 
-        $current = $openSet->extract();
+        $current = $openSet->pop(); // 우선순위 큐에서 노드 추출
+        $currentKey = self::vectorToStr($current);
         $visitedNodes++;
+
+        if (isset($closedSet[$currentKey])) continue; // 이미 처리된 노드 건너뜀
+        $closedSet[$currentKey] = true; // 닫힌 목록에 추가
 
         if ($current->equals($goal)) {
             Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
@@ -53,21 +60,20 @@ class Pathfinder {
 
         foreach ($this->getNeighbors($world, $current) as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
-            $tentativeGScore = $gScore[self::vectorToStr($current)] + 1;
+            $tentativeGScore = $gScore[$currentKey] + 1;
 
             if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-                $openSet->insert($neighbor, -$fScore[$neighborKey]);
+                $openSet->push($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에 추가
             }
         }
     }
 
     Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
     return null;
-}
-    
+}    
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
