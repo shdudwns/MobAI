@@ -208,13 +208,14 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], // 대각선 (같은 높이)
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프
-        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1]  // 대각선 (위)
+        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1],  // 대각선 (위)
+        [0, 1, 0] // 현재 위치 바로 위
     ];
 
     foreach ($directions as $dir) {
-        $x = (int) $pos->x + $dir[0];
-        $y = (int) $pos->y + $dir[1];
-        $z = (int) $pos->z + $dir[2];
+        $x = (int)round($pos->x) + $dir[0]; // (int) 추가 및 round() 사용
+        $y = (int)round($pos->y) + $dir[1]; // (int) 추가 및 round() 사용
+        $z = (int)round($pos->z) + $dir[2]; // (int) 추가 및 round() 사용
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
@@ -226,7 +227,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         }
 
         // 2. 현재 위치한 블록이 Solid인지 확인 (발밑 블록)
-        $currentBlock = $world->getBlockAt($x, $y, $z);
+        $currentBlock = $world->getBlockAt((int)round($x), (int)round($y), (int)round($z)); // round()와 (int) 추가
         if (!$this->isSolidBlock($currentBlock)) { // SolidBlock이 아니면 탐색 중지
             $logData .= "❌ Current Block Not Solid: ({$x}, {$y}, {$z}) - " . $currentBlock->getName() . "\n";
             continue;
@@ -246,9 +247,23 @@ private function getNeighbors(World $world, Vector3 $pos): array {
             }
         }
 
-        // 5. 이동 가능한 블록 추가
+        // 5. 대각선 이동 시 모서리 체크 (추가)
+        if ($dir[0] != 0 && $dir[2] != 0) { // 대각선 이동인 경우
+            $cornerBlock = $world->getBlockAt((int)round($pos->x) + $dir[0], (int)round($pos->y), (int)round($pos->z) + $dir[2]);
+            if (!$this->isPassableBlock($cornerBlock)) {
+                $logData .= "❌ Corner Block Not Passable: ({$x}, {$y}, {$z}) - " . $cornerBlock->getName() . "\n";
+                continue;
+            }
+        }
+
+        // 6. 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
+    }
+
+    Server::getInstance()->broadcastMessage(" [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: " . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z);
+    foreach ($neighbors as $neighbor) {
+        Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
     }
 
     Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: " . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z);
@@ -261,6 +276,7 @@ foreach ($neighbors as $neighbor) {
 
     return $neighbors;
 }
+
 
 private function isPassableBlock(Block $block): bool {
     $passableBlocks = [
