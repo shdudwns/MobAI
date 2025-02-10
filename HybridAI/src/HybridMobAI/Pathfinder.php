@@ -4,6 +4,7 @@ namespace HybridMobAI;
 
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
+use pocketmine\Server;
 
 class Pathfinder {
     private int $maxPathLength = 50;
