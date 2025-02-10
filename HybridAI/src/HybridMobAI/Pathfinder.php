@@ -40,7 +40,7 @@ class Pathfinder {
 
     while (!$openSet->isEmpty()) {
         if ($visitedNodes >= $this->maxPathLength) {
-            Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+            //Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
             return null;
         }
 
@@ -48,7 +48,6 @@ class Pathfinder {
         $currentKey = self::vectorToStr($current);
         $visitedNodes++;
 
-        // ✅ 이미 방문한 노드는 무시
         if (isset($closedSet[$currentKey])) continue;
         $closedSet[$currentKey] = true;
 
@@ -57,7 +56,16 @@ class Pathfinder {
             return $this->reconstructPath($cameFrom, $current);
         }
 
-        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+        $neighbors = $this->getNeighbors($world, $current);
+
+        // ✅ A* 탐색 중 `neighbors` 값 출력
+        Server::getInstance()->broadcastMessage("🔍 [AI] 탐색 중 neighbors 수: " . count($neighbors) . " | 위치: {$current->x}, {$current->y}, {$current->z}");
+        
+        foreach ($neighbors as $neighbor) {
+            Server::getInstance()->broadcastMessage("➡️ [AI] 경로 가능 블록: {$neighbor->x}, {$neighbor->y}, {$neighbor->z}");
+        }
+
+        foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
             if (isset($closedSet[$neighborKey])) continue;
 
@@ -73,34 +81,6 @@ class Pathfinder {
     }
 
     Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
-    return null;
-}
-    public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $openSet = new \SplPriorityQueue();
-    $openSet->insert($start, 0);
-
-    $cameFrom = [];
-    $cost = [self::vectorToStr($start) => 0];
-
-    while (!$openSet->isEmpty()) {
-        $current = $openSet->extract();
-        $currentKey = self::vectorToStr($current);
-
-        if ($current->equals($goal)) {
-            return $this->reconstructPath($cameFrom, $current);
-        }
-
-        foreach ($this->getNeighbors($world, $current) as $neighbor) {
-            $neighborKey = self::vectorToStr($neighbor);
-            $newCost = $cost[$currentKey] + 1;
-
-            if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
-                $cameFrom[$neighborKey] = $current;
-                $cost[$neighborKey] = $newCost;
-                $openSet->insert($neighbor, -$newCost);
-            }
-        }
-    }
     return null;
 }
     
@@ -197,9 +177,9 @@ class Pathfinder {
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 한 칸 내려가기
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 한 칸 점프
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 한 칸 점프 가능
     ];
 
     foreach ($directions as $dir) {
@@ -210,30 +190,34 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-
-        // ✅ 머리 위 공간이 비어 있어야 이동 가능
+        
+        // ✅ 장애물(벽, 2칸 이상 블록) 감지
         if ($this->isSolidBlock($blockAbove)) {
             continue;
         }
 
-        // ✅ 한 칸 내려가는 경우 (바닥이 있어야 함)
+        // ✅ 한 칸 내려가기 가능 여부 체크
         if ($dir[1] === -1 && !$this->isSolidBlock($blockBelow)) {
             continue;
         }
 
-        // ✅ 한 칸 점프하는 경우 (현재 위치에서 점프 가능해야 함)
+        // ✅ 한 칸 점프 가능 여부 체크
         if ($dir[1] === 1 && $this->isSolidBlock($block)) {
             continue;
         }
 
-        // ✅ 장애물 감지 (벽, 2칸 이상 블록)
-        if ($this->isObstacle($block)) {
-            continue;
+        // ✅ 이동 가능 블록 체크
+        if (!$this->isObstacle($block)) {
+            $neighbors[] = new Vector3($x, $y, $z);
         }
-
-        // ✅ 이동 가능한 블록 추가
-        $neighbors[] = new Vector3($x, $y, $z);
     }
+
+    // ✅ 탐색된 `neighbors` 값 디버깅 메시지 출력
+    Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: {$pos->x}, {$pos->y}, {$pos->z}");
+    foreach ($neighbors as $neighbor) {
+        Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: {$neighbor->x}, {$neighbor->y}, {$neighbor->z}");
+    }
+
     return $neighbors;
 }
 
