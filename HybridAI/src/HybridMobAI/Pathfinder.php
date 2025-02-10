@@ -33,7 +33,11 @@ class Pathfinder {
         $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
         $visitedNodes = 0;
 
-        while (!$openSet->isEmpty() && $visitedNodes < $this->maxPathLength) {
+        while (!$openSet->isEmpty()) {
+    if ($visitedNodes >= $this->maxPathLength) {
+        Server::getInstance()->broadcastMessage("❌ A* 탐색 중단: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+        return null;
+    }
             $current = $openSet->extract();
             $visitedNodes++;
             if ($current->equals($goal)) {
@@ -194,17 +198,24 @@ class Pathfinder {
     ];
 
     foreach ($directions as $dir) {
-        $x = $pos->x + $dir[0];
-        $y = $pos->y + $dir[1];
-        $z = $pos->z + $dir[2];
+    $x = (int) $pos->x + $dir[0];
+    $y = (int) $pos->y + $dir[1];
+    $z = (int) $pos->z + $dir[2];
 
-        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
-        $blockBelow = $world->getBlockAt((int)$x, (int)($y - 1), (int)$z);
+    $block = $world->getBlockAt($x, $y, $z);
+    $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+    $blockAbove = $world->getBlockAt($x, $y + 1, $z); // 머리 위 블록 체크
 
-        if (!$block->isSolid() && $blockBelow->isSolid()) {
-            $neighbors[] = new Vector3($x, $y, $z);
-        }
+    // ✅ 장애물 위로 이동할 수 있는 경우 추가
+    if ($block->isSolid() && !$blockAbove->isSolid()) {
+        $neighbors[] = new Vector3($x, $y + 1, $z);
     }
+    
+    // ✅ 일반적인 이동 가능 여부 확인
+    if (!$block->isSolid() && $blockBelow->isSolid()) {
+        $neighbors[] = new Vector3($x, $y, $z);
+    }
+}
 
     return $neighbors;
 }
