@@ -36,8 +36,6 @@ class Pathfinder {
 
     $openSet->insert($start, -$fScore[self::vectorToStr($start)]);
 
-    Server::getInstance()->broadcastMessage("🔍 [AI] A* 탐색 시작: {$start->x}, {$start->y}, {$start->z} → {$goal->x}, {$goal->y}, {$goal->z}");
-
     while (!$openSet->isEmpty()) {
         if ($visitedNodes >= $this->maxPathLength) {
             Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
@@ -52,18 +50,14 @@ class Pathfinder {
         $closedSet[$currentKey] = true;
 
         if ($current->equals($goal)) {
-            Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
             return $this->reconstructPath($cameFrom, $current);
         }
 
         $neighbors = $this->getNeighbors($world, $current);
 
-        // ✅ A* 탐색 중 `neighbors` 값 출력
-        Server::getInstance()->broadcastMessage("🔍 [AI] 탐색 중 neighbors 수: " . count($neighbors) . " | 위치: {$current->x}, {$current->y}, {$current->z}");
-        
-        foreach ($neighbors as $neighbor) {
-            Server::getInstance()->broadcastMessage("➡️ [AI] 경로 가능 블록: {$neighbor->x}, {$neighbor->y}, {$neighbor->z}");
-        }
+        // ✅ 탐색 노드 개수를 줄이기 위해 랜덤 섞기 (우선순위 변경)
+        shuffle($neighbors);
+        $neighbors = array_slice($neighbors, 0, 4); // 최대 4개만 처리
 
         foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
@@ -80,7 +74,6 @@ class Pathfinder {
         }
     }
 
-    Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
     return null;
 }
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
