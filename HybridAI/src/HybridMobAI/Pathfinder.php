@@ -214,7 +214,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     ];
 
     foreach ($directions as $dir) {
-        $neighbor = $pos->add($dir);
+        $neighbor = $pos->addVector($dir);
 
         // 월드 경계 확인
         if (!$this->isWithinWorldBounds($neighbor)) {
