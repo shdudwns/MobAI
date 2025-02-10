@@ -24,41 +24,47 @@ class Pathfinder {
         return $vector;
     }
 
-    public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array
-    {
-        $openSet = new \SplPriorityQueue();
-        $openSet->insert($start, 0);
+    public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
+    $openSet = new \SplPriorityQueue();
+    $openSet->insert($start, 0);
 
-        $cameFrom = [];
-        $gScore = [self::vectorToStr($start) => 0];
-        $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
-        $visitedNodes = 0;
+    $cameFrom = [];
+    $gScore = [self::vectorToStr($start) => 0];
+    $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
+    $visitedNodes = 0;
 
-        while (!$openSet->isEmpty()) {
-    if ($visitedNodes >= ($this->maxPathLength + ($this->maxPathLength * 0.5))) {
-        Server::getInstance()->broadcastMessage("❌ A* 탐색 중단: 탐색 노드 초과 ({$visitedNodes})");
-        return null;
-    }
-            $current = $openSet->extract();
-            $visitedNodes++;
-            if ($current->equals($goal)) {
-                return $this->reconstructPath($cameFrom, $current);
-            }
+    Server::getInstance()->broadcastMessage("🔍 [AI] A* 탐색 시작: {$start->x}, {$start->y}, {$start->z} → {$goal->x}, {$goal->y}, {$goal->z}");
 
-            foreach ($this->getNeighbors($world, $current) as $neighbor) {
-                $neighborKey = self::vectorToStr($neighbor);
-                $tentativeGScore = $gScore[self::vectorToStr($current)] + 1;
+    while (!$openSet->isEmpty()) {
+        if ($visitedNodes >= $this->maxPathLength) {
+            Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+            return null;
+        }
 
-                if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
-                    $cameFrom[$neighborKey] = $current;
-                    $gScore[$neighborKey] = $tentativeGScore;
-                    $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-                    $openSet->insert($neighbor, -$fScore[$neighborKey]);
-                }
+        $current = $openSet->extract();
+        $visitedNodes++;
+
+        if ($current->equals($goal)) {
+            Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
+            return $this->reconstructPath($cameFrom, $current);
+        }
+
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $tentativeGScore = $gScore[self::vectorToStr($current)] + 1;
+
+            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $gScore[$neighborKey] = $tentativeGScore;
+                $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
+                $openSet->insert($neighbor, -$fScore[$neighborKey]);
             }
         }
-        return null;
     }
+
+    Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
+    return null;
+}
     
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
@@ -181,14 +187,8 @@ class Pathfinder {
     private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        // ✅ 기본 수평 이동
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
-
-        // ✅ 위로 이동 (한 칸 장애물 넘기)
-        [0, 1, 0],
-
-        // ✅ 아래로 이동 (한 칸 높이 차이 허용)
-        [0, -1, 0]
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
+        [0, 1, 0], [0, -1, 0]  // 위아래 이동
     ];
 
     foreach ($directions as $dir) {
@@ -198,19 +198,28 @@ class Pathfinder {
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
-        $blockAbove = $world->getBlockAt($x, $y + 1, $z); // 머리 위 블록 체크
+        $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 장애물 위로 이동 가능 여부 확인
-        if ($dir[1] === 1 && $block->isSolid() && !$blockAbove->isSolid()) {
-            $neighbors[] = new Vector3($x, $y + 1, $z);
+        if ($block->isSolid()) {
+            Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
+            continue;
         }
 
-        // ✅ 일반적인 이동 가능 여부 확인
-        if (!$block->isSolid() && $blockBelow->isSolid()) {
-            $neighbors[] = new Vector3($x, $y, $z);
+        if (!$blockBelow->isSolid()) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+            continue;
         }
+
+        // 머리 위 공간 확인 (벽이 있는지)
+        if ($dir[1] === 1 && $blockAbove->isSolid()) {
+            Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
+            continue;
+        }
+
+        $neighbors[] = new Vector3($x, $y, $z);
     }
 
+    Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
     return $neighbors;
 }
 }
