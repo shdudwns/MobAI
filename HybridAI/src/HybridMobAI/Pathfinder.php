@@ -216,10 +216,6 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     foreach ($directions as $dir) {
         $neighbor = $pos->addVector($dir);
 
-        // 월드 경계 확인
-        if (!$this->isWithinWorldBounds($neighbor)) {
-            continue;
-        }
 
         // 이동 가능한 노드인지 확인
         if ($this->isWalkable($world, $neighbor)) {
@@ -237,13 +233,14 @@ private function isWalkable(World $world, Vector3 $pos): bool {
     $block = $world->getBlockAt($pos->x, $pos->y, $pos->z);
 
     // 이동 가능한 블록인지 확인 (예: 공기, 풀 등)
-    $walkableBlocks = [
-        Block::AIR,
-        Block::GRASS,
-        Block::DIRT_PATH
+    $walkableBlockNames = [
+        "grass", "gravel", "sand", "stair", "slab", "path", "carpet",
+        "farmland", "snow_layer", "soul_sand", "grass_path" // 추가적인 이동 가능 블록
     ];
 
-    return in_array($block->getId(), $walkableBlocks);
+    $blockName = strtolower($block->getName());
+
+    return in_array($blockName, $walkableBlockNames);
 }
 
 private function isSolidBlock(Block $block): bool {
