@@ -26,10 +26,9 @@ class Pathfinder {
         return $vector;
     }
 
-    public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-    $openSet = new PriorityQueue();
-    $openSetKeys = []; // openSet에 있는 노드의 key를 저장
-    $closedSet = new \SplObjectStorage();
+    Public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
+    $openSet = new \SplPriorityQueue();
+    $closedSet = [];
     $cameFrom = [];
     $gScore = [self::vectorToStr($start) => 0];
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
@@ -37,8 +36,7 @@ class Pathfinder {
 
     $logData = "🔍 A* Search Start: ({$start->x}, {$start->y}, {$start->z}) → ({$goal->x}, {$goal->y}, {$goal->z})\n";
 
-    $openSet->insert(['vector' => $start, 'fScore' => $fScore[self::vectorToStr($start)]]);
-    $openSetKeys[self::vectorToStr($start)] = true;
+    $openSet->insert($start, -$fScore[self::vectorToStr($start)]);
 
     while (!$openSet->isEmpty()) {
         if ($visitedNodes >= $this->maxPathLength) {
@@ -46,15 +44,15 @@ class Pathfinder {
             file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
             return null;
         }
-        $currentData = $openSet->extract();
-        $current = $currentData['vector'];
+
+        $current = $openSet->extract();
         $currentKey = self::vectorToStr($current);
-        unset($openSetKeys[$currentKey]); // openSet에서 제거
-        $visitedNodes++;
         if (isset($closedSet[$currentKey])) continue;
         $closedSet[$currentKey] = true;
-        if ($closedSet->contains($current)) continue;
-        $closedSet->attach($current);
+        $visitedNodes++;
+
+        if (isset($closedSet[$currentKey])) continue;
+        $closedSet[$currentKey] = true;
 
         if ($current->equals($goal)) {
             $logData .= "✅ 경로 발견! 방문 노드 수: {$visitedNodes}\n";
@@ -64,16 +62,9 @@ class Pathfinder {
 
         $neighbors = $this->getNeighbors($world, $current);
 
-        // ✅ 이웃 노드 랜덤 선택 (최대 4개)
-        $numNeighbors = count($neighbors);
-        $neighborsToUse = min(4, $numNeighbors);
-        $neighborKeys = array_rand($neighbors, $neighborsToUse);
-
-        for ($i = 0; $i < $neighborsToUse; $i++) {
-            $neighbor = $neighbors[$neighborKeys[$i]];
+        foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
-
-            if ($closedSet->contains($neighbor)) continue;
+            if (isset($closedSet[$neighborKey])) continue;
 
             $tentativeGScore = $gScore[$currentKey] + 1;
 
@@ -81,11 +72,7 @@ class Pathfinder {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-
-                if (!isset($openSetKeys[$neighborKey])) { // openSet에 없는 경우만 추가
-                    $openSet->insert(['vector' => $neighbor, 'fScore' => $fScore[$neighborKey]]);
-                    $openSetKeys[$neighborKey] = true;
-                }
+                $openSet->insert($neighbor, -$fScore[$neighborKey]);
 
                 $logData .= "🔹 Add Node: ({$neighbor->x}, {$neighbor->y}, {$neighbor->z}) | gScore: {$gScore[$neighborKey]} | fScore: {$fScore[$neighborKey]}\n";
             }
@@ -94,7 +81,7 @@ class Pathfinder {
 
     $logData .= "⚠️ 경로 없음 (노드 방문: {$visitedNodes})\n";
     file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
-
+    
     return null;
 }
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
@@ -296,11 +283,4 @@ private function isSolidBlock(Block $block): bool {
     return in_array(strtolower($block->getName()), $solidBlockNames);
 }
 
-}
-
-
-class PriorityQueue extends \SplHeap {
-    public function compare($b, $a) { // fScore가 낮은 것이 우선순위가 높음
-        return $a['fScore'] <=> $b['fScore'];
-    }
 }
