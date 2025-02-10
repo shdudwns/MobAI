@@ -40,7 +40,7 @@ class Pathfinder {
 
     while (!$openSet->isEmpty()) {
         if ($visitedNodes >= $this->maxPathLength) {
-            //Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+            Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
             return null;
         }
 
@@ -81,6 +81,29 @@ class Pathfinder {
     }
 
     Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
+    return null;
+}
+    public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
+    $openSet = new \SplPriorityQueue();
+    $openSet->insert($start, 0);
+    $cameFrom = [];
+    $cost = [self::vectorToStr($start) => 0];
+    while (!$openSet->isEmpty()) {
+        $current = $openSet->extract();
+        $currentKey = self::vectorToStr($current);
+        if ($current->equals($goal)) {
+            return $this->reconstructPath($cameFrom, $current);
+        }
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
+            $newCost = $cost[$currentKey] + 1;
+            if (!isset($cost[$neighborKey]) || $newCost < $cost[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $cost[$neighborKey] = $newCost;
+                $openSet->insert($neighbor, -$newCost);
+            }
+        }
+    }
     return null;
 }
     
