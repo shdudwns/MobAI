@@ -266,10 +266,6 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
     }
 
-    Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: " . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z);
-foreach ($neighbors as $neighbor) {
-    Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
-}
 
     // 파일로 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
