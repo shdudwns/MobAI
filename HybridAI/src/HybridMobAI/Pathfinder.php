@@ -34,11 +34,14 @@ class Pathfinder {
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
     $visitedNodes = 0;
 
+    $logData = "🔍 A* Search Start: ({$start->x}, {$start->y}, {$start->z}) → ({$goal->x}, {$goal->y}, {$goal->z})\n";
+    
     $openSet->insert($start, -$fScore[self::vectorToStr($start)]);
 
     while (!$openSet->isEmpty()) {
         if ($visitedNodes >= $this->maxPathLength) {
-            Server::getInstance()->broadcastMessage("❌ [AI] A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})");
+            $logData .= "❌ A* 탐색 실패: 최대 탐색 노드 초과 ({$this->maxPathLength})\n";
+            file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
             return null;
         }
 
@@ -50,17 +53,14 @@ class Pathfinder {
         $closedSet[$currentKey] = true;
 
         if ($current->equals($goal)) {
-            Server::getInstance()->broadcastMessage("✅ [AI] 경로 발견! 노드 방문 수: {$visitedNodes}");
+            $logData .= "✅ 경로 발견! 방문 노드 수: {$visitedNodes}\n";
+            file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
             return $this->reconstructPath($cameFrom, $current);
         }
 
         $neighbors = $this->getNeighbors($world, $current);
-
-        // ✅ 탐색할 노드를 최적화 (가까운 노드만 남기고, 먼 노드는 제거)
-        usort($neighbors, function ($a, $b) use ($goal) {
-            return $this->heuristic($a, $goal) - $this->heuristic($b, $goal);
-        });
-
+        
+        shuffle($neighbors);
         $neighbors = array_slice($neighbors, 0, 4); // 최적 4개만 탐색
 
         foreach ($neighbors as $neighbor) {
@@ -74,14 +74,17 @@ class Pathfinder {
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
                 $openSet->insert($neighbor, -$fScore[$neighborKey]);
+
+                $logData .= "🔹 Add Node: ({$neighbor->x}, {$neighbor->y}, {$neighbor->z}) | gScore: {$gScore[$neighborKey]} | fScore: {$fScore[$neighborKey]}\n";
             }
         }
     }
 
-    Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
-    return null;
-}
+    $logData .= "⚠️ 경로 없음 (노드 방문: {$visitedNodes})\n";
+    file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
     
+    return null;
+}    
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
@@ -198,6 +201,8 @@ class Pathfinder {
  */
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
+    $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
+
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부 확인
@@ -214,14 +219,24 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
         // ✅ 발 밑 블록이 이동 가능한지 확인 (걸을 수 없는 블록이면 continue)
-        if (!$blockBelow->isSolid()) continue;
+        if (!$blockBelow->isSolid()) {
+            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+            continue;
+        }
 
         // ✅ 공중 블록이 비어있는지 확인 (머리 위 블록이 비어있어야 함)
-        if ($blockAbove->isSolid()) continue;
+        if ($blockAbove->isSolid()) {
+            $logData .= "❌ Block Above Solid: ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+            continue;
+        }
 
         // ✅ 이동 가능하면 추가
         $neighbors[] = new Vector3($x, $y, $z);
+        $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
+
+    // 파일로 로그 저장
+    file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
 
     return $neighbors;
 }
