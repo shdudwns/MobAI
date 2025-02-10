@@ -46,15 +46,13 @@ class Pathfinder {
             file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
             return null;
         }
-
-        if (isset($closedSet[$currentKey])) continue;
-    $closedSet[$currentKey] = true;
         $currentData = $openSet->extract();
         $current = $currentData['vector'];
         $currentKey = self::vectorToStr($current);
         unset($openSetKeys[$currentKey]); // openSet에서 제거
         $visitedNodes++;
-
+        if (isset($closedSet[$currentKey])) continue;
+        $closedSet[$currentKey] = true;
         if ($closedSet->contains($current)) continue;
         $closedSet->attach($current);
 
