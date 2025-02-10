@@ -107,7 +107,7 @@ private function handleMobAI(Living $mob): void {
                         $navigator->moveAlongPath($mob);
                     } else {
                         Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음: 장애물 회피 시도");
-                        $ai->avoidObstacle($mob);
+                        //$ai->avoidObstacle($mob);
                     }
                 }
             );
