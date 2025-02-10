@@ -195,47 +195,46 @@ class Pathfinder {
     ];
 
     foreach ($directions as $dir) {
-        $x = (int) $pos->x + $dir[0];
-        $y = (int) $pos->y + $dir[1];
-        $z = (int) $pos->z + $dir[2];
+        $x = (int)$pos->x + $dir[0];
+        $y = (int)$pos->y + $dir[1];
+        $z = (int)$pos->z + $dir[2];
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
         $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
-        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // ✅ 추가적인 머리 위 블록 검사
+        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // 추가적인 머리 위 블록 검사
 
-        // ✅ 이동 가능한 블록 체크 (공기가 아닌 경우만)
+        // 이동 가능한 블록 체크 (공기가 아닌 경우만)
         if ($blockBelow === null || $this->isWalkableBlock($blockBelow)) {
-            $neighbors[] = new Vector3($x, $y, $z);
-        }
-
-        // ✅ 머리 위 장애물 감지 예외 처리
-        if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2) || $this->isSolidBlock($blockAbove3)) {
-            if (!$blockAbove instanceof Grass && !$blockAbove2 instanceof Grass && !$blockAbove3 instanceof Grass) {
-                Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
-                continue;
+            // 머리 위 공간 검사 (3칸)
+            if (!$this->isSolidBlock($blockAbove) && !$this->isSolidBlock($blockAbove2) && !$this->isSolidBlock($blockAbove3)) {
+                // 장애물 여부 판단 (isSolidBlock 체크)
+                if ($this->isSolidBlock($block)) {
+                    // 장애물이지만 걸어갈 수 있는 블록인 경우
+                    if ($this->isWalkableBlock($block)) {
+                        $neighbors[] = new Vector3($x, $y, $z); // 이동 가능한 블록으로 추가
+                    } else {
+                        Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
+                        continue;
+                    }
+                } else {
+                    // 장애물이 아닌 경우
+                    $neighbors[] = new Vector3($x, $y, $z);
+                }
             }
         }
-
-        // ✅ 장애물 여부 판단 (isSolidBlock 체크)
-        if ($this->isSolidBlock($block)) {
-            Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
-            continue;
-        }
-
-        // ✅ 이동 가능한 블록 추가
-        $neighbors[] = new Vector3($x, $y, $z);
     }
 
     return $neighbors;
 }
-    
-    private function isSolidBlock(Block $block): bool {
+
+private function isSolidBlock(Block $block): bool {
     $solidBlockNames = [
         "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
         "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
-        "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate"
+        "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
+        "water", "lava", "cactus" // 물, 용암, 선인장 추가
     ];
 
     $blockName = strtolower($block->getName());
@@ -245,11 +244,13 @@ class Pathfinder {
 
 private function isWalkableBlock(Block $block): bool {
     $walkableBlockNames = [
-        "grass", "gravel", "sand", "stair", "slab", "path", "carpet"
+        "grass", "gravel", "sand", "stair", "slab", "path", "carpet",
+        "farmland", "snow_layer", "soul_sand", "grass_path" // 추가적인 이동 가능 블록
     ];
 
     $blockName = strtolower($block->getName());
 
     return in_array($blockName, $walkableBlockNames);
 }
+
 }
