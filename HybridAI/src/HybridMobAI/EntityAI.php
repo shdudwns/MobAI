@@ -407,15 +407,20 @@ public function removePath(Living $mob): void {
     public function onPathFound(Living $mob, ?array $path): void {
     $navigator = new EntityNavigator();
     $tracker = new EntityTracker();
+
     if ($path !== null && count($path) > 0) {
         $this->setPath($mob, $path);
         Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 완료! 이동 시작...");
+        
+        // 🚀 경로 확인을 위해 로그 출력
+        foreach ($path as $step) {
+            Server::getInstance()->broadcastMessage("📍 경로 좌표: {$step->x}, {$step->y}, {$step->z}");
+        }
 
         // 🚀 경로가 설정되었으므로 즉시 이동 시작
-        $navigator->moveAlongPath($mob);
+        $this->moveAlongPath($mob);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 탐색 실패! 기본 이동 유지...");
-        $tracker = new EntityTracker();
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
             $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
@@ -426,29 +431,43 @@ public function removePath(Living $mob): void {
 }
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
-    if (empty($path)) return;
+    if (empty($path)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 이동할 경로가 없습니다!");
+        return;
+    }
 
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     if ($nextPosition instanceof Vector3) {
-        $speed = 0.18; // ✅ 속도 조정 (너무 크면 순간이동처럼 됨)
-        $motion = $nextPosition->subtractVector($mob->getPosition())->normalize()->multiply($speed);
+        $speed = 0.18; // ✅ 속도 조정
+        $direction = $nextPosition->subtractVector($mob->getPosition());
 
-        // ✅ 이동 방향 적용
+        // ✅ 이동 거리가 너무 작으면 강제로 이동
+        if ($direction->lengthSquared() < 0.01) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리가 너무 짧아 강제 이동!");
+            $mob->teleport($nextPosition);
+            return;
+        }
+
+        $motion = $direction->normalize()->multiply($speed);
         $mob->setMotion($motion);
 
+        // ✅ 이동 로그 출력
+        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
+        
         // ✅ 몬스터가 바라볼 방향 설정
         $mob->lookAt($nextPosition);
-        
-        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
     }
 }
-    public function lookAt(Vector3 $target): void {
-    $dx = $target->x - $this->getPosition()->x;
-    $dz = $target->z - $this->getPosition()->z;
+    public function lookAt(Living $mob, Vector3 $target): void {
+    $dx = $target->x - $mob->getPosition()->x;
+    $dz = $target->z - $mob->getPosition()->z;
 
     // ✅ Yaw 계산 (고개를 밑으로 안 떨구도록 보정)
     $yaw = rad2deg(atan2(-$dx, $dz));
 
-    $this->setRotation($yaw, 0); // ✅ Pitch를 0으로 설정하여 밑을 안 쳐다보게 함
+    // ✅ Pitch 값 수정 (고개를 밑으로 내리지 않도록 보정)
+    $pitch = 0;
+
+    $mob->setRotation($yaw, $pitch); // ✅ Pitch를 0으로 설정하여 밑을 안 쳐다보게 함
 }
 }
