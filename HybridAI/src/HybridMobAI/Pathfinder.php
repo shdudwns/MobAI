@@ -202,16 +202,17 @@ class Pathfinder {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // ✅ 머리 위 2칸 검사 추가
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
+        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // ✅ 추가적인 머리 위 블록 검사
 
-        // ✅ 발밑 블록 예외처리 (공기가 아니면 이동 가능)
-        if ($blockBelow !== null && !$this->isSolidBlock($blockBelow)) {
-            continue;
+        // ✅ 이동 가능한 블록 체크 (공기가 아닌 경우만)
+        if ($blockBelow === null || $this->isWalkableBlock($blockBelow)) {
+            $neighbors[] = new Vector3($x, $y, $z);
         }
 
-        // ✅ 머리 위 장애물 감지 및 예외처리
-        if ($blockAbove->isSolid() || $blockAbove2->isSolid()) {
-            if (!$blockAbove instanceof Grass && !$blockAbove2 instanceof Grass) {
+        // ✅ 머리 위 장애물 감지 예외 처리
+        if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2) || $this->isSolidBlock($blockAbove3)) {
+            if (!$blockAbove instanceof Grass && !$blockAbove2 instanceof Grass && !$blockAbove3 instanceof Grass) {
                 Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
                 continue;
             }
@@ -229,26 +230,26 @@ class Pathfinder {
 
     return $neighbors;
 }
+    
     private function isSolidBlock(Block $block): bool {
     $solidBlockNames = [
         "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
         "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
-        "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
+        "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate"
     ];
 
-    // ✅ 몬스터가 걸을 수 있는 블록 추가
+    $blockName = strtolower($block->getName());
+
+    return in_array($blockName, $solidBlockNames);
+}
+
+private function isWalkableBlock(Block $block): bool {
     $walkableBlockNames = [
         "grass", "gravel", "sand", "stair", "slab", "path", "carpet"
     ];
 
     $blockName = strtolower($block->getName());
 
-    // ✅ 이동 가능한 블록인지 확인
-    if (in_array($blockName, $walkableBlockNames)) {
-        return false;
-    }
-
-    // ✅ 장애물 블록인지 확인
-    return in_array($blockName, $solidBlockNames);
+    return in_array($blockName, $walkableBlockNames);
 }
 }
