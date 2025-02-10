@@ -190,47 +190,77 @@ class Pathfinder {
     return sqrt(pow($a->x - $b->x, 2) + pow($a->y - $b->y, 2) + pow($a->z - $b->z, 2));
 }
 
+/**
+ * 이웃 노드 가져오기 (최적화 버전)
+ */
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1] // 내려가기 가능 여부 확인
+        // 기본 4방향 (상하좌우)
+        new Vector3(1, 0, 0),  // 오른쪽
+        new Vector3(-1, 0, 0), // 왼쪽
+        new Vector3(0, 0, 1),  // 앞쪽
+        new Vector3(0, 0, -1), // 뒤쪽
+
+        // 상하 이동 (필요한 경우)
+        new Vector3(0, 1, 0),  // 위쪽
+        new Vector3(0, -1, 0), // 아래쪽
+
+        // 대각선 이동 (필요한 경우)
+        new Vector3(1, 0, 1),  // 오른쪽 앞
+        new Vector3(-1, 0, 1), // 왼쪽 앞
+        new Vector3(1, 0, -1), // 오른쪽 뒤
+        new Vector3(-1, 0, -1) // 왼쪽 뒤
     ];
 
     foreach ($directions as $dir) {
-        $x = (int)$pos->x + $dir[0];
-        $y = (int)$pos->y + $dir[1];
-        $z = (int)$pos->z + $dir[2];
+        $neighbor = $pos->add($dir);
 
-        $block = $world->getBlockAt($x, $y, $z);
-        $blockBelow = $world->getBlockAt($x, $y - 1, $z);
-        $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
-        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // 추가적인 머리 위 블록 검사
+        // 월드 경계 확인
+        if (!$this->isWithinWorldBounds($neighbor)) {
+            continue;
+        }
 
-        // 이동 가능한 블록 체크 (공기가 아닌 경우만)
-        if ($blockBelow === null || $this->isWalkableBlock($blockBelow)) {
-            // 머리 위 공간 검사 (3칸)
-            if (!$this->isSolidBlock($blockAbove) && !$this->isSolidBlock($blockAbove2) && !$this->isSolidBlock($blockAbove3)) {
-                // 장애물 여부 판단 (isSolidBlock 체크)
-                if ($this->isSolidBlock($block)) {
-                    // 장애물이지만 걸어갈 수 있는 블록인 경우
-                    if ($this->isWalkableBlock($block)) {
-                        $neighbors[] = new Vector3($x, $y, $z); // 이동 가능한 블록으로 추가
-                    } else {
-                        Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
-                        continue; // 이동 불가능한 장애물은 건너뜀
-                    }
-                } else {
-                    // 장애물이 아닌 경우
-                    $neighbors[] = new Vector3($x, $y, $z);
-                }
-            }
+        // 이동 가능한 노드인지 확인
+        if ($this->isWalkable($world, $neighbor)) {
+            $neighbors[] = $neighbor;
         }
     }
 
     return $neighbors;
+}
+
+/**
+ * 월드 경계 내에 있는지 확인
+ */
+private function isWithinWorldBounds(Vector3 $pos): bool {
+    $world = Server::getInstance()->getWorldManager()->getDefaultWorld();
+    $minX = 0;
+    $maxX = $world->getMaxX();
+    $minY = 0;
+    $maxY = $world->getMaxY();
+    $minZ = 0;
+    $maxZ = $world->getMaxZ();
+
+    return $pos->x >= $minX && $pos->x <= $maxX &&
+           $pos->y >= $minY && $pos->y <= $maxY &&
+           $pos->z >= $minZ && $pos->z <= $maxZ;
+}
+
+/**
+ * 이동 가능한 노드인지 확인
+ */
+private function isWalkable(World $world, Vector3 $pos): bool {
+    $block = $world->getBlockAt($pos->x, $pos->y, $pos->z);
+
+    // 이동 가능한 블록인지 확인 (예: 공기, 풀 등)
+    $walkableBlocks = [
+        Block::AIR,
+        Block::GRASS,
+        Block::DIRT_PATH
+    ];
+
+    return in_array($block->getId(), $walkableBlocks);
 }
 
 private function isSolidBlock(Block $block): bool {
