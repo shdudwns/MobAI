@@ -53,7 +53,6 @@ class MobAITask extends Task {
 private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
-    $detector = new ObstacleDetector($this->plugin);
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
 
     if (!$this->aiEnabled) {
@@ -63,7 +62,6 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveRandomly($mob);
         }
-        $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
         return;
     }
 
@@ -74,7 +72,6 @@ private function handleMobAI(Living $mob): void {
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
 
-        // ✅ 기존 경로 유지 (플레이어 위치 변화가 적으면 탐색 X)
         if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
             $ai->moveAlongPath($mob);
             return;
@@ -88,14 +85,9 @@ private function handleMobAI(Living $mob): void {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
 
-        // ✅ 탐색 주기를 40틱 이상으로 제한 (2초에 한 번)
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
-
-            // ✅ 최적의 알고리즘 선택
             $algorithm = $this->selectBestAlgorithm($mob, $player);
-            Server::getInstance()->broadcastMessage("🧠 AI 경로 탐색 시작: 몬스터 ID:{$mob->getId()} | 알고리즘: $algorithm");
-
             $ai->findPathAsync(
                 $mob->getWorld(),
                 $mob->getPosition(),
@@ -106,22 +98,12 @@ private function handleMobAI(Living $mob): void {
                         $ai->setPath($mob, $path);
                         $navigator->moveAlongPath($mob);
                     } else {
-                        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음: 장애물 회피 시도");
-                        //$ai->avoidObstacle($mob);
+                        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음");
                     }
                 }
             );
         }
     }
-
-    // ✅ 장애물 감지 및 우회 (이제 내부에서 `findPathAsync()` 호출 X)
-    //$ai->avoidObstacle($mob);
-
-    // ✅ 웅덩이 감지 및 탈출 (이제 내부에서 `findPathAsync()` 호출 X)
-    //$ai->escapePit($mob);
-
-    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
-    $this->handleSwimming($mob);
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
