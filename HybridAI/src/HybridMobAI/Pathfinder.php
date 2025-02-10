@@ -186,7 +186,12 @@ class Pathfinder {
         return $path;
     }
 
-    private function getNeighbors(World $world, Vector3 $pos): array {
+    private function heuristic(Vector3 $a, Vector3 $b): float {
+    // 유클리드 거리 사용
+    return sqrt(pow($a->x - $b->x, 2) + pow($a->y - $b->y, 2) + pow($a->z - $b->z, 2));
+}
+
+private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
@@ -216,7 +221,7 @@ class Pathfinder {
                         $neighbors[] = new Vector3($x, $y, $z); // 이동 가능한 블록으로 추가
                     } else {
                         Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
-                        continue;
+                        continue; // 이동 불가능한 장애물은 건너뜀
                     }
                 } else {
                     // 장애물이 아닌 경우
