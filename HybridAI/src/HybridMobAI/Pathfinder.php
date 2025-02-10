@@ -196,30 +196,39 @@ class Pathfinder {
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        // 기본 4방향 (상하좌우)
-        new Vector3(1, 0, 0),  // 오른쪽
-        new Vector3(-1, 0, 0), // 왼쪽
-        new Vector3(0, 0, 1),  // 앞쪽
-        new Vector3(0, 0, -1), // 뒤쪽
-
-        // 상하 이동 (필요한 경우)
-        new Vector3(0, 1, 0),  // 위쪽
-        new Vector3(0, -1, 0), // 아래쪽
-
-        // 대각선 이동 (필요한 경우)
-        new Vector3(1, 0, 1),  // 오른쪽 앞
-        new Vector3(-1, 0, 1), // 왼쪽 앞
-        new Vector3(1, 0, -1), // 오른쪽 뒤
-        new Vector3(-1, 0, -1) // 왼쪽 뒤
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1] // 내려가기 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
-        $neighbor = $pos->addVector($dir);
+        $x = (int)$pos->x + $dir[0];
+        $y = (int)$pos->y + $dir[1];
+        $z = (int)$pos->z + $dir[2];
 
+        $block = $world->getBlockAt($x, $y, $z);
+        $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+        $blockAbove = $world->getBlockAt($x, $y + 1, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
+        $blockAbove3 = $world->getBlockAt($x, $y + 3, $z); // 추가적인 머리 위 블록 검사
 
-        // 이동 가능한 노드인지 확인
-        if ($this->isWalkable($world, $neighbor)) {
-            $neighbors[] = $neighbor;
+        // 이동 가능한 블록 체크 (공기가 아닌 경우만)
+        if ($blockBelow === null || $this->isWalkableBlock($blockBelow)) {
+            // 머리 위 공간 검사 (3칸)
+            if (!$this->isSolidBlock($blockAbove) && !$this->isSolidBlock($blockAbove2) && !$this->isSolidBlock($blockAbove3)) {
+                // 장애물 여부 판단 (isSolidBlock 체크)
+                if ($this->isSolidBlock($block)) {
+                    // 장애물이지만 걸어갈 수 있는 블록인 경우
+                    if ($this->isWalkableBlock($block)) {
+                        $neighbors[] = new Vector3($x, $y, $z); // 이동 가능한 블록으로 추가
+                    } else {
+                        continue; // 이동 불가능한 장애물은 건너뜀
+                    }
+                } else {
+                    // 장애물이 아닌 경우
+                    $neighbors[] = new Vector3($x, $y, $z);
+                }
+            }
         }
     }
 
