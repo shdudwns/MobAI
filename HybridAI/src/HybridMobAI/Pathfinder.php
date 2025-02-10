@@ -202,22 +202,19 @@ class Pathfinder {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // ✅ 머리 위 2칸 검사 추가
 
-        // ✅ 현재 몬스터의 발밑 블록인지 체크 (발밑 블록은 장애물이 아님)
-        if ($blockBelow->getPosition()->equals($pos->floor())) {
-            Server::getInstance()->broadcastMessage("✅ [AI] 현재 위치 블록 제외 (이동 가능): {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+        // ✅ 발밑 블록 예외처리 (공기가 아니면 이동 가능)
+        if ($blockBelow !== null && !$this->isSolidBlock($blockBelow)) {
             continue;
         }
 
-        // ✅ 머리 위 블록이 막혀 있으면 이동 불가
-        if ($blockAbove->isSolid()) {
-            Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
-            continue;
-        }
-
-        // ✅ 발 밑이 공기(Air)인 경우 허용
-        if ($blockBelow instanceof Air) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 발 밑이 공기이지만 이동 가능: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+        // ✅ 머리 위 장애물 감지 및 예외처리
+        if ($blockAbove->isSolid() || $blockAbove2->isSolid()) {
+            if (!$blockAbove instanceof Grass && !$blockAbove2 instanceof Grass) {
+                Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
+                continue;
+            }
         }
 
         // ✅ 장애물 여부 판단 (isSolidBlock 체크)
@@ -230,8 +227,6 @@ class Pathfinder {
         $neighbors[] = new Vector3($x, $y, $z);
     }
 
-    Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
-
     return $neighbors;
 }
     private function isSolidBlock(Block $block): bool {
@@ -241,7 +236,7 @@ class Pathfinder {
         "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
     ];
 
-    // ✅ 몬스터가 걸을 수 있는 블록 추가 (잔디, 계단, 반블록 등)
+    // ✅ 몬스터가 걸을 수 있는 블록 추가
     $walkableBlockNames = [
         "grass", "gravel", "sand", "stair", "slab", "path", "carpet"
     ];
