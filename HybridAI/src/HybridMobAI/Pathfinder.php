@@ -234,7 +234,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
         // ✅ 2. 발밑 블록이 단단한지 확인 (몬스터가 서 있을 수 있는 블록)
         if (!$this->isSolidBlock($blockBelow)) {
-            $logData .= "❌ Skipping - No solid block below at ({$x}, {$y - 1}, {$z}) → {$blockBelow->getName()}\n";
+            $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
             continue;
         }
 
