@@ -187,8 +187,8 @@ class Pathfinder {
     private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동 (수평)
-        [0, 1, 0], [0, -1, 0]  // 위/아래 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 이동
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
@@ -196,30 +196,14 @@ class Pathfinder {
         $y = (int) $pos->y + $dir[1];
         $z = (int) $pos->z + $dir[2];
 
-        // ✅ 현재 몬스터가 있는 위치는 검사에서 제외
-        if ($x === (int) $pos->x && $y === (int) $pos->y && $z === (int) $pos->z) {
-            continue;
-        }
-
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 장애물 블록인지 확인
-        if ($block->isSolid()) {
-            Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
+        // ✅ 발 밑이 Air라도, 한 칸 아래 블록이 Solid면 이동 가능
+        if ($blockBelow instanceof Air && !$blockBelow->isSolid()) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
             continue;
-        }
-
-        // ✅ 공중 이동 불가 → 아래 블록이 Air인 경우 추가 검사
-        if ($blockBelow instanceof Air) {
-            $blockTwoBelow = $world->getBlockAt($x, $y - 2, $z);
-            
-            // ✅ 만약 블록이 2칸 아래까지 Air라면 이동 불가 (공중 떠 있음)
-            if ($blockTwoBelow instanceof Air) {
-                Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
-                continue;
-            }
         }
 
         // ✅ 머리 위 장애물 확인 (점프 가능 여부)
@@ -234,5 +218,5 @@ class Pathfinder {
 
     Server::getInstance()->broadcastMessage("✅ [AI] 탐색 가능한 이웃 블록 수: " . count($neighbors));
     return $neighbors;
-    }
+}
 }
