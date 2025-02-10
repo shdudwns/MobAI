@@ -9,7 +9,7 @@ use pocketmine\block\Block;
 use pocketmine\block\Air;
 
 class Pathfinder {
-    private int $maxPathLength = 500;
+    private int $maxPathLength = 100;
     private array $vectorPool = [];
     private static function vectorToStr(Vector3 $vector): string {
         return "{$vector->x}:{$vector->y}:{$vector->z}";
@@ -35,7 +35,7 @@ class Pathfinder {
     $visitedNodes = 0;
 
     $logData = "🔍 A* Search Start: ({$start->x}, {$start->y}, {$start->z}) → ({$goal->x}, {$goal->y}, {$goal->z})\n";
-    
+
     $openSet->insert($start, -$fScore[self::vectorToStr($start)]);
 
     while (!$openSet->isEmpty()) {
@@ -59,9 +59,10 @@ class Pathfinder {
         }
 
         $neighbors = $this->getNeighbors($world, $current);
-        
+
+        // ✅ 탐색 노드 개수를 줄이기 위해 랜덤 섞기 + 최대 4개만 추가
         shuffle($neighbors);
-        $neighbors = array_slice($neighbors, 0, 4); // 최적 4개만 탐색
+        $neighbors = array_slice($neighbors, 0, 4);
 
         foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
@@ -84,7 +85,7 @@ class Pathfinder {
     file_put_contents("path_logs/astar_log.txt", $logData, FILE_APPEND);
     
     return null;
-}    
+}   
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
@@ -218,19 +219,24 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 발 밑 블록이 이동 가능한지 확인 (걸을 수 없는 블록이면 continue)
-        if (!$blockBelow->isSolid()) {
+        // ✅ 발밑 블록이 이동 가능한지 확인 (공기면 continue)
+        if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
             $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
             continue;
         }
 
-        // ✅ 공중 블록이 비어있는지 확인 (머리 위 블록이 비어있어야 함)
+        // ✅ 머리 위 블록이 비어있는지 확인 (머리 위 장애물이 있으면 continue)
         if ($blockAbove->isSolid()) {
             $logData .= "❌ Block Above Solid: ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
             continue;
         }
 
-        // ✅ 이동 가능하면 추가
+        // ✅ 공기 블록 제외 (Air 블록은 이동 가능 블록으로 인식하지 않음)
+        if ($block instanceof Air) {
+            continue;
+        }
+
+        // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
