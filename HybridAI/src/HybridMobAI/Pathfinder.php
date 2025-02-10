@@ -191,6 +191,7 @@ class Pathfinder {
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1] // 내려가기 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
@@ -208,25 +209,24 @@ class Pathfinder {
             continue;
         }
 
-        // ✅ 발 밑이 공기(Air)라면 이동 가능 여부 확인
-        if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 공중 이동 불가 (밑이 공기): {$blockBelow->getName()} at {$x}, {$y}, {$z}");
-            continue;
-        }
-
-        // ✅ 머리 위 장애물 확인 (점프 가능 여부)
-        if ($dir[1] === 1 && $blockAbove->isSolid()) {
+        // ✅ 머리 위 블록이 막혀 있으면 이동 불가
+        if ($blockAbove->isSolid()) {
             Server::getInstance()->broadcastMessage("⛔ [AI] 머리 위 장애물 발견: {$blockAbove->getName()} at {$x}, {$y}, {$z}");
             continue;
         }
 
-        // ✅ 장애물 여부 판단
-        if ($this->isSolidBlock($block) || $this->isSolidBlock($blockAbove)) {
+        // ✅ 발 밑이 공기(Air)인 경우 허용
+        if ($blockBelow instanceof Air) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 발 밑이 공기이지만 이동 가능: {$blockBelow->getName()} at {$x}, {$y}, {$z}");
+        }
+
+        // ✅ 장애물 여부 판단 (isSolidBlock 체크)
+        if ($this->isSolidBlock($block)) {
             Server::getInstance()->broadcastMessage("🚧 [AI] 장애물 감지 (이동 불가): {$block->getName()} at {$x}, {$y}, {$z}");
             continue;
         }
 
-        // ✅ 이동 가능한 블록으로 추가
+        // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
     }
 
@@ -241,7 +241,7 @@ class Pathfinder {
         "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
     ];
 
-    // ✅ 몬스터가 걸을 수 있는 블록인지 확인 (잔디, 계단, 반블록 등)
+    // ✅ 몬스터가 걸을 수 있는 블록 추가 (잔디, 계단, 반블록 등)
     $walkableBlockNames = [
         "grass", "gravel", "sand", "stair", "slab", "path", "carpet"
     ];
