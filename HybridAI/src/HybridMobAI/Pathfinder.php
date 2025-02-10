@@ -56,9 +56,12 @@ class Pathfinder {
 
         $neighbors = $this->getNeighbors($world, $current);
 
-        // ✅ 탐색 노드 개수를 줄이기 위해 랜덤 섞기 (우선순위 변경)
-        shuffle($neighbors);
-        $neighbors = array_slice($neighbors, 0, 4); // 최대 4개만 처리
+        // ✅ 탐색할 노드를 최적화 (가까운 노드만 남기고, 먼 노드는 제거)
+        usort($neighbors, function ($a, $b) use ($goal) {
+            return $this->heuristic($a, $goal) - $this->heuristic($b, $goal);
+        });
+
+        $neighbors = array_slice($neighbors, 0, 4); // 최적 4개만 탐색
 
         foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
@@ -75,8 +78,10 @@ class Pathfinder {
         }
     }
 
+    Server::getInstance()->broadcastMessage("⚠️ [AI] A* 탐색 종료: 경로 없음 (노드 방문: {$visitedNodes})");
     return null;
 }
+    
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
     $openSet->insert($start, 0);
@@ -195,49 +200,32 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 한 칸 내려가기
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 한 칸 점프 가능
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부 확인
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 점프 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
-        $x = (int)$pos->x + $dir[0];
-        $y = (int)$pos->y + $dir[1];
-        $z = (int)$pos->z + $dir[2];
+        $x = (int) $pos->x + $dir[0];
+        $y = (int) $pos->y + $dir[1];
+        $z = (int) $pos->z + $dir[2];
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        
-        // ✅ 장애물(벽, 2칸 이상 블록) 감지
-        if ($this->isSolidBlock($blockAbove)) {
-            continue;
-        }
 
-        // ✅ 한 칸 내려가기 가능 여부 체크
-        if ($dir[1] === -1 && !$this->isSolidBlock($blockBelow)) {
-            continue;
-        }
+        // ✅ 발 밑 블록이 이동 가능한지 확인 (걸을 수 없는 블록이면 continue)
+        if (!$blockBelow->isSolid()) continue;
 
-        // ✅ 한 칸 점프 가능 여부 체크
-        if ($dir[1] === 1 && $this->isSolidBlock($block)) {
-            continue;
-        }
+        // ✅ 공중 블록이 비어있는지 확인 (머리 위 블록이 비어있어야 함)
+        if ($blockAbove->isSolid()) continue;
 
-        // ✅ 이동 가능 블록 체크
-        if (!$this->isObstacle($block)) {
-            $neighbors[] = new Vector3($x, $y, $z);
-        }
+        // ✅ 이동 가능하면 추가
+        $neighbors[] = new Vector3($x, $y, $z);
     }
-
-    // ✅ 탐색된 `neighbors` 값 디버깅 메시지 출력
-    //Server::getInstance()->broadcastMessage("🔍 [AI] 탐색된 neighbors 수: " . count($neighbors) . " | 위치: {$pos->x}, {$pos->y}, {$pos->z}");
-   /* foreach ($neighbors as $neighbor) {
-        Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: {$neighbor->x}, {$neighbor->y}, {$neighbor->z}");
-    }*/
 
     return $neighbors;
 }
-
+    
     private function isObstacle(Block $block): bool {
     $obstacleBlocks = [
         "fence", "wall", "iron_door", "wooden_door", "trapdoor",
