@@ -36,7 +36,7 @@ class Pathfinder {
     $visitedNodes = 0;
 
     $startKey = self::vectorToStr($start);
-    $openSet->push($start, -$fScore[$startKey]); // 초기 노드 추가
+    $openSet->insert($start, -$fScore[$startKey]); // 초기 노드 추가
 
     Server::getInstance()->broadcastMessage("🔍 [AI] A* 탐색 시작: {$start->x}, {$start->y}, {$start->z} → {$goal->x}, {$goal->y}, {$goal->z}");
 
@@ -66,7 +66,7 @@ class Pathfinder {
                 $cameFrom[$neighborKey] = $current;
                 $gScore[$neighborKey] = $tentativeGScore;
                 $fScore[$neighborKey] = $gScore[$neighborKey] + $this->heuristic($neighbor, $goal);
-                $openSet->push($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에 추가
+                $openSet->insert($neighbor, -$fScore[$neighborKey]); // 우선순위 큐에 추가
             }
         }
     }
