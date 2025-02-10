@@ -206,57 +206,51 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1], // 대각선 (같은 높이)
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프
-        [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1],  // 대각선 (위)
-        [0, 1, 0] // 현재 위치 바로 위
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부 확인
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1] // 점프 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
-        $x = (int)round($pos->x) + $dir[0]; // (int) 추가 및 round() 사용
-        $y = (int)round($pos->y) + $dir[1]; // (int) 추가 및 round() 사용
-        $z = (int)round($pos->z) + $dir[2]; // (int) 추가 및 round() 사용
+        $x = (int) $pos->x + $dir[0];
+        $y = (int) $pos->y + $dir[1];
+        $z = (int) $pos->z + $dir[2];
 
         $block = $world->getBlockAt($x, $y, $z);
+        $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+        $blockBelow2 = $world->getBlockAt($x, $y - 2, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // 머리 위 추가 검사
 
-        // 1. 공기 블록은 무조건 제외
+        // ✅ 1. 공기(Air) 블록은 무조건 제외
         if ($block instanceof Air) {
             continue;
         }
 
-        // 2. 현재 위치한 블록이 Solid인지 확인 (발밑 블록)
-        $currentBlock = $world->getBlockAt((int)round($x), (int)round($y), (int)round($z)); // round()와 (int) 추가
-        if (!$this->isSolidBlock($currentBlock)) { // SolidBlock이 아니면 탐색 중지
-            $logData .= "❌ Current Block Not Solid: ({$x}, {$y}, {$z}) - " . $currentBlock->getName() . "\n";
+        // ✅ 2. 발밑 블록이 Solid가 아니면 이동 불가 (예외: blockBelow2가 Solid면 가능)
+        if ($blockBelow instanceof Air && $blockBelow2 instanceof Air) {
+            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
             continue;
         }
 
-        // 3. 이동하려는 블록이 통과 가능한 블록인지 확인
-        if (!$this->isPassableBlock($block)) {
-            $logData .= "❌ Block Not Passable: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
-            continue;
-        }
-
-        // 4. 점프의 경우, 머리 위에 공간이 있는지 확인
-        if ($dir[1] == 1) { // 점프하는 경우
-            if ($this->isSolidBlock($blockAbove) || $this->isSolidBlock($blockAbove2)) {
-                $logData .= "❌ Block Above Solid (Blocked): ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+        // ✅ 3. 1칸 블록 위 점프 가능 (머리 위 공간이 있어야 함)
+        if ($this->isSolidBlock($block)) {
+            if (!$this->isSolidBlock($blockAbove)) {
+                $logData .= "✅ Jumpable Block: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
+                $neighbors[] = new Vector3($x, $y + 1, $z);
+                continue;
+            } else {
+                $logData .= "❌ Block Too High (Obstacle): ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
                 continue;
             }
         }
 
-        // 5. 대각선 이동 시 모서리 체크 (추가)
-        if ($dir[0] != 0 && $dir[2] != 0) { // 대각선 이동인 경우
-            $cornerBlock = $world->getBlockAt((int)round($pos->x) + $dir[0], (int)round($pos->y), (int)round($pos->z) + $dir[2]);
-            if (!$this->isPassableBlock($cornerBlock)) {
-                $logData .= "❌ Corner Block Not Passable: ({$x}, {$y}, {$z}) - " . $cornerBlock->getName() . "\n";
-                continue;
-            }
+        // ✅ 4. 머리 위 장애물 감지 (이동 가능하려면 2칸 이상 공간 필요)
+        if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            $logData .= "❌ Block Above Solid (Blocked): ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+            continue;
         }
 
-        // 6. 이동 가능한 블록 추가
+        // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
@@ -265,8 +259,6 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     foreach ($neighbors as $neighbor) {
         Server::getInstance()->broadcastMessage("➡️ [AI] 이동 가능: " . (int)$neighbor->x . ", " . (int)$neighbor->y . ", " . (int)$neighbor->z);
     }
-
-
     // 파일로 로그 저장
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
 
