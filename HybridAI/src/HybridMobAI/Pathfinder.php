@@ -217,17 +217,26 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
+        $blockBelow2 = $world->getBlockAt($x, $y - 2, $z); // 확실한 바닥 블록 감지
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
 
-        // ✅ 발밑 블록이 이동 가능한지 확인 (공기면 continue)
+        // ✅ 발밑 블록이 공기(Air)거나 너무 얇은 경우 (바닥이 없는 경우 이동 불가)
         if ($blockBelow instanceof Air || !$blockBelow->isSolid()) {
-            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+            if ($blockBelow2 instanceof Air || !$blockBelow2->isSolid()) {
+                $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+                continue;
+            }
+        }
+
+        // ✅ 머리 위 블록이 이동을 막는 경우 (단순한 잔디 블록 제외)
+        if ($this->isSolidBlock($blockAbove) && !$this->isPassableBlock($blockAbove)) {
+            $logData .= "❌ Block Above Solid: ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
             continue;
         }
 
-        // ✅ 머리 위 블록이 비어있는지 확인 (머리 위 장애물이 있으면 continue)
-        if ($blockAbove->isSolid()) {
-            $logData .= "❌ Block Above Solid: ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+        if ($this->isSolidBlock($blockAbove2) && !$this->isPassableBlock($blockAbove2)) {
+            $logData .= "❌ Block Above2 Solid: ({$x}, " . ($y + 2) . ", {$z}) - " . $blockAbove2->getName() . "\n";
             continue;
         }
 
@@ -247,39 +256,23 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     return $neighbors;
 }
     
-    private function isObstacle(Block $block): bool {
-    $obstacleBlocks = [
-        "fence", "wall", "iron_door", "wooden_door", "trapdoor",
-        "cactus", "fire", "lava", "water"
+    private function isPassableBlock(Block $block): bool {
+    $passableBlocks = [
+        "grass", "tall_grass", "carpet", "flower", "red_flower", "yellow_flower",
+        "vine", "lily_pad", "button", "lever", "redstone_wire", "repeater",
+        "comparator", "wall_torch", "ladder", "snow"
     ];
 
-    $blockName = strtolower($block->getName());
-
-    return in_array($blockName, $obstacleBlocks) || $this->isSolidBlock($block);
+    return in_array(strtolower($block->getName()), $passableBlocks);
 }
-
-private function isSolidBlock(Block $block): bool {
+    private function isSolidBlock(Block $block): bool {
     $solidBlockNames = [
         "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
         "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
         "concrete", "concrete_powder", "netherrack", "end_stone", "deepslate",
-        "water", "lava", "cactus" // 물, 용암, 선인장 추가
+        "glass", "chest", "crafting_table", "furnace", "door", "trapdoor"
     ];
 
-    $blockName = strtolower($block->getName());
-
-    return in_array($blockName, $solidBlockNames);
+    return in_array(strtolower($block->getName()), $solidBlockNames);
 }
-
-private function isWalkableBlock(Block $block): bool {
-    $walkableBlockNames = [
-        "grass", "gravel", "sand", "stair", "slab", "path", "carpet",
-        "farmland", "snow_layer", "soul_sand", "grass_path" // 추가적인 이동 가능 블록
-    ];
-
-    $blockName = strtolower($block->getName());
-
-    return in_array($blockName, $walkableBlockNames);
-}
-
 }
