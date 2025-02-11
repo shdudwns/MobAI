@@ -260,6 +260,10 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     return in_array(strtolower($block->getName()), $passableBlocks);
 }
     private function isSolidBlock(Block $block): bool {
+    if ($block->isSolid()) {
+        return true;
+    }
+
     $solidBlockNames = [
         "stone", "dirt", "cobblestone", "log", "planks", "brick", "sandstone",
         "obsidian", "bedrock", "iron_block", "gold_block", "diamond_block",
