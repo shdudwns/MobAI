@@ -441,34 +441,30 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    if ($nextPosition instanceof Vector3) {
+    while (!empty($this->entityPaths[$mob->getId()])) {
         $direction = $nextPosition->subtractVector($currentPosition);
         $distanceSquared = $direction->lengthSquared();
-        $epsilon = 0.001; // 너무 작은 값 방지
 
-        Server::getInstance()->broadcastMessage("📏 [AI] 이동 거리 계산: {$distanceSquared}");
-
-        // 너무 짧은 거리일 경우, 다음 노드로 이동
-        if ($distanceSquared < 0.01) {
-            if (!empty($this->entityPaths[$mob->getId()])) {
-                $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-                $direction = $nextPosition->subtractVector($currentPosition);
-                $distanceSquared = $direction->lengthSquared();
-            } else {
-                return;
-            }
+        if ($distanceSquared >= 0.01) {
+            break; // ✅ 이동할 충분한 거리가 있으면 이동
         }
 
-        // 이동 실행 (거리가 0이 아니면)
-        if ($distanceSquared > $epsilon) {
-            $speed = 0.22;
-            $motion = $direction->normalize()->multiply($speed);
-            $mob->setMotion($motion);
-            Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
-        }
+        // ✅ 거리가 너무 짧으면 다음 노드 가져오기
+        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    }
 
-        // 몬스터 바라볼 방향 설정
+    if ($nextPosition instanceof Vector3) {
+        $speed = 0.22;
+        $motion = $direction->normalize()->multiply($speed);
+        $mob->setMotion($motion);
+        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
+
+        // ✅ 몬스터 바라볼 방향 설정
         $this->lookAt($mob, $nextPosition);
+    } else {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
+        $navigator = new EntityNavigator();
+        $navigator->moveRandomly($mob);
     }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
@@ -477,15 +473,19 @@ public function removePath(Living $mob): void {
     $dz = $target->z - $mob->getPosition()->z;
 
     $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
-    $yaw = rad2deg(atan2(-$dx, $dz)); // ✅ Yaw 계산 (좌우 방향)
-    $pitch = rad2deg(atan2($dy, $horizontalDistance)); // ✅ Pitch 계산 (고개 위/아래)
+    if ($horizontalDistance < 0.01) {
+        $horizontalDistance = 0.01; // ✅ 너무 작은 값 방지
+    }
+
+    $yaw = rad2deg(atan2(-dx, dz)); // ✅ 좌우 회전 계산
+    $pitch = rad2deg(atan2($dy, $horizontalDistance)); // ✅ 위/아래 회전 계산
+
+    // ✅ pitch 값 제한 (너무 위나 아래를 보지 않도록)
+    $maxPitch = 60;
+    $minPitch = -60;
+    $pitch = max($minPitch, min($maxPitch, $pitch));
 
     $mob->setRotation($yaw, $pitch);
-}
-    public function onMobDeath(Living $mob): void {
-    if (isset($this->entityPaths[$mob->getId()])) {
-        unset($this->entityPaths[$mob->getId()]);
-        Server::getInstance()->broadcastMessage("💀 몬스터 {$mob->getId()} 사망 → 경로 삭제 완료");
-    }
+    Server::getInstance()->broadcastMessage("🔄 몬스터 {$mob->getId()} 시선 조정 → Yaw: {$yaw}, Pitch: {$pitch}");
 }
 }
