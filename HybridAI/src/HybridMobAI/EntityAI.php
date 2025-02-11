@@ -460,7 +460,7 @@ public function removePath(Living $mob): void {
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
 
         // ✅ 몬스터 바라볼 방향 설정
-        $this->lookAt($mob, $nextPosition);
+        //$this->lookAt($mob, $nextPosition);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
         $navigator = new EntityNavigator();
