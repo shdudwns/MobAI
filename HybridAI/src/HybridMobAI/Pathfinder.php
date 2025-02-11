@@ -210,16 +210,10 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
 
     $directions = [
-        // 기본 이동 (수평/대각선)
-        [1,0,0], [-1,0,0], [0,0,1], [0,0,-1],
-        [1,0,1], [-1,0,1], [1,0,-1], [-1,0,-1],
-        
-        // 1블록 점프 가능 경로
-        [1,1,0], [-1,1,0], [0,1,1], [0,1,-1],
-        [1,1,1], [-1,1,1], [1,1,-1], [-1,1,-1],
-        
-        // 내려가기 가능 경로
-        [1,-1,0], [-1,-1,0], [0,-1,1], [0,-1,-1]
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부
+        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1] // ✅ 대각선 이동 추가
     ];
 
     foreach ($directions as $dir) {
@@ -231,24 +225,20 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
 
-        // ✅ 공중 블록이면 제외
         if ($block instanceof Air) {
             continue;
         }
 
-        // ✅ 발밑 블록이 단단하지 않으면 제외
         if (!$this->isSolidBlock($blockBelow)) {
             $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
             continue;
         }
 
-        // ✅ 1칸 점프 가능하도록 수정 (머리 위 공간 확보 필요)
         if ($this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
             $neighbors[] = new Vector3($x, $y + 1, $z);
             continue;
         }
 
-        // ✅ 이동 가능한 블록 추가
         $neighbors[] = new Vector3($x, $y, $z);
         $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
