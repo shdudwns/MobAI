@@ -172,11 +172,10 @@ class EntityAI {
     $yaw = (float) $mob->getLocation()->yaw;
 
     if ($yaw === null) {
-        Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
-    // ✅ 몬스터 정면 장애물 감지 (광선 추적)
+    // ✅ 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2));
@@ -201,10 +200,6 @@ class EntityAI {
                 });
                 return;
             }
-
-        // ✅ 직접 탐색 (raycast 실패 시)
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 실행...");
-        $this->initiatePathfind($mob, $position, $hitPos, $world);
         }
     }
 }
@@ -424,7 +419,6 @@ public function removePath(Living $mob): void {
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
     if (empty($path)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 이동할 경로가 없습니다!");
         return;
     }
 
@@ -437,25 +431,23 @@ public function removePath(Living $mob): void {
     }
 
     $direction = $nextPosition->subtractVector($currentPosition);
-
-    if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.04) {
-        $speed = 0.25; // ✅ 속도 조정
-        $currentMotion = $mob->getMotion();
-        $inertiaFactor = 0.6; // ✅ 관성 계수 적용
-
-        $blendedMotion = new Vector3(
-            ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-            $currentMotion->y,
-            ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
-        );
-
-        $mob->setMotion($blendedMotion);
-        $mob->lookAt($nextPosition);
-    } else {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
-        $navigator = new EntityNavigator();
-        $navigator->moveRandomly($mob);
+    if ($direction->lengthSquared() < 0.04) {
+        return;
     }
+
+    $speed = 0.22; // ✅ 속도 조정
+    $currentMotion = $mob->getMotion();
+    $inertiaFactor = 0.6; // ✅ 관성 적용
+
+    // ✅ 부드러운 이동 적용
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+    );
+
+    $mob->setMotion($blendedMotion);
+    $mob->lookAt($nextPosition); // ✅ 부드러운 회전 적용
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
