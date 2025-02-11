@@ -488,4 +488,8 @@ public function removePath(Living $mob): void {
 
     $mob->setRotation($yaw, $pitch);
 }
+    public function onMobDeath(Living $mob): void {
+    $this->removePath($mob);
+    Server::getInstance()->broadcastMessage("💀 몬스터 {$mob->getId()} 사망 → 경로 삭제 완료");
+}
 }
