@@ -54,7 +54,7 @@ private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
-
+    
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
@@ -69,6 +69,10 @@ private function handleMobAI(Living $mob): void {
     $currentTick = Server::getInstance()->getTick();
     $player = $tracker->findNearestPlayer($mob);
 
+    if ($mob->isClosed() || !$mob->isAlive()) {
+        return; // 💀 몬스터가 죽었으면 AI 처리 중단
+    }
+    
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
 
