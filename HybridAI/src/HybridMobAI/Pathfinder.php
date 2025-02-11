@@ -234,7 +234,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
         // ✅ 머리 위 두 칸이 막히면 이동 불가
         if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
-            $logData .= "❌ 장애물 감지 (머리 위 차단): ({$x}, " . ($y + 1) . ", {$z}) - " . $blockAbove->getName() . "\n";
+            $logData .= "❌ 장애물 감지 (머리 위 차단): ({$x}, {($y + 1)}, {$z}) - " . $blockAbove->getName() . "\n";
             continue;
         }
 
