@@ -210,10 +210,8 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
 
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 4방향 이동
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부 확인
-        [1, 0, 1], [-1, 0, -1], [1, 0, -1], [-1, 0, 1] // 대각선 이동 추가
     ];
 
     foreach ($directions as $dir) {
@@ -224,29 +222,25 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // 추가 검사
 
-        // ✅ 두 칸 높이의 장애물 감지
+        // ✅ 1. 2칸 연속 장애물 감지
         if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
+            $logData .= "❌ Blocked by two solid blocks at ({$x}, {$y}, {$z})\n";
             continue;
         }
 
-        // ✅ 머리 위 두 칸이 막히면 이동 불가
+        // ✅ 2. 머리 위 두 칸이 모두 막히면 장애물 처리
         if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            $logData .= "❌ Block Above Too Low: ({$x}, {$y}, {$z})\n";
             continue;
         }
 
-        // ✅ 대각선 이동 시, 주변 블록이 막혀있지 않아야 함
-        if (abs($dir[0]) + abs($dir[2]) == 2) { 
-            $side1 = $world->getBlockAt($pos->x + $dir[0], $pos->y, $pos->z);
-            $side2 = $world->getBlockAt($pos->x, $pos->y, $pos->z + $dir[2]);
-
-            if ($this->isSolidBlock($side1) || $this->isSolidBlock($side2)) {
-                continue;
-            }
+        // ✅ 3. 일반적인 이동 가능 여부 체크
+        if (!$this->isSolidBlock($block)) {
+            $neighbors[] = new Vector3($x, $y, $z);
+            $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z})\n";
         }
-
-        $neighbors[] = new Vector3($x, $y, $z);
     }
 
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
