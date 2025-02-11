@@ -211,9 +211,7 @@ private function getNeighbors(World $world, Vector3 $pos): array {
 
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 수평 이동
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 내려가기 가능 여부
-        [1, 0, 1], [1, 0, -1], [-1, 0, 1], [-1, 0, -1] // ✅ 대각선 이동 추가
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 점프 가능 여부 확인
     ];
 
     foreach ($directions as $dir) {
@@ -224,23 +222,25 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // 추가 검사
 
-        if ($block instanceof Air) {
+        // ✅ 1. 2칸 연속 장애물 감지
+        if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
+            $logData .= "❌ Blocked by two solid blocks at ({$x}, {$y}, {$z})\n";
             continue;
         }
 
-        if (!$this->isSolidBlock($blockBelow)) {
-            $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
+        // ✅ 2. 머리 위 두 칸이 모두 막히면 장애물 처리
+        if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            $logData .= "❌ Block Above Too Low: ({$x}, {$y}, {$z})\n";
             continue;
         }
 
-        if ($this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
-            $neighbors[] = new Vector3($x, $y + 1, $z);
-            continue;
+        // ✅ 3. 일반적인 이동 가능 여부 체크
+        if (!$this->isSolidBlock($block)) {
+            $neighbors[] = new Vector3($x, $y, $z);
+            $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z})\n";
         }
-
-        $neighbors[] = new Vector3($x, $y, $z);
-        $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
 
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
