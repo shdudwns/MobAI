@@ -230,7 +230,9 @@ private function getNeighbors(World $world, Vector3 $pos): array {
         }
 
         // ✅ 발밑 블록이 단단하지 않으면 제외
-        if (!$this->isSolidBlock($blockBelow)) {
+        if ($blockBelow instanceof Grass || !$blockBelow->isSolid()) {
+            $logData .= "✅ 예외 처리: Grass 블록 이동 가능 ({$x}, {$y - 1}, {$z})\n";
+        } else {
             $logData .= "❌ Block Below Not Solid: ({$x}, " . ($y - 1) . ", {$z}) - " . $blockBelow->getName() . "\n";
             continue;
         }
