@@ -452,7 +452,7 @@ public function removePath(Living $mob): void {
         // ✅ 이동할 거리가 0.5 블록(제곱 거리 0.25) 미만이면 강제 이동
         if ($distanceSquared < 0.04) { // 🔥 기존 0.25 → 0.04로 완화
             Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 짧음 ({$distanceSquared}) → 강제 텔레포트!");
-            $mob->teleport($nextPosition);
+            //$mob->teleport($nextPosition);
             return;
         }
 
