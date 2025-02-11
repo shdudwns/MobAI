@@ -54,6 +54,7 @@ private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
+    $detector = new ObstacleDetector($this->plugin);
     
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
@@ -62,6 +63,7 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveRandomly($mob);
         }
+        $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
         return;
     }
 
