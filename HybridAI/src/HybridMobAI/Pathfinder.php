@@ -207,7 +207,7 @@ class Pathfinder {
  */
 private function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
-    $logData = "Neighbors for: ({$pos->x}, {$pos->y}, {$pos->z})\n";
+    $logData = "Neighbors for: (" . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z . ")\n";
 
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], // 기본 4방향 이동
@@ -217,36 +217,29 @@ private function getNeighbors(World $world, Vector3 $pos): array {
     ];
 
     foreach ($directions as $dir) {
-        $x = (int) $pos->x + $dir[0];
-        $y = (int) $pos->y + $dir[1];
-        $z = (int) $pos->z + $dir[2];
+        $x = (int)$pos->x + $dir[0];
+        $y = (int)$pos->y + $dir[1];
+        $z = (int)$pos->z + $dir[2];
 
         $block = $world->getBlockAt($x, $y, $z);
         $blockBelow = $world->getBlockAt($x, $y - 1, $z);
         $blockAbove = $world->getBlockAt($x, $y + 1, $z);
-        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z);
+        $blockAbove2 = $world->getBlockAt($x, $y + 2, $z); // 머리 위 추가 검사
 
-        // ✅ 두 칸 높이의 장애물 감지
+        // ✅ 두 칸 이상 블록이 쌓여있으면 장애물로 인식
         if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
+            $logData .= "❌ 장애물 감지 (두 칸 블록): ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
             continue;
         }
 
         // ✅ 머리 위 두 칸이 막히면 이동 불가
         if ($this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            $logData .= "❌ 장애물 감지 (머리 위 차단): ({$x}, {$y + 1}, {$z}) - " . $blockAbove->getName() . "\n";
             continue;
         }
 
-        // ✅ 대각선 이동 시, 주변 블록이 막혀있지 않아야 함
-        if (abs($dir[0]) + abs($dir[2]) == 2) { 
-            $side1 = $world->getBlockAt((int)$pos->x + $dir[0], (int)$pos->y, (int)$pos->z);
-            $side2 = $world->getBlockAt((int)$pos->x, (int)$pos->y, (int)$pos->z + $dir[2]);
-
-            if ($this->isSolidBlock($side1) || $this->isSolidBlock($side2)) {
-                continue;
-            }
-        }
-
         $neighbors[] = new Vector3($x, $y, $z);
+        $logData .= "✅ Valid Neighbor: ({$x}, {$y}, {$z}) - " . $block->getName() . "\n";
     }
 
     file_put_contents("path_logs/neighbors_log.txt", $logData . "\n", FILE_APPEND);
