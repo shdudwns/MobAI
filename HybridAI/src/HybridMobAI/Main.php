@@ -29,7 +29,7 @@ class Main extends PluginBase implements Listener {
     $this->saveDefaultConfig(); // config.yml 자동 생성
     $this->initializeConfig();
     $this->reloadAISettings();
-    $this->getServer()->getPluginManager()->registerEvents(new EntityEventListener($this->getEntity()), $this);
+    $this->getServer()->getPluginManager()->registerEvents(new EntityEventListener($this->getEntityAI()), $this);
     //$this->entityAI = new EntityAI($this);
     $this->getLogger()->info("HybridMobAI 플러그인 활성화");
     EntityFactory::getInstance()->register(Zombie::class, function(World $world, CompoundTag $nbt): Zombie {
