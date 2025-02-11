@@ -26,6 +26,7 @@ class Main extends PluginBase implements Listener {
     
     public function onEnable(): void {
     self::$instance = $this;
+    $this->getServer()->getPluginManager()->registerEvents(new EntityEventListener($this), $this);
     $this->saveDefaultConfig(); // config.yml 자동 생성
     $this->initializeConfig();
     $this->reloadAISettings();
