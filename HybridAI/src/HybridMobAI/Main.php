@@ -43,7 +43,7 @@ class Main extends PluginBase implements Listener {
     //$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => $this->spawnRandomZombies()), $spawnInterval);
     $config = $this->getConfig()->get("AI");
     $aiEnabled = $config["enabled"];
-    $this->getServer()->getPluginManager()->registerEvents(new EntityEventListener(new EntityAI($this, $aiEnabled), $this);
+    $this->getServer()->getPluginManager()->registerEvents(new EntityEventListener(new EntityAI($this, $aiEnabled)), $this);
     }
     private function initializeConfig(): void {
     $defaultConfig = [
