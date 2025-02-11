@@ -54,7 +54,7 @@ private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
-    
+
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
@@ -72,10 +72,11 @@ private function handleMobAI(Living $mob): void {
     if ($mob->isClosed() || !$mob->isAlive()) {
         return; // 💀 몬스터가 죽었으면 AI 처리 중단
     }
-    
+
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
 
+        // ✅ 기존 경로 유지 (플레이어 변화가 적으면 탐색 X)
         if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
             $ai->moveAlongPath($mob);
             return;
@@ -83,14 +84,20 @@ private function handleMobAI(Living $mob): void {
 
         $ai->setTarget($mob, $player->getPosition());
 
+        // ✅ 장애물 감지 후 회피 시도
+        $ai->avoidObstacle($mob);
+
+        // ✅ 기존 경로가 있으면 이동, 없으면 직접 추적
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
 
+        // ✅ 탐색 주기를 20~40틱 사이로 최적화
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
+
             $algorithm = $this->selectBestAlgorithm($mob, $player);
             $ai->findPathAsync(
                 $mob->getWorld(),
@@ -102,7 +109,8 @@ private function handleMobAI(Living $mob): void {
                         $ai->setPath($mob, $path);
                         $ai->moveAlongPath($mob);
                     } else {
-                        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음");
+                        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음 → 장애물 감지 시도");
+                        $ai->avoidObstacle($mob);
                     }
                 }
             );
