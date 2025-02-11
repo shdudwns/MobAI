@@ -12,6 +12,7 @@ use pocketmine\plugin\PluginBase;
 use pocketmine\block\Block;
 use pocketmine\math\VectorMath;
 use pocketmine\math\RaycastResult;
+use pocketmine\event\entity\EntityDeathEvent;
 
 class EntityAI {
     private bool $enabled;
@@ -492,4 +493,10 @@ public function removePath(Living $mob): void {
     $this->removePath($mob);
     Server::getInstance()->broadcastMessage("💀 몬스터 {$mob->getId()} 사망 → 경로 삭제 완료");
 }
+    public function onEntityDeath(EntityDeathEvent $event): void {
+        $entity = $event->getEntity();
+        if ($entity instanceof Living) {
+            $this->entityAI->onMobDeath($entity);
+        }
+    }
 }
