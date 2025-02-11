@@ -455,7 +455,7 @@ public function removePath(Living $mob): void {
         $currentMotion = $mob->getMotion();
 
         // ✅ 기존 모션과 새로운 모션을 혼합하여 자연스러운 이동 적용
-        $blendedMotion = $currentMotion->multiply(0.6)->add($direction->normalize()->multiply($speed * 0.4));
+        $blendedMotion = $currentMotion->multiply(0.6)->addVector($direction->normalize()->multiply($speed * 0.4));
 
         // ✅ 새로운 모션 적용
         $mob->setMotion($blendedMotion);
