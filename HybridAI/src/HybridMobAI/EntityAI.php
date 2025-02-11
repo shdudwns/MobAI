@@ -437,22 +437,21 @@ public function removePath(Living $mob): void {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
-    // 🎯 이동 방향 계산
     $direction = $nextPosition->subtractVector($currentPosition);
 
     if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.04) {
-        $speed = 0.22; // ✅ 이동 속도 조정
+        $speed = 0.25; // ✅ 속도 조정
         $currentMotion = $mob->getMotion();
+        $inertiaFactor = 0.6; // ✅ 관성 계수 적용
 
-        // ✅ 기존 모션과 새로운 모션을 혼합하여 부드러운 이동 적용
-        $blendedMotion = $currentMotion->multiply(0.6)->addVector($direction->normalize()->multiply($speed * 0.4));
+        $blendedMotion = new Vector3(
+            ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+            $currentMotion->y,
+            ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+        );
 
-        // ✅ 이동 모션 적용
         $mob->setMotion($blendedMotion);
-        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
-
-        // ✅ 자연스러운 회전 적용
-        $this->lookAt($mob, $nextPosition);
+        $mob->lookAt($nextPosition);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
         $navigator = new EntityNavigator();
