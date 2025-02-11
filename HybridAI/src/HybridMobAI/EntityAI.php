@@ -440,27 +440,22 @@ public function removePath(Living $mob): void {
 
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-
-    while (!empty($this->entityPaths[$mob->getId()])) {
-        $direction = $nextPosition->subtractVector($currentPosition);
-        $distanceSquared = $direction->lengthSquared();
-
-        if ($distanceSquared >= 0.01) {
-            break; // ✅ 이동할 충분한 거리가 있으면 이동
-        }
-
-        // ✅ 거리가 너무 짧으면 다음 노드 가져오기
+    $direction = $nextPosition->subtractVector($currentPosition);
+    
+    // ✅ 이동할 거리가 너무 짧으면 다음 노드 가져오기
+    while (!empty($this->entityPaths[$mob->getId()]) && $direction->lengthSquared() < 0.01) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+        $direction = $nextPosition->subtractVector($currentPosition);
     }
 
-    if ($nextPosition instanceof Vector3) {
+    if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.01) {
         $speed = 0.22;
         $motion = $direction->normalize()->multiply($speed);
         $mob->setMotion($motion);
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
 
         // ✅ 몬스터 바라볼 방향 설정
-        //$this->lookAt($mob, $nextPosition);
+        $this->lookAt($mob, $nextPosition);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
         $navigator = new EntityNavigator();
