@@ -440,21 +440,28 @@ public function removePath(Living $mob): void {
 
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+
+    // 이동 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
 
-    while (!empty($this->entityPaths[$mob->getId()]) && $direction->lengthSquared() < 0.01) {
+    // 너무 가까운 위치는 무시
+    while (!empty($this->entityPaths[$mob->getId()]) && $direction->lengthSquared() < 0.04) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
         $direction = $nextPosition->subtractVector($currentPosition);
     }
 
-    if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.01) {
-        $speed = 0.18;
+    if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.04) {
+        $speed = 0.22; // 기본 속도 조정
         $currentMotion = $mob->getMotion();
-        $blendedMotion = $currentMotion->multiply(0.7)->addVector($direction->normalize()->multiply($speed * 0.3));
 
+        // ✅ 기존 모션과 새로운 모션을 혼합하여 자연스러운 이동 적용
+        $blendedMotion = $currentMotion->multiply(0.6)->add($direction->normalize()->multiply($speed * 0.4));
+
+        // ✅ 새로운 모션 적용
         $mob->setMotion($blendedMotion);
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
 
+        // ✅ 부드러운 회전 적용
         $this->lookAt($mob, $nextPosition);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
@@ -464,8 +471,8 @@ public function removePath(Living $mob): void {
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
-    $dy = $target->y - $mob->getPosition()->y;
     $dz = $target->z - $mob->getPosition()->z;
+    $dy = $target->y - $mob->getPosition()->y;
 
     $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
     if ($horizontalDistance < 0.01) {
@@ -475,15 +482,18 @@ public function removePath(Living $mob): void {
     $yaw = rad2deg(atan2(-$dx, $dz));
     $pitch = rad2deg(atan2($dy, $horizontalDistance));
 
+    // ✅ 최대 30도까지만 회전하도록 제한
+    $currentYaw = $mob->getLocation()->yaw;
+    $deltaYaw = $yaw - $currentYaw;
+    if ($deltaYaw > 180) $deltaYaw -= 360;
+    if ($deltaYaw < -180) $deltaYaw += 360;
+    $yaw = $currentYaw + max(-30, min(30, $deltaYaw)); // -30 ~ +30도 범위로 제한
+
     $maxPitch = 45;
     $minPitch = -45;
     $pitch = max($minPitch, min($maxPitch, $pitch));
 
-    // ✅ 이전 yaw와 blend하여 부드러운 회전 적용
-    $currentYaw = $mob->getLocation()->yaw;
-    $blendedYaw = $currentYaw * 0.8 + $yaw * 0.2;
-
-    $mob->setRotation($blendedYaw, $pitch);
-    Server::getInstance()->broadcastMessage("🔄 몬스터 {$mob->getId()} 시선 조정 → Yaw: {$blendedYaw}, Pitch: {$pitch}");
+    $mob->setRotation($yaw, $pitch);
+    Server::getInstance()->broadcastMessage("🔄 몬스터 {$mob->getId()} 시선 조정 → Yaw: {$yaw}, Pitch: {$pitch}");
 }
 }
