@@ -477,7 +477,7 @@ public function removePath(Living $mob): void {
     $dz = $target->z - $mob->getPosition()->z;
 
     $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
-    $yaw = rad2deg(atan2(-dx, dz)); // ✅ Yaw 계산 (좌우 방향)
+    $yaw = rad2deg(atan2(-$dx, $dz)); // ✅ Yaw 계산 (좌우 방향)
     $pitch = rad2deg(atan2($dy, $horizontalDistance)); // ✅ Pitch 계산 (고개 위/아래)
 
     $mob->setRotation($yaw, $pitch);
