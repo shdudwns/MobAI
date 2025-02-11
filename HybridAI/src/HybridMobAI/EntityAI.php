@@ -477,7 +477,7 @@ public function removePath(Living $mob): void {
         $horizontalDistance = 0.01; // ✅ 너무 작은 값 방지
     }
 
-    $yaw = rad2deg(atan2(-dx, dz)); // ✅ 좌우 회전 계산
+    $yaw = rad2deg(atan2(-$dx, $dz)); // ✅ 좌우 회전 계산
     $pitch = rad2deg(atan2($dy, $horizontalDistance)); // ✅ 위/아래 회전 계산
 
     // ✅ pitch 값 제한 (너무 위나 아래를 보지 않도록)
