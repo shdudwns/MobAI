@@ -422,12 +422,15 @@ public function removePath(Living $mob): void {
         return;
     }
 
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition()); // 🎯 플레이어를 직접 바라보게 수정
+    } else {
+        $mob->lookAt($nextPosition); // 경로 따라 이동
     }
 
     $direction = $nextPosition->subtractVector($currentPosition);
@@ -435,11 +438,10 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.22; // ✅ 속도 조정
+    $speed = 0.22; 
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.6; // ✅ 관성 적용
+    $inertiaFactor = 0.6; 
 
-    // ✅ 부드러운 이동 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
@@ -447,7 +449,6 @@ public function removePath(Living $mob): void {
     );
 
     $mob->setMotion($blendedMotion);
-    $mob->lookAt($nextPosition); // ✅ 부드러운 회전 적용
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
