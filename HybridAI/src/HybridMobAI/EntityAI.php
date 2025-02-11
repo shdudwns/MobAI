@@ -444,12 +444,12 @@ public function removePath(Living $mob): void {
     if ($nextPosition instanceof Vector3) {
         $direction = $nextPosition->subtractVector($currentPosition);
         $distanceSquared = $direction->lengthSquared();
+        $epsilon = 0.001; // 너무 작은 값 방지
 
         Server::getInstance()->broadcastMessage("📏 [AI] 이동 거리 계산: {$distanceSquared}");
 
-        // ✅ 너무 짧은 거리는 무시하고 다음 노드로 이동
+        // 너무 짧은 거리일 경우, 다음 노드로 이동
         if ($distanceSquared < 0.01) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 너무 짧음 → 다음 노드로 이동");
             if (!empty($this->entityPaths[$mob->getId()])) {
                 $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
                 $direction = $nextPosition->subtractVector($currentPosition);
@@ -459,34 +459,33 @@ public function removePath(Living $mob): void {
             }
         }
 
-        // ✅ 거리가 너무 짧으면 강제 텔레포트하지 않고 부드럽게 이동
-        if ($distanceSquared > 0.001) {
+        // 이동 실행 (거리가 0이 아니면)
+        if ($distanceSquared > $epsilon) {
             $speed = 0.22;
             $motion = $direction->normalize()->multiply($speed);
             $mob->setMotion($motion);
             Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
         }
 
-        // ✅ 몬스터 바라볼 방향 설정
+        // 몬스터 바라볼 방향 설정
         $this->lookAt($mob, $nextPosition);
     }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
+    $dy = $target->y - $mob->getPosition()->y;
     $dz = $target->z - $mob->getPosition()->z;
 
-    // ✅ Yaw 계산
-    $yaw = rad2deg(atan2(-$dx, $dz));
-
-    // ✅ Pitch 계산 (위 아래 시야 고정)
-    $dy = $target->y - $mob->getPosition()->y;
-    $distance = sqrt($dx * $dx + $dz * $dz);
-    $pitch = rad2deg(atan2(-$dy, $distance)); // 🔥 기존 pitch 값을 수정하여 바닥만 보는 문제 해결
+    $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
+    $yaw = rad2deg(atan2(-dx, dz)); // ✅ Yaw 계산 (좌우 방향)
+    $pitch = rad2deg(atan2($dy, $horizontalDistance)); // ✅ Pitch 계산 (고개 위/아래)
 
     $mob->setRotation($yaw, $pitch);
 }
     public function onMobDeath(Living $mob): void {
-    $this->removePath($mob);
-    Server::getInstance()->broadcastMessage("💀 몬스터 {$mob->getId()} 사망 → 경로 삭제 완료");
+    if (isset($this->entityPaths[$mob->getId()])) {
+        unset($this->entityPaths[$mob->getId()]);
+        Server::getInstance()->broadcastMessage("💀 몬스터 {$mob->getId()} 사망 → 경로 삭제 완료");
+    }
 }
 }
