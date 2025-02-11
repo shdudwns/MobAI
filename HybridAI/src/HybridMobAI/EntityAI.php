@@ -450,7 +450,7 @@ public function removePath(Living $mob): void {
     if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.01) {
         $speed = 0.18;
         $currentMotion = $mob->getMotion();
-        $blendedMotion = $currentMotion->multiply(0.7)->add($direction->normalize()->multiply($speed * 0.3));
+        $blendedMotion = $currentMotion->multiply(0.7)->addVector($direction->normalize()->multiply($speed * 0.3));
 
         $mob->setMotion($blendedMotion);
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
