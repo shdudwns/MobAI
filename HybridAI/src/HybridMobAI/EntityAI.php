@@ -176,47 +176,38 @@ class EntityAI {
         return;
     }
 
-    // ✅ 몬스터의 정면을 검사 (광선 추적)
+    // ✅ 몬스터 정면 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2));
 
-    $hitPos = $this->raycast($world, $start, $end, function(Block $block) {
-        return $this->isSolidBlock($block);
-    });
+    $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
-        $hitBlock = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y, (int) $hitPos->z);
-        $blockAbove = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y + 1, (int) $hitPos->z);
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도...");
 
-        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
-            $this->initiatePathfind($mob, $position, $hitBlock, $world, function (?array $path) use ($mob) {
-                if (!empty($path)) {
-                    $this->setPath($mob, $path);
-                    $navigator = new EntityNavigator();
-                    Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 적용!");
-                    $navigator->moveAlongPath($mob);
-                } else {
-                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 실패! 기존 이동 유지...");
-                }
-            });
-            return;
+        // ✅ 최대 3블록 내에서 회피 경로 탐색
+        for ($i = 0; $i < 3; $i++) {
+            $offsetX = mt_rand(-2, 2);
+            $offsetZ = mt_rand(-2, 2);
+            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+            $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+
+            if ($this->isPassableBlock($alternativeBlock)) {
+                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                    if ($path !== null) {
+                        $this->setPath($mob, $path);
+                        $this->moveAlongPath($mob);
+                    }
+                });
+                return;
+            }
         }
+
+        // ✅ 직접 탐색 (raycast 실패 시)
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 실행...");
+        $this->initiatePathfind($mob, $position, $hitPos, $world);
     }
-
-    // ✅ 직접 탐색 (광선 추적 실패 시)
-    $frontBlockPos = $position->addVector($directionVector);
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-
-    if (!$this->isSolidBlock($frontBlock) || $frontBlock instanceof Air || $frontBlock->isTransparent()) {
-        return;
-    }
-
-    Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도... (" . $frontBlock->getName() . ")");
-    $this->initiatePathfind($mob, $position, $frontBlock, $world, function (?array $path) use ($mob) {
-        $this->onPathFound($mob, $path);
-    });
 }
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
@@ -441,27 +432,26 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // 이동 벡터 계산
-    $direction = $nextPosition->subtractVector($currentPosition);
-
-    // 너무 가까운 위치는 무시
-    while (!empty($this->entityPaths[$mob->getId()]) && $direction->lengthSquared() < 0.04) {
+    // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-        $direction = $nextPosition->subtractVector($currentPosition);
     }
 
+    // 🎯 이동 방향 계산
+    $direction = $nextPosition->subtractVector($currentPosition);
+
     if ($nextPosition instanceof Vector3 && $direction->lengthSquared() >= 0.04) {
-        $speed = 0.22; // 기본 속도 조정
+        $speed = 0.22; // ✅ 이동 속도 조정
         $currentMotion = $mob->getMotion();
 
-        // ✅ 기존 모션과 새로운 모션을 혼합하여 자연스러운 이동 적용
+        // ✅ 기존 모션과 새로운 모션을 혼합하여 부드러운 이동 적용
         $blendedMotion = $currentMotion->multiply(0.6)->addVector($direction->normalize()->multiply($speed * 0.4));
 
-        // ✅ 새로운 모션 적용
+        // ✅ 이동 모션 적용
         $mob->setMotion($blendedMotion);
         Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
 
-        // ✅ 부드러운 회전 적용
+        // ✅ 자연스러운 회전 적용
         $this->lookAt($mob, $nextPosition);
     } else {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 더 이상 이동할 경로가 없음 → 랜덤 이동 실행!");
