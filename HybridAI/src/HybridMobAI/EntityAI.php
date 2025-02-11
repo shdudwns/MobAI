@@ -186,7 +186,6 @@ class EntityAI {
     if ($hitPos instanceof Vector3) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도...");
 
-        // ✅ 최대 3블록 내에서 회피 경로 탐색
         for ($i = 0; $i < 3; $i++) {
             $offsetX = mt_rand(-2, 2);
             $offsetZ = mt_rand(-2, 2);
@@ -202,11 +201,11 @@ class EntityAI {
                 });
                 return;
             }
-        }
 
         // ✅ 직접 탐색 (raycast 실패 시)
         Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 실행...");
         $this->initiatePathfind($mob, $position, $hitPos, $world);
+        }
     }
 }
     
