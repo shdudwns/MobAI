@@ -450,7 +450,7 @@ public function removePath(Living $mob): void {
     $mob->lookAt($nextPosition); // ✅ 부드러운 회전 적용
 
     // 🚀 장애물 감지 및 우회
-    $ai = new EntityAI($this->plugin, $this->aiEnabled);
+    $ai = new EntityAI($this->plugin, $this->enabled);
     $ai->avoidObstacle($mob);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
