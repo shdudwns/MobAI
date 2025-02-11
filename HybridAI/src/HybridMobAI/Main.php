@@ -25,7 +25,7 @@ class Main extends PluginBase implements Listener {
     private static ?Main $instance = null;
     
     public function onEnable(): void {
-    self::$instance = $this
+    self::$instance = $this;
     $this->saveDefaultConfig(); // config.yml 자동 생성
     $this->initializeConfig();
     $this->reloadAISettings();
