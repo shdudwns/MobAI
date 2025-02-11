@@ -445,8 +445,11 @@ public function removePath(Living $mob): void {
         $direction = $nextPosition->subtractVector($currentPosition);
         $distanceSquared = $direction->lengthSquared();
 
-        if ($distanceSquared === 0) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 0 → 다음 노드 선택!");
+        Server::getInstance()->broadcastMessage("📏 [AI] 이동 거리 계산: {$distanceSquared}");
+
+        // ✅ 너무 짧은 거리는 무시하고 다음 노드로 이동
+        if ($distanceSquared < 0.01) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 너무 짧음 → 다음 노드로 이동");
             if (!empty($this->entityPaths[$mob->getId()])) {
                 $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
                 $direction = $nextPosition->subtractVector($currentPosition);
@@ -456,23 +459,16 @@ public function removePath(Living $mob): void {
             }
         }
 
-        // ✅ 거리가 너무 짧으면 강제 텔레포트
-        if ($distanceSquared < 0.01) { // 🔥 0.04 → 0.01로 수정
-            //Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 짧음 ({$distanceSquared}) → 강제 텔레포트!");
-            $mob->teleport($nextPosition);
-            return;
-        }
-
-        if ($direction->lengthSquared() > 0.001) {
+        // ✅ 거리가 너무 짧으면 강제 텔레포트하지 않고 부드럽게 이동
+        if ($distanceSquared > 0.001) {
             $speed = 0.22;
             $motion = $direction->normalize()->multiply($speed);
             $mob->setMotion($motion);
+            Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
         }
 
         // ✅ 몬스터 바라볼 방향 설정
         $this->lookAt($mob, $nextPosition);
-
-        Server::getInstance()->broadcastMessage("➡️ 몬스터 {$mob->getId()} 이동 중: {$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z}");
     }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
