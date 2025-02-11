@@ -458,7 +458,7 @@ public function removePath(Living $mob): void {
 
         // ✅ 거리가 너무 짧으면 강제 텔레포트
         if ($distanceSquared < 0.01) { // 🔥 0.04 → 0.01로 수정
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 짧음 ({$distanceSquared}) → 강제 텔레포트!");
+            //Server::getInstance()->broadcastMessage("⚠️ [AI] 이동 거리 짧음 ({$distanceSquared}) → 강제 텔레포트!");
             $mob->teleport($nextPosition);
             return;
         }
@@ -496,7 +496,7 @@ public function removePath(Living $mob): void {
     public function onEntityDeath(EntityDeathEvent $event): void {
         $entity = $event->getEntity();
         if ($entity instanceof Living) {
-            $this->entityAI->onMobDeath($entity);
+            $this->onMobDeath($entity);
         }
     }
 }
