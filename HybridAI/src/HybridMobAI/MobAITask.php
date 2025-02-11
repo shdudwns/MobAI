@@ -49,7 +49,6 @@ class MobAITask extends Task {
             }
         }
     }
-
 private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
@@ -72,7 +71,7 @@ private function handleMobAI(Living $mob): void {
     $player = $tracker->findNearestPlayer($mob);
 
     if ($mob->isClosed() || !$mob->isAlive()) {
-        return;
+        return; // 💀 몬스터가 죽었으면 AI 처리 중단
     }
     
     if ($player !== null) {
@@ -90,6 +89,9 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
+
+        // ✅ 장애물 감지 및 우회
+        $ai->avoidObstacle($mob);
 
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
@@ -110,9 +112,6 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
-
-    // ✅ 장애물 감지 및 점프 기능 복구
-    $ai->avoidObstacle($mob);
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
