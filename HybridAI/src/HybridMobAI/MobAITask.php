@@ -116,6 +116,7 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
