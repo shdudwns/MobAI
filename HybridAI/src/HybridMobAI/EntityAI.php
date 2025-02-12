@@ -441,36 +441,36 @@ public function removePath(Living $mob): void {
     $tracker = new EntityTracker();
     $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
-    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition());
-    } else {
-        $mob->lookAt($nextPosition);
-    }
-
-    // ✅ 너무 가까운 노드는 건너뜀
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
+    // ✅ 현재 위치에서 너무 가까운 노드 제거
+    do {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    }
+    } while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5);
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.28; // ✅ 속도 조정 (0.26 → 0.28)
+    $speed = 0.26; // ✅ 속도 약간 증가 (0.22 → 0.26)
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35; // ✅ 관성 감소 (0.4 → 0.35)
+    $inertiaFactor = 0.4; // ✅ 관성 감소 (0.6 → 0.4)
 
-    // ✅ 대각선 이동 보정 (45도 움직임 보정)
-    $diagonalFactor = 0.7071; // cos(45°) = sin(45°)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * $diagonalFactor, $direction->y, $direction->z * $diagonalFactor);
-    }
+    // ✅ 대각선 이동 보정 추가 (이동 방향이 자연스럽게 유지되도록)
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y * 0.8, // 공중 부유 방지
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+    );
 
-    $blendedMotion = $currentMotion->multiply($inertiaFactor)->addVector($direction->normalize()->multiply($speed * (1 - $inertiaFactor)));
     $mob->setMotion($blendedMotion);
+
+    // ✅ 플레이어가 가까우면 직접 바라보게 설정
+    if ($player !== null && $currentPosition->distanceSquared($player->getPosition()) < 9) {
+        $mob->lookAt($player->getPosition());
+    } else {
+        $mob->lookAt($nextPosition);
+    }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
