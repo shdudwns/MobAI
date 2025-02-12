@@ -473,15 +473,21 @@ public function removePath(Living $mob): void {
         $mob->lookAt($nextPosition);
     }
 
-    // ✅ 회전 먼저 적용 후 이동 (usleep 제거, 딜레이 없이 자연스럽게 전환)
-    $mob->setRotation($mob->getLocation()->yaw, 0);
+    // ✅ 너무 가까운 노드는 건너뜀
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.2) {
+        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    }
 
+    // ✅ 이동 방향 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
-    if ($direction->lengthSquared() < 0.04) {
+    $distanceSquared = $direction->lengthSquared();
+
+    // ✅ 너무 작은 거리는 무시 (제자리 멈춤 방지)
+    if ($distanceSquared < 0.01) {
         return;
     }
 
-    $speed = 0.22; // ✅ 속도 조정
+    $speed = 0.24; // ✅ 속도 조정 (너무 빠르면 부자연스러움)
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.5; // ✅ 관성 보정
 
