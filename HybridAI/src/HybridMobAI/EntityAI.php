@@ -456,7 +456,7 @@ public function removePath(Living $mob): void {
     }
 
     $blendedMotion = $currentMotion->multiply($inertiaFactor)->addVector($direction->normalize()->multiply($speed * (1 - $inertiaFactor)));
-    $this->avoidObstacle();
+    $this->avoidObstacle($mob);
     $mob->setMotion($blendedMotion);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
