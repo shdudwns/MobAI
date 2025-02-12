@@ -202,6 +202,27 @@ class EntityAI {
             }
         }
     }
+
+    // ✅ 직접 탐색 추가
+    $frontBlock = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+    if ($this->isSolidBlock($frontBlock)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도... (" . $frontBlock->getName() . ")");
+        for ($i = 0; $i < 3; $i++) {
+            $offsetX = mt_rand(-2, 2);
+            $offsetZ = mt_rand(-2, 2);
+            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+
+            if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
+                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                    if ($path !== null) {
+                        $this->setPath($mob, $path);
+                        $this->moveAlongPath($mob);
+                    }
+                });
+                return;
+            }
+        }
+    }
 }
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
@@ -422,9 +443,16 @@ public function removePath(Living $mob): void {
         return;
     }
 
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition()); // 🎯 플레이어를 직접 바라보게 수정
+    } else {
+        $mob->lookAt($nextPosition); // 경로 따라 이동
+    }
     // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
@@ -447,11 +475,6 @@ public function removePath(Living $mob): void {
     );
 
     $mob->setMotion($blendedMotion);
-    $mob->lookAt($nextPosition); // ✅ 부드러운 회전 적용
-
-    // 🚀 장애물 감지 및 우회
-    $ai = new EntityAI($this->plugin, $this->enabled);
-    $ai->avoidObstacle($mob);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
