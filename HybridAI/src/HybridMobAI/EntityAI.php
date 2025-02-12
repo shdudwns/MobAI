@@ -189,8 +189,8 @@ class EntityAI {
         // ✅ 장애물 정보 출력
         Server::getInstance()->broadcastMessage("🛑 [AI] 장애물 감지됨! 블록: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
 
-        // ✅ 공기(Air)나 몬스터가 밟고 있는 블록이면 장애물로 인식하지 않음
-        if ($hitBlock instanceof Air || $hitBlock->getId() === $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z)->getId()) {
+        // ✅ Air 또는 몬스터가 밟고 있는 블록이면 장애물로 인식하지 않음
+        if ($this->isNonSolidBlock($hitBlock) || $hitBlock->getId() === $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z)->getId()) {
             Server::getInstance()->broadcastMessage("🚫 [AI] 장애물 아님 (무시됨): " . $hitBlock->getName());
             return;
         }
@@ -202,7 +202,7 @@ class EntityAI {
         }
     }
 
-    // ✅ 장애물 감지 실패 시 감지된 블록 정보를 출력
+    // ✅ 장애물 감지 실패 시 감지된 블록 정보 출력
     Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
     $find = new Pathfinder();
     $neighbors = $find->getNeighbors($world, $position);
@@ -213,12 +213,24 @@ class EntityAI {
         // ✅ 직접 탐색한 블록 정보 출력
         Server::getInstance()->broadcastMessage("🔎 [AI] 직접 탐색 블록: " . $neighborBlock->getName() . " (위치: {$neighbor->x}, {$neighbor->y}, {$neighbor->z})");
 
-        if ($this->isSolidBlock($neighborBlock)) {
+        if ($this->isSolidBlock($neighborBlock) && !$this->isNonSolidBlock($neighborBlock)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지: " . $neighborBlock->getName());
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
     }
+}
+
+private function isNonSolidBlock(Block $block): bool {
+    $nonSolidBlocks = [
+        "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
+        "mushroom", "wheat", "carrot", "potato", "beetroot", "nether_wart",
+        "sugar_cane", "cactus", "reed", "vine", "lily_pad",
+        "glass_pane", "iron_bars", "cauldron", "brewing_stand", "enchanting_table",
+        "sign", "wall_sign", "painting", "item_frame",
+    ];
+
+    return in_array(strtolower($block->getName()), $nonSolidBlocks);
 }
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
@@ -300,25 +312,6 @@ private function isSolidBlock(Block $block): bool {
     }
 
     return false;
-}
-
-private function isNonSolidBlock(Block $block): bool {
-    $nonSolidBlocks = [
-        "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
-        "mushroom", "wheat", "carrot", "potato", "beetroot", "nether_wart",
-        "sugar_cane", "cactus", "reed", "vine", "lily_pad",
-        "door", "trapdoor", "fence", "fence_gate", "wall",
-        "glass_pane", "iron_bars", "cauldron", "brewing_stand", "enchanting_table",
-        "workbench", "furnace", "chest", "trapped_chest", "dispenser", "dropper",
-        "hopper", "anvil", "beacon", "daylight_detector", "note_block",
-        "piston", "sticky_piston", "lever", "button", "pressure_plate",
-        "redstone_torch", "redstone_wire", "repeater", "comparator",
-        "sign", "wall_sign", "painting", "item_frame",
-    ];
-
-    $blockName = strtolower($block->getName()); // 블록 이름을 소문자로 변환하여 비교
-
-    return in_array($blockName, $nonSolidBlocks);
 }
 
 
@@ -446,6 +439,12 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition());
+    } else {
+        $mob->lookAt($nextPosition);
+    }
+
     // ✅ 너무 가까운 노드는 건너뜀
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
@@ -456,29 +455,22 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    // ✅ 이동하기 전에 먼저 몸을 돌림
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition());
-    } else {
-        $mob->lookAt($nextPosition);
-    }
-
-    $speed = 0.26; // ✅ 속도 조정
+    $speed = 0.26;
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35; // ✅ 관성 보정
+    $inertiaFactor = 0.4;
 
-    // ✅ 이동 방향 보정 (몸을 먼저 돌리고 이동)
-    $adjustedDirection = new Vector3(
-        $direction->x * 0.9,
-        ($direction->y > 0.5 ? 0.42 : ($direction->y < -0.5 ? -0.2 : $direction->y)), // 점프 및 내려가기 보정
-        $direction->z * 0.9
-    );
+    // ✅ 몬스터가 점프해야 하는지 감지
+    if ($direction->y > 0.5) {
+        $direction = new Vector3($direction->x, 0.42, $direction->z);
+    } elseif ($direction->y < -0.5) {
+        $direction = new Vector3($direction->x, -0.2, $direction->z);
+    }
 
     // ✅ 부드러운 이동 적용
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($adjustedDirection->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $adjustedDirection->y > 0 ? $adjustedDirection->y : $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($adjustedDirection->normalize()->z * $speed * (1 - $inertiaFactor))
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $direction->y > 0 ? $direction->y : $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
