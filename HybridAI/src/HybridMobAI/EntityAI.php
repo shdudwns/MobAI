@@ -178,25 +178,27 @@ class EntityAI {
     // ✅ 몬스터 정면 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(3));
+    $end = $start->addVector($directionVector->multiply(2.5));
 
     $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
         $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
         $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
+        $blockAbove2 = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 2, (int)$hitPos->z);
 
         // ✅ 장애물 정보 출력
         Server::getInstance()->broadcastMessage("🛑 [AI] 장애물 감지됨! 블록: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
 
-        // ✅ Air 또는 몬스터가 밟고 있는 블록이면 장애물로 인식하지 않음
+        // ✅ 이동 가능한 블록이면 장애물로 인식하지 않음
         if ($this->isNonSolidBlock($hitBlock) || $hitBlock->getId() === $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z)->getId()) {
             Server::getInstance()->broadcastMessage("🚫 [AI] 장애물 아님 (무시됨): " . $hitBlock->getName());
             return;
         }
 
-        // ✅ 두 칸 높이 장애물 감지
-        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
+        // ✅ 2칸 이상 블록이 있는 경우 장애물로 인식
+        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도...");
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
@@ -440,7 +442,9 @@ public function removePath(Living $mob): void {
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
     if ($player !== null) {
-        $mob->lookAt($player->getPosition());
+        // ✅ Y 좌표를 고정하여 플레이어가 점프하거나 날아도 따라가지 않도록 수정
+        $targetPosition = new Vector3($player->getPosition()->x, $mob->getPosition()->y, $player->getPosition()->z);
+        $mob->lookAt($targetPosition);
     } else {
         $mob->lookAt($nextPosition);
     }
@@ -459,11 +463,16 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.4;
 
-    // ✅ 몬스터가 점프해야 하는지 감지
+    // ✅ 점프 판정 수정 (플레이어 점프와 무관하게 블록 높이만 감지)
     if ($direction->y > 0.5) {
         $direction = new Vector3($direction->x, 0.42, $direction->z);
     } elseif ($direction->y < -0.5) {
         $direction = new Vector3($direction->x, -0.2, $direction->z);
+    }
+
+    // ✅ 대각선 이동 보정 (이전보다 부드러운 움직임)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
     }
 
     // ✅ 부드러운 이동 적용
