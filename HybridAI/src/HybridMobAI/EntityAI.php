@@ -221,7 +221,7 @@ class EntityAI {
     // ✅ 이동 가능한 블록은 무시
     if ($this->isNonSolidBlock($neighborBlock)) {
         Server::getInstance()->broadcastMessage(
-            "🚫 [AI] 이동 가능한 블록 (무시됨): " . $neighborBlock->getVanillaName()
+            "🚫 [AI] 이동 가능한 블록 (무시됨): " . $neighborBlock->getName()
         );
         continue;
     }
