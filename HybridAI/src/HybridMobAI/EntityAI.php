@@ -177,7 +177,7 @@ class EntityAI {
 
     // 1. 앞쪽 2칸 블록 확인
     $x = (int)$position->x;
-    $y = (int)$position->y + (int)$mob->getEyeHeight(); // 눈높이
+    $y = (int)$position->y + 1; // 눈높이를 블록 높이(1)로 설정
     $z = (int)$position->z;
 
     $frontBlock1 = $world->getBlockAt($x + (int)cos(deg2rad($yaw)), $y, $z + (int)sin(deg2rad($yaw)));
