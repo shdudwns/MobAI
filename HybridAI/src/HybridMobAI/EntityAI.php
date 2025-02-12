@@ -472,11 +472,11 @@ public function removePath(Living $mob): void {
 
     $speed = 0.26; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.4; // ✅ 관성 보정
+    $inertiaFactor = 0.35; // ✅ 관성 보정
 
-    // ✅ 대각선 이동 보정 (대각선 이동 가능할 경우 우선 처리)
+    // ✅ 대각선 이동 보정 (X, Z 축 이동 조정)
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.75, $direction->y, $direction->z * 0.75);
+        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
     }
 
     // ✅ Y축 보정 (점프 및 내려가기 처리)
