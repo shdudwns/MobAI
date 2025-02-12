@@ -242,6 +242,22 @@ private function moveAroundObstacle(Living $mob): void {
     return $this->isSolidBlock($blockAbove);
 }
 
+public function avoidObstacle(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+
+    // ✅ 몬스터 정면의 블록 감지
+    $frontBlockPos = $position->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+
+    if ($this->isObstacle($frontBlock, $frontBlockAbove)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: {$frontBlock->getName()} at {$frontBlockPos->x}, {$frontBlockPos->y}, {$frontBlockPos->z}");
+        $this->findAlternativePath($mob, $position, $world);
+    }
+}
+
 public function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
     $maxAttempts = 5;
     for ($i = 0; $i < $maxAttempts; $i++) {
