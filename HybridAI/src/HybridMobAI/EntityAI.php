@@ -547,4 +547,3 @@ private function lerpAngle(float $current, float $target, float $alpha): float {
     return $current + ($diff * $alpha);
 }
 }
-}
