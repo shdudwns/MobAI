@@ -429,32 +429,6 @@ public function removePath(Living $mob): void {
         return isset($this->entityPaths[$mob->getId()]);
     }
 
-    public function onPathFound(Living $mob, ?array $path): void {
-    $navigator = new EntityNavigator();
-    $tracker = new EntityTracker();
-
-    if ($path !== null && count($path) > 0) {
-        $this->setPath($mob, $path);
-        
-        // ✅ 경로 저장 여부 확인
-        $savedPath = $this->getPath($mob);
-        if (empty($savedPath)) {
-            Server::getInstance()->broadcastMessage("❌ [AI] 경로 저장 실패!");
-            return;
-        }
-
-        Server::getInstance()->broadcastMessage("✅ 몬스터 {$mob->getId()} 경로 탐색 완료! 이동 시작...");
-        $navigator->moveAlongPath($mob);
-    } else {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 탐색 실패! 기본 이동 유지...");
-        $nearestPlayer = $tracker->findNearestPlayer($mob);
-        if ($nearestPlayer !== null) {
-            $navigator->moveToPlayer($mob, $nearestPlayer, $this->enabled);
-        } else {
-            $navigator->moveRandomly($mob);
-        }
-    }
-}
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
     if (empty($path)) {
@@ -466,15 +440,22 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 몬스터가 바라보는 방향 기준으로 이동하도록 수정
+    // ✅ 플레이어가 있으면 바라보도록 수정
     if ($player !== null) {
         $mob->lookAt($player->getPosition());
     } else {
         $mob->lookAt($nextPosition);
     }
 
-    // ✅ 너무 가까운 노드는 건너뜀
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.2) {
+    // ✅ 회전 먼저 적용 후 이동
+    $yaw = $mob->getLocation()->yaw;
+    $mob->setRotation($yaw, 0);
+
+    // ✅ 회전 후 딜레이 (너무 크면 멈춘 것처럼 보이므로 줄임)
+    usleep(20000); // 20ms 딜레이
+
+    // ✅ 너무 가까운 노드는 건너뜀 (멈춤 방지)
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.3) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
@@ -487,9 +468,14 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.24; // ✅ 속도 조정 (너무 빠르면 부자연스러움)
+    $speed = 0.24; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.5; // ✅ 관성 보정
+
+    // ✅ 미끄러짐 방지 (회전 후 이동 안정화)
+    if ($distanceSquared < 0.5) {
+        $inertiaFactor = 0.7; // 가까울수록 더 천천히 움직이도록 보정
+    }
 
     // ✅ 점프 & 내려가기 반응 추가 (장애물 넘기 & 자연스러운 낙하)
     if ($direction->y > 0.5) {
@@ -512,7 +498,7 @@ public function removePath(Living $mob): void {
 
     $mob->setMotion($blendedMotion);
 
-    // 🚀 장애물 감지 및 우회
+    // 🚀 장애물 감지 및 자동 우회
     $this->avoidObstacle($mob);
 }
 }
