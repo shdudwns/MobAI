@@ -242,10 +242,10 @@ private function moveAroundObstacle(Living $mob): void {
         return;
     }
 
-    // ✅ 몬스터의 "눈높이" 기준으로 장애물 감지
+    // ✅ 몬스터 눈높이 기준 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(2.5));
+    $end = $start->addVector($directionVector->multiply(2));
 
     $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
@@ -254,62 +254,55 @@ private function moveAroundObstacle(Living $mob): void {
         $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
         $blockAbove2 = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 2, (int)$hitPos->z);
 
-        Server::getInstance()->broadcastMessage("🛑 [AI] 장애물 감지됨! 블록: " . $hitBlock->getName());
-
-        // ✅ 두 칸 이상 블록이 있는 경우 장애물로 인식
+        // ✅ 두 칸 이상 블록이 막혀 있으면 장애물로 인식
         if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도...");
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $hitBlock->getName());
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
     }
 
-    // ✅ raycast() 실패 시 직접 탐색 실행
-    //Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
+    // ✅ 광선 추적 실패 → 직접 탐색 실행
     $this->directObstacleSearch($mob, $world, $position);
 }
 
 private function directObstacleSearch(Living $mob, World $world, Vector3 $position): void {
-    $pathfinder = new Pathfinder();
-    $neighbors = $pathfinder->getNeighbors($world, $position);
+    $front = $position->add(1, 0, 0);
+    $frontAbove = $position->add(1, 1, 0);
+    $frontAbove2 = $position->add(1, 2, 0);
 
-    foreach ($neighbors as $neighbor) {
-        $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-        
-        // ✅ 직접 탐색한 블록 정보 출력
-        Server::getInstance()->broadcastMessage("🔎 [AI] 직접 탐색 블록: " . $neighborBlock->getName());
+    $blockFront = $world->getBlockAt((int)$front->x, (int)$front->y, (int)$front->z);
+    $blockAbove = $world->getBlockAt((int)$frontAbove->x, (int)$frontAbove->y, (int)$frontAbove->z);
+    $blockAbove2 = $world->getBlockAt((int)$frontAbove2->x, (int)$frontAbove2->y, (int)$frontAbove2->z);
 
-        if ($this->isSolidBlock($neighborBlock)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지: " . $neighborBlock->getName());
-            $this->findAlternativePath($mob, $position, $world);
-            return;
-        }
+    // ✅ 공기(Air)나 이동 가능한 블록이면 장애물 아님
+    if (!$this->isSolidBlock($blockFront) || $blockFront instanceof Air) {
+        return;
+    }
+
+    // ✅ 두 칸 이상 막혀 있으면 장애물로 인식
+    if ($this->isSolidBlock($blockFront) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지됨: " . $blockFront->getName());
+        $this->findAlternativePath($mob, $position, $world);
     }
 }
 
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
-    $attempts = 0;
-    while ($attempts < 5) { // 최대 5번 시도
+    for ($i = 0; $i < 3; $i++) {
         $offsetX = mt_rand(-2, 2);
         $offsetZ = mt_rand(-2, 2);
         $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-        $goalBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
 
-        if ($this->isPassableBlock($goalBlock) && $this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y + 1, (int)$alternativeGoal->z))) { // 1칸 위도 확인
+        if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
             $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
                 if ($path !== null) {
                     $this->setPath($mob, $path);
                     $this->moveAlongPath($mob);
                 }
             });
-            return; // 경로를 찾았으면 함수 종료
+            return;
         }
-        $attempts++;
     }
-
-    // 5번 시도해도 경로를 못 찾으면 다른 행동을 하거나, 현재 위치에서 잠시 멈추는 등의 처리를 추가할 수 있습니다.
-    Server::getInstance()->broadcastMessage("⚠️ [AI] 우회 경로를 찾지 못했습니다!");
-    // 예: $mob->setMotion(new Vector3(0, 0, 0)); // 몬스터 멈추기
 }
 
 private function isNonSolidBlock(Block $block): bool {
@@ -518,7 +511,7 @@ public function removePath(Living $mob): void {
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
     if ($player !== null) {
-        // ✅ Y 좌표를 고정하여 플레이어 점프/비행을 따라가지 않음
+        // ✅ 몸을 먼저 회전한 후 이동
         $targetPosition = new Vector3($player->getPosition()->x, $mob->getPosition()->y, $player->getPosition()->z);
         $mob->lookAt($targetPosition);
     } else {
@@ -539,9 +532,9 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.4;
 
-    // ✅ 부드러운 회전 적용 (회전 후 이동)
-    if ($player !== null) {
-        $mob->lookAt($targetPosition);
+    // ✅ 대각선 이동 보정
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
     }
 
     // ✅ 부드러운 이동 적용
