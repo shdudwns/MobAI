@@ -260,16 +260,19 @@ private function moveAroundObstacle(Living $mob): void {
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
     Server::getInstance()->broadcastMessage("🔄 [AI] 우회 경로 탐색 시작...");
 
+    // ✅ 다양한 방향 탐색 (기본 4방향 + 대각선 + 위/아래 경사로 포함)
     $directions = [
         new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1),
-        new Vector3(1, 0, 1), new Vector3(-1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1)
+        new Vector3(1, 0, 1), new Vector3(-1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1),
+        new Vector3(1, 1, 0), new Vector3(-1, 1, 0), new Vector3(0, 1, 1), new Vector3(0, 1, -1) // 경사로 탐색 추가
     ];
 
     foreach ($directions as $dir) {
         $alternativeGoal = $position->addVector($dir);
         $block = $world->getBlockAt((int) $alternativeGoal->x, (int) $alternativeGoal->y, (int) $alternativeGoal->z);
+        $blockBelow = $world->getBlockAt((int) $alternativeGoal->x, (int) $alternativeGoal->y - 1, (int) $alternativeGoal->z);
 
-        if ($this->isPassableBlock($block)) {
+        if ($this->isPassableBlock($block) && !$blockBelow instanceof Air) {
             Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 찾음: ({$alternativeGoal->x}, {$alternativeGoal->y}, {$alternativeGoal->z})");
 
             $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
@@ -493,6 +496,7 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
+    // ✅ 몬스터가 바라보는 방향 기준으로 이동하도록 수정
     if ($player !== null) {
         $mob->lookAt($player->getPosition());
     } else {
@@ -509,15 +513,23 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.26;
+    $speed = 0.24; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.4;
+    $inertiaFactor = 0.5; // ✅ 관성 보정
 
-    // ✅ 바라보는 방향 기준 이동 (부드럽게 따라오기)
+    // ✅ 대각선 이동 보정
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
+    }
+
+    // ✅ 부드러운 회전 추가 (몸을 먼저 돌리고 이동)
+    $mob->setRotation($mob->getLocation()->yaw, 0);
+    $direction = $direction->normalize()->multiply($speed);
+
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+        ($currentMotion->x * $inertiaFactor) + ($direction->x * (1 - $inertiaFactor)),
+        $direction->y > 0 ? $direction->y : $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->z * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
