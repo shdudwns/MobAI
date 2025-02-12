@@ -449,11 +449,7 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.35; // ✅ 관성 감소 (0.4 → 0.35)
 
-    // ✅ 대각선 이동 보정 (45도 움직임 보정)
-    $diagonalFactor = 0.7071; // cos(45°) = sin(45°)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * $diagonalFactor, $direction->y, $direction->z * $diagonalFactor);
-    }
+
 
     $blendedMotion = $currentMotion->multiply($inertiaFactor)->addVector($direction->normalize()->multiply($speed * (1 - $inertiaFactor)));
     $this->avoidObstacle($mob);
