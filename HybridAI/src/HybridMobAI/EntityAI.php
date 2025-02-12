@@ -234,6 +234,31 @@ class EntityAI {
     }
 }
 
+private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
+    $attempts = 0;
+    while ($attempts < 5) { // 최대 5번 시도
+        $offsetX = mt_rand(-2, 2);
+        $offsetZ = mt_rand(-2, 2);
+        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+        $goalBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+
+        if ($this->isPassableBlock($goalBlock) && $this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y + 1, (int)$alternativeGoal->z))) { // 1칸 위도 확인
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
+                    $this->moveAlongPath($mob);
+                }
+            });
+            return; // 경로를 찾았으면 함수 종료
+        }
+        $attempts++;
+    }
+
+    // 5번 시도해도 경로를 못 찾으면 다른 행동을 하거나, 현재 위치에서 잠시 멈추는 등의 처리를 추가할 수 있습니다.
+    Server::getInstance()->broadcastMessage("⚠️ [AI] 우회 경로를 찾지 못했습니다!");
+    // 예: $mob->setMotion(new Vector3(0, 0, 0)); // 몬스터 멈추기
+}
+
 private function isNonSolidBlock(Block $block): bool {
     $nonSolidBlocks = [
         "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
@@ -261,19 +286,15 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
     $dz /= $length;
 
     $x = $start->x;
-    $y = $start->y;
+    $y = $start->y + $mob->getEyeHeight(); // 시작 y 위치를 눈높이로 조정
     $z = $start->z;
 
     for ($i = 0; $i <= $length; $i += 0.5) {
-        $block1 = $world->getBlockAt((int)$x, (int)$y, (int)$z); // 1칸 높이
-        $block2 = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z); // 2칸 높이
+        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z); 
+        $blockAbove = $world->getBlockAt((int)$x, (int)$y+1, (int)$z);
+        $blockAbove2 = $world->getBlockAt((int)$x, (int)$y+2, (int)$z);
 
-        // ✅ 2칸 모두 장애물인지 확인
-        if ($filter($block1) && $filter($block2)) {
-            Server::getInstance()->broadcastMessage(
-                "🛑 [AI] 2칸 장애물 감지: " . $block1->getVanillaName() . 
-                " (위치: {$x}, {$y}, {$z})"
-            );
+        if ($filter($block) || $filter($blockAbove) || $filter($blockAbove2)) { // 한칸이라도 막혀있으면 감지
             return new Vector3((int)$x, (int)$y, (int)$z);
         }
 
@@ -305,32 +326,19 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
 }
 // Helper function to check if a block is solid for collision
 private function isSolidBlock(Block $block): bool {
-    $nonObstacleBlocks = [ 
-        "grass", "dirt", "stone", "sand", "gravel", "clay", "coarse_dirt",
-        "podzol", "red_sand", "mycelium", "snow", "sandstone", "andesite",
-        "diorite", "granite", "netherrack", "end_stone", "terracotta", "concrete",
-    ];
-
-    $obstacleBlocks = [ 
-        "fence", "fence_gate", "wall", "cobweb", "water", "lava", "magma_block",
-        "soul_sand", "honey_block", "nether_wart_block", "scaffolding", "cactus"
-    ];
-
-    $blockName = strtolower($block->getName());
-
-    // ✅ 이동 가능한 블록이면 false 반환 (장애물 아님)
-    if (in_array($blockName, $nonObstacleBlocks)) {
-        return false;
-    }
-
-    // ✅ 장애물 블록이면 true 반환
-    if (in_array($blockName, $obstacleBlocks) || $block->isSolid()) {
-        return true;
-    }
-
-    return false;
+    return $block->isSolid() && !$this->isPassableBlock($block); // isSolid() && isPassableBlock()을 같이 사용해서 좀더 정확하게 판별
 }
 
+private function isPassableBlock(Block $block): bool {
+    $nonPassableBlocks = [ // 통과 불가능한 블록 목록
+        "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
+        "mushroom", "wheat", "carrot", "potato", "beetroot", "nether_wart",
+        "sugar_cane", "cactus", "reed", "vine", "lily_pad",
+        "glass_pane", "iron_bars", "cauldron", "brewing_stand", "enchanting_table",
+        "sign", "wall_sign", "painting", "item_frame",
+    ];
+    return !in_array(strtolower($block->getName()), $nonPassableBlocks) && ($block instanceof Air || $block instanceof TallGrass || $block->isTransparent() || !$block->isSolid());
+}
 
     public function escapePit(Living $mob): void {
     $position = $mob->getPosition();
