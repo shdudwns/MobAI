@@ -233,30 +233,6 @@ private function moveAroundObstacle(Living $mob): void {
     }
 }
     
-    public function avoidObstacle(Living $mob): void {
-    $position = $mob->getPosition();
-    $world = $mob->getWorld();
-
-    $directions = [
-        new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1), // 기본 수평 이동
-        new Vector3(1, 1, 0), new Vector3(-1, 1, 0), new Vector3(0, 1, 1), new Vector3(0, 1, -1), // 점프 가능 여부 확인
-    ];
-
-    foreach ($directions as $dir) {
-        $checkPos = $position->addVector($dir);
-        $block = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y, (int) $checkPos->z);
-        $blockAbove = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y + 1, (int) $checkPos->z);
-        $blockAbove2 = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y + 2, (int) $checkPos->z);
-
-        // ✅ 장애물 판별 (2칸 이상 막혀 있는지 확인)
-        if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: {$block->getName()} at ({$checkPos->x}, {$checkPos->y}, {$checkPos->z})");
-            $this->findAlternativePath($mob, $position, $world);
-            return;
-        }
-    }
-}
-
     private function isObstacle(Block $block, Block $blockAbove): bool {
     if ($block instanceof Air) return false; // ✅ 공기는 장애물이 아님
     if ($this->isPassableBlock($block)) return false; // ✅ 지나갈 수 있는 블록은 장애물 X
@@ -264,6 +240,22 @@ private function moveAroundObstacle(Living $mob): void {
 
     // ✅ 위에도 블록이 있어서 이동 불가능한 경우 장애물로 판단
     return $this->isSolidBlock($blockAbove);
+}
+
+private function avoidObstacle(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+
+    // ✅ 몬스터 정면의 블록 감지
+    $frontBlockPos = $position->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+
+    if ($this->isObstacle($frontBlock, $frontBlockAbove)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: {$frontBlock->getName()} at {$frontBlockPos->x}, {$frontBlockPos->y}, {$frontBlockPos->z}");
+        $this->findAlternativePath($mob, $position, $world);
+    }
 }
     
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
@@ -515,31 +507,34 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $tracker = new EntityTracker();
-    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 몬스터가 바라보는 방향 기준으로 이동하도록 수정
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition());
-    } else {
-        $mob->lookAt($nextPosition);
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
+        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
-    // ✅ 회전 먼저 적용 후 이동
-    $mob->setRotation($mob->getLocation()->yaw, 0);
-    usleep(50000); // ✅ 회전 후 약간의 딜레이 추가
+    if ($nextPosition === null) return;
+
+    // ✅ 몬스터가 서서히 회전하도록 개선
+    $mob->lookAt($nextPosition);
+    usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.22; // ✅ 속도 조정
+    $speed = 0.24; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.5; // ✅ 관성 보정
 
+    // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
+    }
+
+    // ✅ 이동 모션 계산 및 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
