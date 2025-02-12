@@ -134,7 +134,7 @@ private function handleMobAI(Living $mob): void {
     $frontBlock2 = $world->getBlockAt($x + 2 * (int)cos(deg2rad($yaw)), $y, $z + 2 * (int)sin(deg2rad($yaw)));
 
     // 2. 장애물 여부 확인
-    if ($this->isSolidBlock($frontBlock1) && $this->isSolidBlock($frontBlock2)) {
+    if ($this->entityAI->isSolidBlock($frontBlock1) && $this->entityAI->isSolidBlock($frontBlock2)) {
         Server::getInstance()->broadcastMessage(" [AI] 눈앞에 2칸 이상 장애물 감지: " . $frontBlock1->getName());
         $this->moveAroundObstacle($mob); // 장애물 우회
         return;
@@ -161,7 +161,7 @@ private function moveAroundObstacle(Living $mob): void {
     $newBlock = $world->getBlockAt((int)$newX, (int)$mob->getY(), (int)$newZ);
     $newBlockAbove = $world->getBlockAt((int)$newX, (int)$mob->getY() + 1, (int)$newZ);
 
-    if ($this->isPassableBlock($newBlock) && $this->isPassableBlock($newBlockAbove)) {
+    if ($this->entityAI->isPassableBlock($newBlock) && $this->entityAI->isPassableBlock($newBlockAbove)) {
         // 4. 이동
         $mob->teleport(new Vector3($newX, $mob->getY(), $newZ));
     } else {
@@ -173,7 +173,7 @@ private function moveAroundObstacle(Living $mob): void {
         $newBlock = $world->getBlockAt((int)$newX, (int)$mob->getY(), (int)$newZ);
         $newBlockAbove = $world->getBlockAt((int)$newX, (int)$mob->getY() + 1, (int)$newZ);
 
-        if ($this->isPassableBlock($newBlock) && $this->isPassableBlock($newBlockAbove)) {
+        if ($this->entityAI->isPassableBlock($newBlock) && $this->entityAI->isPassableBlock($newBlockAbove)) {
             $mob->teleport(new Vector3($newX, $mob->getY(), $newZ));
         } else {
             // 여전히 이동 불가능한 경우, 제자리에서 잠시 멈추거나 다른 행동을 취하도록 설정
