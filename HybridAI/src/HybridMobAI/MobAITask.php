@@ -67,6 +67,7 @@ private function handleMobAI(Living $mob): void {
     }
 
     $mobId = $mob->getId();
+    $ai->avoidObstacle($mob);
     $currentTick = Server::getInstance()->getTick();
 
     // ✅ 장애물 감지 및 점프를 가장 먼저 실행 (우선순위 상향)
