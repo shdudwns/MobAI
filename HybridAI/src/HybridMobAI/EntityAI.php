@@ -170,20 +170,24 @@ class EntityAI {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
+    Server::getInstance()->broadcastMessage("함수호출");
 
     if ($yaw === null) {
+        Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 없음! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
-    // ✅ 몬스터의 정면을 검사 (광선 추적)
+    // ✅ 몬스터 정면 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(1.5));
+    $end = $start->addVector($directionVector->multiply(3)); // ✅ 범위 3블록 확장
 
     $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 경로 탐색 중...");
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
+
+        // ✅ 새로운 경로 탐색
         $this->findAlternativePath($mob, $position, $world);
     }
 }
@@ -445,18 +449,32 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.28; // ✅ 속도 조정 (0.26 → 0.28)
+    $speed = 0.28;
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35; // ✅ 관성 감소 (0.4 → 0.35)
+    $inertiaFactor = 0.35;
 
+    // ✅ 대각선 이동 보정 (Y축 제외)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.7071, $direction->y, $direction->z * 0.7071);
+    }
 
+    // ✅ Y축 높이 차이 반영 (위로 올라가야 할 경우 점프)
+    if ($direction->y > 0.5) {
+        $direction = new Vector3($direction->x, 0.42, $direction->z);
+    } elseif ($direction->y < -0.5) {
+        $direction = new Vector3($direction->x, -0.2, $direction->z); // ✅ 내려가기 적용
+    }
 
+    // ✅ 점프 시 관성 조절 (Y축 이동 가능하도록)
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
+        $direction->y > 0 ? $direction->y : $currentMotion->y, // 점프 가능하도록 Y값 적용
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
+
+    // ✅ 장애물 감지 및 우회
     $this->avoidObstacle($mob);
+
     $mob->setMotion($blendedMotion);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
