@@ -52,7 +52,7 @@ class MobAITask extends Task {
 private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
-    $ai = new EntityAI($this->plugin, $this->aiEnabled)
+    $ai = new EntityAI($this->plugin, $this->aiEnabled);
     
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
