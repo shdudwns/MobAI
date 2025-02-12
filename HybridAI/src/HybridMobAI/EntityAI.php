@@ -166,7 +166,7 @@ class EntityAI {
     Server::getInstance()->getAsyncPool()->submitTask($task);
 }
 
-    private function basicObstacle(Living $mob): void {
+    public function basicObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
