@@ -112,7 +112,7 @@ private function handleMobAI(Living $mob): void {
         }
     }
     $ai->avoidObstacle($mob);
-    $detector = new ObstacleDetector($this->plugin);
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
