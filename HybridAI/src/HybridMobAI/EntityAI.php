@@ -195,7 +195,8 @@ class EntityAI {
     }
 
     // ✅ 직접 탐색 (raycast 실패 시)
-    $neighbors = Pathfinder::getNeighbors($world, $position);
+    $find = new Pathfinder();
+    $neighbors = $find->getNeighbors($world, $position);
 
     foreach ($neighbors as $neighbor) {
         $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
