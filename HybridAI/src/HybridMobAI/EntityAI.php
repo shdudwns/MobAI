@@ -169,47 +169,54 @@ class EntityAI {
     public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $yaw = (float)$mob->getLocation()->yaw;
+    $yaw = (float) $mob->getLocation()->yaw;
 
     if ($yaw === null) {
+        Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 null입니다! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
-    // ✅ 몬스터 정면 장애물 감지 (광선 추적)
+    // ✅ 몬스터의 정면을 검사 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(3));
+    $end = $start->addVector($directionVector->multiply(2));
 
-    $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
+    $hitPos = $this->raycast($world, $start, $end, function(Block $block) {
+        return $this->isSolidBlock($block);
+    });
 
     if ($hitPos instanceof Vector3) {
-        $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
-        $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
+        $hitBlock = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y, (int) $hitPos->z);
+        $blockAbove = $world->getBlockAt((int) $hitPos->x, (int) $hitPos->y + 1, (int) $hitPos->z);
 
-        // ✅ 공기(Air)나 밟고 있는 땅이면 장애물로 인식하지 않음
-        if ($hitBlock instanceof Air || $hitBlock->getId() === $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z)->getId()) {
-            Server::getInstance()->broadcastMessage("🚫 [AI] 장애물 아님: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
-            return;
-        }
-
-        // ✅ 두 칸 높이 장애물 감지
         if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 블록: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
-            $this->findAlternativePath($mob, $position, $world);
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도... (" . $hitBlock->getName() . ")");
+            $this->initiatePathfind($mob, $position, $hitBlock, $world, function (?array $path) use ($mob) {
+                if (!empty($path)) {
+                    $this->setPath($mob, $path);
+                    $navigator = new EntityNavigator();
+                    Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 적용!");
+                    $navigator->moveAlongPath($mob);
+                } else {
+                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 실패! 기존 이동 유지...");
+                }
+            });
             return;
         }
     }
-    $find = new Pathfinder();
-    $neighbors = $find->getNeighbors($world, $position);
 
-    foreach ($neighbors as $neighbor) {
-        $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
-        if ($this->isSolidBlock($neighborBlock)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지: 블록: " . $neighborBlock->getName() . " (위치: {$neighbor->x}, {$neighbor->y}, {$neighbor->z})");
-            $this->findAlternativePath($mob, $position, $world);
-            return;
-        }
+    // ✅ 직접 탐색 (광선 추적 실패 시)
+    $frontBlockPos = $position->addVector($directionVector);
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+
+    if (!$this->isSolidBlock($frontBlock) || $frontBlock instanceof Air || $frontBlock->isTransparent()) {
+        return;
     }
+
+    Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도... (" . $frontBlock->getName() . ")");
+    $this->initiatePathfind($mob, $position, $frontBlock, $world, function (?array $path) use ($mob) {
+        $this->onPathFound($mob, $path);
+    });
 }
     
 private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
@@ -230,13 +237,11 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
     $y = $start->y;
     $z = $start->z;
 
-    for ($i = 0; $i <= $length; $i += 0.5) {
+    for ($i = 0; $i <= $length; $i += 0.5) { // 정밀도 vs 성능을 위해 스텝 크기(0.5)를 조정합니다.
         $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
-        $blockAbove = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z);
 
-        // ✅ 두 칸 블록을 함께 감지 (벽 등 장애물 체크)
-        if ($filter($block) && $filter($blockAbove)) {
-            return new Vector3((int)$x, (int)$y, (int)$z);
+        if ($filter($block)) {
+            return new Vector3((int)$x, (int)$y, (int)$z); // 블록의 정수 좌표를 반환합니다.
         }
 
         $x += $dx * 0.5;
@@ -244,7 +249,7 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
         $z += $dz * 0.5;
     }
 
-    return null;
+    return null; // solid 블록에 부딪히지 않았습니다.
 }
     private function initiatePathfind(Living $mob, Vector3 $position, Block $block, World $world){ // Add World $world parameter
     // ✅ 5번까지 랜덤 방향으로 우회 시도
