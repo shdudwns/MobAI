@@ -170,7 +170,6 @@ class EntityAI {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
-    //Server::getInstance()->broadcastMessage("함수호출");
 
     if ($yaw === null) {
         Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 없음! (Mob ID: " . $mob->getId() . ")");
@@ -180,15 +179,33 @@ class EntityAI {
     // ✅ 몬스터 정면 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(3)); // ✅ 범위 3블록 확장
+    $end = $start->addVector($directionVector->multiply(3));
 
     $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
+        $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
+        $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
 
-        // ✅ 새로운 경로 탐색
-        $this->findAlternativePath($mob, $position, $world);
+        // ✅ 두 칸 높이 장애물 감지
+        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
+            $this->findAlternativePath($mob, $position, $world);
+            return;
+        }
+    }
+
+    // ✅ 직접 탐색 (raycast 실패 시)
+    Server::getInstance()->broadcastMessage("🔍 [AI] 광선 추적 실패! 직접 탐색 시도...");
+    $neighbors = Pathfinder::getNeighbors($world, $position);
+
+    foreach ($neighbors as $neighbor) {
+        $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
+        if ($this->isSolidBlock($neighborBlock)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지: ({$neighbor->x}, {$neighbor->y}, {$neighbor->z})");
+            $this->findAlternativePath($mob, $position, $world);
+            return;
+        }
     }
 }
     
@@ -449,31 +466,33 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.28;
+    $speed = 0.26; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35;
+    $inertiaFactor = 0.4; // ✅ 관성 보정
 
-    // ✅ 대각선 이동 보정 (Y축 제외)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.7071, $direction->y, $direction->z * 0.7071);
-    }
-
-    // ✅ Y축 높이 차이 반영 (위로 올라가야 할 경우 점프)
     if ($direction->y > 0.5) {
         $direction = new Vector3($direction->x, 0.42, $direction->z);
     } elseif ($direction->y < -0.5) {
         $direction = new Vector3($direction->x, -0.2, $direction->z); // ✅ 내려가기 적용
     }
+    // ✅ 대각선 이동 보정 (Y축 포함)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
+    }
 
-    // ✅ 점프 시 관성 조절 (Y축 이동 가능하도록)
+    // ✅ 점프 시 Y 속도 유지
+    if ($direction->y > 0.5) {
+        $direction = new Vector3($direction->x, 0.42, $direction->z);
+    } elseif ($direction->y < -0.5) {
+        $direction = new Vector3($direction->x, -0.2, $direction->z);
+    }
+
+    // ✅ 블렌딩된 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $direction->y > 0 ? $direction->y : $currentMotion->y, // 점프 가능하도록 Y값 적용
+        $direction->y > 0 ? $direction->y : $currentMotion->y, 
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
-
-    // ✅ 장애물 감지 및 우회
-    $this->avoidObstacle($mob);
 
     $mob->setMotion($blendedMotion);
 }
