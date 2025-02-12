@@ -184,43 +184,34 @@ class EntityAI {
 
     if ($hitPos instanceof Vector3) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 시도...");
-
-        for ($i = 0; $i < 3; $i++) {
-            $offsetX = mt_rand(-2, 2);
-            $offsetZ = mt_rand(-2, 2);
-            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-            $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
-
-            if ($this->isPassableBlock($alternativeBlock)) {
-                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->setPath($mob, $path);
-                        $this->moveAlongPath($mob);
-                    }
-                });
-                return;
-            }
-        }
+        $this->findAlternativePath($mob, $position, $world);
+        return;
     }
 
-    // ✅ 직접 탐색 추가
-    $frontBlock = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
-    if ($this->isSolidBlock($frontBlock)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도... (" . $frontBlock->getName() . ")");
-        for ($i = 0; $i < 3; $i++) {
-            $offsetX = mt_rand(-2, 2);
-            $offsetZ = mt_rand(-2, 2);
-            $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+    // ✅ 광선 추적 실패 시 직접 탐색
+    foreach ($this->getNeighbors($world, $position) as $neighbor) {
+        if ($this->isSolidBlock($world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z))) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색: 장애물 감지됨! 우회 시도...");
+            $this->findAlternativePath($mob, $position, $world);
+            return;
+        }
+    }
+}
 
-            if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
-                $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                    if ($path !== null) {
-                        $this->setPath($mob, $path);
-                        $this->moveAlongPath($mob);
-                    }
-                });
-                return;
-            }
+private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
+    for ($i = 0; $i < 3; $i++) {
+        $offsetX = mt_rand(-2, 2);
+        $offsetZ = mt_rand(-2, 2);
+        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+
+        if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
+            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
+                if ($path !== null) {
+                    $this->setPath($mob, $path);
+                    $this->moveAlongPath($mob);
+                }
+            });
+            return;
         }
     }
 }
@@ -446,35 +437,36 @@ public function removePath(Living $mob): void {
     $tracker = new EntityTracker();
     $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
-    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition()); // 🎯 플레이어를 직접 바라보게 수정
-    } else {
-        $mob->lookAt($nextPosition); // 경로 따라 이동
-    }
-    // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
+    // ✅ 현재 위치에서 너무 가까운 노드 제거
+    do {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    }
+    } while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5);
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.22; // ✅ 속도 조정
+    $speed = 0.26; // ✅ 속도 약간 증가 (0.22 → 0.26)
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.6; // ✅ 관성 적용
+    $inertiaFactor = 0.4; // ✅ 관성 감소 (0.6 → 0.4)
 
-    // ✅ 부드러운 이동 적용
+    // ✅ 대각선 이동 보정 추가 (이동 방향이 자연스럽게 유지되도록)
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
+        $currentMotion->y * 0.8, // 공중 부유 방지
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
+
+    // ✅ 플레이어가 가까우면 직접 바라보게 설정
+    if ($player !== null && $currentPosition->distanceSquared($player->getPosition()) < 9) {
+        $mob->lookAt($player->getPosition());
+    } else {
+        $mob->lookAt($nextPosition);
+    }
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
