@@ -324,7 +324,7 @@ private function isNonSolidBlock(Block $block): bool {
     return in_array(strtolower($block->getName()), $nonSolidBlocks);
 }
     
-private function raycast(World $world, Living $mob, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
+private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
     $dx = $end->x - $start->x;
     $dy = $end->y - $start->y;
     $dz = $end->z - $start->z;
@@ -339,15 +339,15 @@ private function raycast(World $world, Living $mob, Vector3 $start, Vector3 $end
     $dz /= $length;
 
     $x = $start->x;
-    $y = $start->y + $mob->getEyeHeight(); // 시작 y 위치를 눈높이로 조정
+    $y = $start->y;
     $z = $start->z;
 
     for ($i = 0; $i <= $length; $i += 0.5) {
-        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z); 
-        $blockAbove = $world->getBlockAt((int)$x, (int)$y+1, (int)$z);
-        $blockAbove2 = $world->getBlockAt((int)$x, (int)$y+2, (int)$z);
+        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
+        $blockAbove = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z);
 
-        if ($filter($block) || $filter($blockAbove) || $filter($blockAbove2)) { // 한칸이라도 막혀있으면 감지
+        // ✅ 두 칸 블록을 함께 감지 (벽 등 장애물 체크)
+        if ($filter($block) && $filter($blockAbove)) {
             return new Vector3((int)$x, (int)$y, (int)$z);
         }
 
