@@ -89,10 +89,6 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
-
-        // ✅ 장애물 감지 및 우회
-        $ai->avoidObstacle($mob);
-
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
             $algorithm = $this->selectBestAlgorithm($mob, $player);
@@ -112,6 +108,7 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
+    $ai->avoidObstacle($mob);
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
