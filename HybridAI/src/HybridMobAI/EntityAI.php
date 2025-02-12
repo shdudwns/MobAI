@@ -172,7 +172,6 @@ class EntityAI {
     $yaw = (float)$mob->getLocation()->yaw;
 
     if ($yaw === null) {
-        Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 없음! (Mob ID: " . $mob->getId() . ")");
         return;
     }
 
@@ -196,9 +195,7 @@ class EntityAI {
     }
 
     // ✅ 직접 탐색 (raycast 실패 시)
-    Server::getInstance()->broadcastMessage("🔍 [AI] 광선 추적 실패! 직접 탐색 시도...");
-    $find = new Pathfinder();
-    $neighbors = $find->getNeighbors($world, $position);
+    $neighbors = Pathfinder::getNeighbors($world, $position);
 
     foreach ($neighbors as $neighbor) {
         $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
@@ -246,11 +243,13 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
     $y = $start->y;
     $z = $start->z;
 
-    for ($i = 0; $i <= $length; $i += 0.5) { // 정밀도 vs 성능을 위해 스텝 크기(0.5)를 조정합니다.
+    for ($i = 0; $i <= $length; $i += 0.5) {
         $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
+        $blockAbove = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z);
 
-        if ($filter($block)) {
-            return new Vector3((int)$x, (int)$y, (int)$z); // 블록의 정수 좌표를 반환합니다.
+        // ✅ 두 칸 블록을 함께 감지 (벽 등 장애물 체크)
+        if ($filter($block) && $filter($blockAbove)) {
+            return new Vector3((int)$x, (int)$y, (int)$z);
         }
 
         $x += $dx * 0.5;
@@ -258,7 +257,7 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
         $z += $dz * 0.5;
     }
 
-    return null; // solid 블록에 부딪히지 않았습니다.
+    return null;
 }
     private function initiatePathfind(Living $mob, Vector3 $position, Block $block, World $world){ // Add World $world parameter
     // ✅ 5번까지 랜덤 방향으로 우회 시도
@@ -471,27 +470,21 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.4; // ✅ 관성 보정
 
-    if ($direction->y > 0.5) {
-        $direction = new Vector3($direction->x, 0.42, $direction->z);
-    } elseif ($direction->y < -0.5) {
-        $direction = new Vector3($direction->x, -0.2, $direction->z); // ✅ 내려가기 적용
-    }
-    // ✅ 대각선 이동 보정 (Y축 포함)
+    // ✅ 대각선 이동 보정 (부드러운 보간)
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
+        $direction = new Vector3($direction->x * 0.75, $direction->y, $direction->z * 0.75);
     }
 
-    // ✅ 점프 시 Y 속도 유지
+    // ✅ Y축 보정 (이동 중 점프 및 내려가기 반영)
     if ($direction->y > 0.5) {
         $direction = new Vector3($direction->x, 0.42, $direction->z);
     } elseif ($direction->y < -0.5) {
         $direction = new Vector3($direction->x, -0.2, $direction->z);
     }
 
-    // ✅ 블렌딩된 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $direction->y > 0 ? $direction->y : $currentMotion->y, 
+        $direction->y > 0 ? $direction->y : $currentMotion->y,
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
