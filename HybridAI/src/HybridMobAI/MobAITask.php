@@ -68,6 +68,8 @@ private function handleMobAI(Living $mob): void {
 
     $mobId = $mob->getId();
     $currentTick = Server::getInstance()->getTick();
+    $ai->avoidObstacle($mob);
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
     $player = $tracker->findNearestPlayer($mob);
 
     if ($mob->isClosed() || !$mob->isAlive()) {
@@ -108,8 +110,6 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
-    $ai->avoidObstacle($mob);
-    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
