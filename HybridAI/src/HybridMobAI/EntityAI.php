@@ -256,16 +256,28 @@ private function moveAroundObstacle(Living $mob): void {
         }
     }
 }
+
+    private function isObstacle(Block $block, Block $blockAbove): bool {
+    if ($block instanceof Air) return false; // ✅ 공기는 장애물이 아님
+    if ($this->isPassableBlock($block)) return false; // ✅ 지나갈 수 있는 블록은 장애물 X
+    if (!$this->isSolidBlock($block)) return false; // ✅ 단단하지 않은 블록은 장애물 X
+
+    // ✅ 위에도 블록이 있어서 이동 불가능한 경우 장애물로 판단
+    return $this->isSolidBlock($blockAbove);
+}
     
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
     Server::getInstance()->broadcastMessage("🔄 [AI] 우회 경로 탐색 시작...");
 
-    // ✅ 다양한 방향 탐색 (기본 4방향 + 대각선 + 위/아래 경사로 포함)
+    // ✅ 1. 다양한 방향 탐색 (기본 4방향 + 대각선 + 위/아래 경사로 포함)
     $directions = [
         new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1),
         new Vector3(1, 0, 1), new Vector3(-1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1),
-        new Vector3(1, 1, 0), new Vector3(-1, 1, 0), new Vector3(0, 1, 1), new Vector3(0, 1, -1) // 경사로 탐색 추가
+        new Vector3(1, 1, 0), new Vector3(-1, 1, 0), new Vector3(0, 1, 1), new Vector3(0, 1, -1), // 경사로 탐색 추가
+        new Vector3(2, 0, 0), new Vector3(-2, 0, 0), new Vector3(0, 0, 2), new Vector3(0, 0, -2) // 더 먼 거리 탐색
     ];
+
+    shuffle($directions); // ✅ 랜덤하게 순서 변경 (좀 더 자연스러운 탐색)
 
     foreach ($directions as $dir) {
         $alternativeGoal = $position->addVector($dir);
@@ -281,14 +293,26 @@ private function findAlternativePath(Living $mob, Vector3 $position, World $worl
                     $this->setPath($mob, $path);
                     $this->moveAlongPath($mob);
                 } else {
-                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 경로 탐색 실패...");
+                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 경로 탐색 실패... 랜덤 이동 시작");
+                    $this->moveRandomly($mob); // ✅ 우회 실패 시 랜덤 이동 추가
                 }
             });
             return;
         }
     }
 
-    Server::getInstance()->broadcastMessage("❌ [AI] 모든 우회 경로 탐색 실패...");
+    Server::getInstance()->broadcastMessage("❌ [AI] 모든 우회 경로 탐색 실패, 랜덤 이동 시작...");
+    $this->moveRandomly($mob); // ✅ 모든 우회 실패 시 랜덤 이동
+}
+
+private function moveRandomly(Living $mob): void {
+    $randomDir = new Vector3(mt_rand(-3, 3), 0, mt_rand(-3, 3)); // ✅ 랜덤 이동 범위 조정
+    $newPos = $mob->getPosition()->addVector($randomDir);
+    
+    Server::getInstance()->broadcastMessage("🔄 [AI] 랜덤 이동 시도: {$newPos->x}, {$newPos->y}, {$newPos->z}");
+    
+    $mob->lookAt($newPos); // ✅ 랜덤 방향 바라보도록 설정
+    $mob->setMotion($randomDir->normalize()->multiply(0.2)); // ✅ 이동 속도 조정
 }
     
 private function isNonSolidBlock(Block $block): bool {
@@ -503,33 +527,23 @@ public function removePath(Living $mob): void {
         $mob->lookAt($nextPosition);
     }
 
-    // ✅ 너무 가까운 노드는 건너뜀
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    }
+    // ✅ 회전 먼저 적용 후 이동
+    $mob->setRotation($mob->getLocation()->yaw, 0);
+    usleep(50000); // ✅ 회전 후 약간의 딜레이 추가
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.24; // ✅ 속도 조정
+    $speed = 0.22; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.5; // ✅ 관성 보정
 
-    // ✅ 대각선 이동 보정
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
-    }
-
-    // ✅ 부드러운 회전 추가 (몸을 먼저 돌리고 이동)
-    $mob->setRotation($mob->getLocation()->yaw, 0);
-    $direction = $direction->normalize()->multiply($speed);
-
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->x * (1 - $inertiaFactor)),
-        $direction->y > 0 ? $direction->y : $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->z * (1 - $inertiaFactor))
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
