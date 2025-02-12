@@ -170,6 +170,7 @@ class EntityAI {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float) $mob->getLocation()->yaw;
+    $find = new Pathfinder();
         
 
     if ($yaw === null) {
@@ -192,7 +193,7 @@ class EntityAI {
     }
 
     // ✅ 광선 추적 실패 시 직접 탐색 수행
-    foreach ($this->getNeighbors($world, $position) as $neighbor) {
+    foreach ($find->getNeighbors($world, $position) as $neighbor) {
         if ($this->isSolidBlock($world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z))) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색으로 장애물 감지됨! 우회 경로 탐색 중...");
             $this->findAlternativePath($mob, $position, $world);
