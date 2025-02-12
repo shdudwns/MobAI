@@ -242,7 +242,7 @@ private function moveAroundObstacle(Living $mob): void {
     return $this->isSolidBlock($blockAbove);
 }
 
-private function avoidObstacle(Living $mob): void {
+public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
