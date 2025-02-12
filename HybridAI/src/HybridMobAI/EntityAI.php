@@ -180,7 +180,7 @@ class EntityAI {
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $end = $start->addVector($directionVector->multiply(2.5));
 
-    $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
+    $hitPos = $this->raycast($world, $mob, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
         $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
@@ -271,7 +271,7 @@ private function isNonSolidBlock(Block $block): bool {
     return in_array(strtolower($block->getName()), $nonSolidBlocks);
 }
     
-private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
+private function raycast(World $world, Living $mob, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
     $dx = $end->x - $start->x;
     $dy = $end->y - $start->y;
     $dz = $end->z - $start->z;
