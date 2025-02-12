@@ -526,7 +526,7 @@ public function removePath(Living $mob): void {
     if ($nextPosition === null) return;
 
     // ✅ 몬스터가 서서히 회전하도록 개선
-    $mob->lookAt($nextPosition);
+    $mob->smoothLookAt($nextPosition);
     //usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
 
     $direction = $nextPosition->subtractVector($currentPosition);
@@ -567,5 +567,39 @@ public function removePath(Living $mob): void {
     $smoothPitch = $currentPitch + ($pitch - $currentPitch) * 0.3;
 
     $this->setRotation($smoothYaw, $smoothPitch);
+}
+    private function smoothLookAt(Living $mob, Vector3 $target, int $durationTicks): void {
+    $currentYaw = $mob->getLocation()->yaw;
+    $targetYaw = atan2($target->z - $mob->z, $target->x - $mob->x) * 180 / M_PI - 90;
+    $yawPerTick = ($targetYaw - $currentYaw) / $durationTicks;
+
+    // ✅ Pitch는 0으로 고정 (수평을 바라보도록)
+    $targetPitch = 0;
+
+    // ✅ ScheduleTask를 통해 점진적 회전 적용
+    $this->plugin->getScheduler()->scheduleRepeatingTask(new class($mob, $yawPerTick, $targetPitch, $durationTicks) extends Task {
+        private $mob;
+        private $yawPerTick;
+        private $targetPitch;
+        private $remainingTicks;
+
+        public function __construct(Living $mob, float $yawPerTick, float $targetPitch, int $durationTicks) {
+            $this->mob = $mob;
+            $this->yawPerTick = $yawPerTick;
+            $this->targetPitch = $targetPitch;
+            $this->remainingTicks = $durationTicks;
+        }
+
+        public function onRun(): void {
+            if ($this->remainingTicks-- <= 0 || $this->mob->isClosed()) {
+                $this->getHandler()->cancel();
+                return;
+            }
+            $this->mob->setRotation(
+                $this->mob->getLocation()->yaw + $this->yawPerTick,
+                $this->targetPitch // Pitch는 항상 0으로 고정
+            );
+        }
+    }, 1);
 }
 }
