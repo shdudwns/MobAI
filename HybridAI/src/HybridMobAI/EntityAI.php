@@ -236,67 +236,40 @@ private function moveAroundObstacle(Living $mob): void {
     public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $yaw = (float) $mob->getLocation()->yaw;
 
-    if ($yaw === null) {
-        return;
-    }
+    $directions = [
+        new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1), // 기본 수평 이동
+        new Vector3(1, 1, 0), new Vector3(-1, 1, 0), new Vector3(0, 1, 1), new Vector3(0, 1, -1), // 점프 가능 여부 확인
+    ];
 
-    // ✅ 몬스터 시야 기준 장애물 감지
-    $start = $position->add(0, $mob->getEyeHeight(), 0);
-    $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(2));
+    foreach ($directions as $dir) {
+        $checkPos = $position->addVector($dir);
+        $block = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y, (int) $checkPos->z);
+        $blockAbove = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y + 1, (int) $checkPos->z);
+        $blockAbove2 = $world->getBlockAt((int) $checkPos->x, (int) $checkPos->y + 2, (int) $checkPos->z);
 
-    $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
-
-    if ($hitPos instanceof Vector3) {
-        $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
-        $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
-        $blockAbove2 = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 2, (int)$hitPos->z);
-
-        // ✅ 장애물 감지 조건 (2칸 이상 막혀 있어야 장애물)
-        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $hitBlock->getName() . " at {$hitPos->x}, {$hitPos->y}, {$hitPos->z}");
+        // ✅ 장애물 판별 (2칸 이상 막혀 있는지 확인)
+        if ($this->isSolidBlock($block) && $this->isSolidBlock($blockAbove)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: {$block->getName()} at ({$checkPos->x}, {$checkPos->y}, {$checkPos->z})");
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
     }
-
-    // ✅ 광선 추적 실패 → 직접 탐색 실행
-    //Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
-    $this->directObstacleSearch($mob, $world, $position);
 }
     
-private function directObstacleSearch(Living $mob, World $world, Vector3 $position): void {
-    $front = $position->add(1, 0, 0);
-    $frontAbove = $position->add(1, 1, 0);
-    $frontAbove2 = $position->add(1, 2, 0);
-
-    $blockFront = $world->getBlockAt((int)$front->x, (int)$front->y, (int)$front->z);
-    $blockAbove = $world->getBlockAt((int)$frontAbove->x, (int)$frontAbove->y, (int)$frontAbove->z);
-    $blockAbove2 = $world->getBlockAt((int)$frontAbove2->x, (int)$frontAbove2->y, (int)$frontAbove2->z);
-
-    if (!$this->isSolidBlock($blockFront) || $blockFront instanceof Air) {
-        return;
-    }
-
-    if ($this->isSolidBlock($blockFront) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지됨: " . $blockFront->getName());
-
-        // ✅ 우회 경로 찾기 시작 로그 추가
-        Server::getInstance()->broadcastMessage("🔄 [AI] 우회 경로 탐색 시작...");
-        $this->findAlternativePath($mob, $position, $world);
-    }
-}
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
     Server::getInstance()->broadcastMessage("🔄 [AI] 우회 경로 탐색 시작...");
 
-    for ($i = 0; $i < 3; $i++) {
-        $offsetX = mt_rand(-2, 2);
-        $offsetZ = mt_rand(-2, 2);
-        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+    $directions = [
+        new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1),
+        new Vector3(1, 0, 1), new Vector3(-1, 0, -1), new Vector3(-1, 0, 1), new Vector3(1, 0, -1)
+    ];
 
-        if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
+    foreach ($directions as $dir) {
+        $alternativeGoal = $position->addVector($dir);
+        $block = $world->getBlockAt((int) $alternativeGoal->x, (int) $alternativeGoal->y, (int) $alternativeGoal->z);
+
+        if ($this->isPassableBlock($block)) {
             Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 찾음: ({$alternativeGoal->x}, {$alternativeGoal->y}, {$alternativeGoal->z})");
 
             $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
@@ -314,7 +287,7 @@ private function findAlternativePath(Living $mob, Vector3 $position, World $worl
 
     Server::getInstance()->broadcastMessage("❌ [AI] 모든 우회 경로 탐색 실패...");
 }
-
+    
 private function isNonSolidBlock(Block $block): bool {
     $nonSolidBlocks = [
         "air", "grass", "tall_grass", "snow", "carpet", "flower", "red_flower", "yellow_flower",
