@@ -170,7 +170,7 @@ class EntityAI {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
-    Server::getInstance()->broadcastMessage("함수호출");
+    //Server::getInstance()->broadcastMessage("함수호출");
 
     if ($yaw === null) {
         Server::getInstance()->broadcastMessage("❌ [AI] Yaw 값이 없음! (Mob ID: " . $mob->getId() . ")");
