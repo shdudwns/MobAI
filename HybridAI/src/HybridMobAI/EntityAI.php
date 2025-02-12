@@ -515,48 +515,37 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $tracker = new EntityTracker();
-    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition()); // 🎯 플레이어를 정확히 바라보도록 수정
-    } else {
-        $mob->lookAt($nextPosition);
-    }
 
     // ✅ 너무 가까운 노드는 건너뜀
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
+    if ($nextPosition === null) return;
+
+    // ✅ 몬스터가 바라볼 방향 설정
+    $mob->lookAt($nextPosition);
+
+    // ✅ 이동 방향 계산
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.26; // ✅ 속도 조정
+    // ✅ 속도 및 관성 조정
+    $speed = 0.26;
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.4; // ✅ 관성 보정
+    $inertiaFactor = 0.4;
 
-    if ($direction->y > 0.5) {
-        $direction = new Vector3($direction->x, 0.42, $direction->z);
-    } elseif ($direction->y < -0.5) {
-        $direction = new Vector3($direction->x, -0.2, $direction->z); // ✅ 내려가기 적용
-    }
-
-    // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
-    }
-
-    // ✅ 이동 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
+    // ✅ 이동 모션 적용
     $mob->setMotion($blendedMotion);
-}}
+}
+}
