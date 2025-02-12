@@ -214,7 +214,7 @@ class EntityAI {
         
         // ✅ 직접 탐색한 블록 정보 출력
         Server::getInstance()->broadcastMessage(
-        "🔎 [AI] 직접 탐색 블록: " . $neighborBlock->getVanillaName() . 
+        "🔎 [AI] 직접 탐색 블록: " . $neighborBlock->getName() . 
         " (위치: {$neighbor->x}, {$neighbor->y}, {$neighbor->z})"
     );
 
