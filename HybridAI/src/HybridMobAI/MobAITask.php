@@ -52,8 +52,7 @@ class MobAITask extends Task {
 private function handleMobAI(Living $mob): void {
     $tracker = new EntityTracker();
     $navigator = new EntityNavigator();
-    $ai = new EntityAI($this->plugin, $this->aiEnabled);
-    $detector = new ObstacleDetector($this->plugin);
+    $ai = new EntityAI($this->plugin, $this->aiEnabled)
     
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
@@ -113,6 +112,7 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
+    $detector = new ObstacleDetector($this->plugin);
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
