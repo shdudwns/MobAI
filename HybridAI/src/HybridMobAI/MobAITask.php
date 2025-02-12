@@ -68,10 +68,12 @@ private function handleMobAI(Living $mob): void {
 
     $mobId = $mob->getId();
     $currentTick = Server::getInstance()->getTick();
+
+    // ✅ 장애물 감지 및 점프를 가장 먼저 실행 (우선순위 상향)
     $ai->avoidObstacle($mob);
     $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
-    $player = $tracker->findNearestPlayer($mob);
 
+    $player = $tracker->findNearestPlayer($mob);
     if ($mob->isClosed() || !$mob->isAlive()) {
         return; // 💀 몬스터가 죽었으면 AI 처리 중단
     }
@@ -91,6 +93,7 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
+
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
             $algorithm = $this->selectBestAlgorithm($mob, $player);
