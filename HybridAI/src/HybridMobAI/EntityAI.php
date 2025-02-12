@@ -440,19 +440,10 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 플레이어가 있으면 바라보도록 수정
+    // ✅ 몬스터가 플레이어를 바라보도록 함 (몸은 유지한 채 얼굴만 회전)
     if ($player !== null) {
         $mob->lookAt($player->getPosition());
-    } else {
-        $mob->lookAt($nextPosition);
     }
-
-    // ✅ 회전 먼저 적용 후 이동
-    $yaw = $mob->getLocation()->yaw;
-    $mob->setRotation($yaw, 0);
-
-    // ✅ 회전 후 딜레이 (너무 크면 멈춘 것처럼 보이므로 줄임)
-    usleep(20000); // 20ms 딜레이
 
     // ✅ 너무 가까운 노드는 건너뜀 (멈춤 방지)
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.3) {
@@ -472,10 +463,9 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.5; // ✅ 관성 보정
 
-    // ✅ 미끄러짐 방지 (회전 후 이동 안정화)
-    if ($distanceSquared < 0.5) {
-        $inertiaFactor = 0.7; // 가까울수록 더 천천히 움직이도록 보정
-    }
+    // ✅ 방향 보정 (얼굴은 정면, 이동은 자연스럽게)
+    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
+    $mob->setRotation($yaw, 0);
 
     // ✅ 점프 & 내려가기 반응 추가 (장애물 넘기 & 자연스러운 낙하)
     if ($direction->y > 0.5) {
@@ -489,7 +479,7 @@ public function removePath(Living $mob): void {
         $direction = new Vector3($direction->x * 0.9, $direction->y, $direction->z * 0.9);
     }
 
-    // ✅ 이동 모션 적용
+    // ✅ 이동 모션 적용 (현재 이동과 부드럽게 결합)
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
