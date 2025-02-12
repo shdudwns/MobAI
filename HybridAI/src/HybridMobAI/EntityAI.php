@@ -255,8 +255,8 @@ private function moveAroundObstacle(Living $mob): void {
         $blockAbove2 = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 2, (int)$hitPos->z);
 
         // ✅ 장애물 감지 조건 (2칸 이상 막혀 있어야 장애물)
-        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $hitBlock->getName());
+        if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $hitBlock->getName() . " at {$hitPos->x}, {$hitPos->y}, {$hitPos->z}");
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
@@ -289,21 +289,30 @@ private function directObstacleSearch(Living $mob, World $world, Vector3 $positi
     }
 }
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
+    Server::getInstance()->broadcastMessage("🔄 [AI] 우회 경로 탐색 시작...");
+
     for ($i = 0; $i < 3; $i++) {
         $offsetX = mt_rand(-2, 2);
         $offsetZ = mt_rand(-2, 2);
         $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
 
         if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
+            Server::getInstance()->broadcastMessage("✅ [AI] 우회 경로 찾음: ({$alternativeGoal->x}, {$alternativeGoal->y}, {$alternativeGoal->z})");
+
             $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
                 if ($path !== null) {
+                    Server::getInstance()->broadcastMessage("🚀 [AI] 우회 경로 적용!");
                     $this->setPath($mob, $path);
                     $this->moveAlongPath($mob);
+                } else {
+                    Server::getInstance()->broadcastMessage("❌ [AI] 우회 경로 탐색 실패...");
                 }
             });
             return;
         }
     }
+
+    Server::getInstance()->broadcastMessage("❌ [AI] 모든 우회 경로 탐색 실패...");
 }
 
 private function isNonSolidBlock(Block $block): bool {
@@ -512,7 +521,6 @@ public function removePath(Living $mob): void {
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
     if ($player !== null) {
-        // ✅ 먼저 회전 후 이동 (자연스러운 움직임)
         $mob->lookAt($player->getPosition());
     } else {
         $mob->lookAt($nextPosition);
@@ -532,12 +540,7 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.4;
 
-    // ✅ 몸을 먼저 회전 후 이동
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
-    }
-
-    // ✅ 부드러운 이동 적용
+    // ✅ 바라보는 방향 기준 이동 (부드럽게 따라오기)
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
