@@ -22,6 +22,7 @@ class EntityAI {
     private PluginBase $plugin;
     private array $targets = [];
     private array $enabledAlgorithms;
+    private $currentPathIndices = [];
 
     public function __construct(PluginBase $plugin, bool $enabled) {
         $this->plugin = $plugin;
@@ -521,7 +522,7 @@ public function removePath(Living $mob): void {
 
     // ✅ 목표 지점 도달 체크 (0.3블록 이내)
     if ($currentPos->distanceSquared($nextPos) < 0.3) {
-        $this->setCurrentPathIndex($mob, $currentIndex + 1);
+        $this->setCurrentPathIndex($mob, $currentIndex + 1); // 다음 포인터로 이동
         return;
     }
 
@@ -546,6 +547,14 @@ public function removePath(Living $mob): void {
 
     // ✅ Y축 모션은 중력 영향만 받도록 유지
     $mob->setMotion(new Vector3($newMotionX, $currentMotion->y, $newMotionZ));
+}
+    private function getCurrentPathIndex(Living $mob): int {
+    $mobId = $mob->getId();
+    return $this->currentPathIndices[$mobId] ?? 0; // 기본값은 0
+}
+    private function setCurrentPathIndex(Living $mob, int $index): void {
+    $mobId = $mob->getId();
+    $this->currentPathIndices[$mobId] = $index;
 }
     private function smoothLookAt(Living $mob, Vector3 $target, int $durationTicks): void {
     $currentYaw = $mob->getLocation()->yaw;
