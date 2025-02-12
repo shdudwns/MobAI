@@ -196,8 +196,9 @@ class EntityAI {
     }
 
     // ✅ 직접 탐색 (raycast 실패 시)
-   /* Server::getInstance()->broadcastMessage("🔍 [AI] 광선 추적 실패! 직접 탐색 시도...");
-    $neighbors = Pathfinder::getNeighbors($world, $position);
+    Server::getInstance()->broadcastMessage("🔍 [AI] 광선 추적 실패! 직접 탐색 시도...");
+    $find = new Pathfinder();
+    $neighbors = $find->getNeighbors($world, $position);
 
     foreach ($neighbors as $neighbor) {
         $neighborBlock = $world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z);
@@ -206,7 +207,7 @@ class EntityAI {
             $this->findAlternativePath($mob, $position, $world);
             return;
         }
-    }*/
+    }
 }
     
 private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
