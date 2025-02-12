@@ -511,44 +511,74 @@ public function removePath(Living $mob): void {
 }
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
-    if (empty($path)) {
+    if (empty($path)) return;
+
+    $currentIndex = $this->getCurrentPathIndex($mob);
+    if ($currentIndex >= count($path)) return;
+
+    $currentPos = $mob->getPosition();
+    $nextPos = $path[$currentIndex];
+
+    // ✅ 목표 지점 도달 체크 (0.3블록 이내)
+    if ($currentPos->distanceSquared($nextPos) < 0.3) {
+        $this->setCurrentPathIndex($mob, $currentIndex + 1);
         return;
     }
 
-    $currentPosition = $mob->getPosition();
-    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    // ✅ 부드러운 회전 (Yaw만 적용, Pitch는 0으로 고정)
+    $this->smoothLookAt($mob, $nextPos, 20);
 
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    }
+    // ✅ 방향 벡터 계산 (Y축 무시)
+    $direction = $nextPos->subtract($currentPos->x, $currentPos->y, $currentPos->z);
+    $horizontalDistance = sqrt($direction->x ** 2 + $direction->z ** 2);
+    if ($horizontalDistance < 0.001) return;
 
-    if ($nextPosition === null) return;
+    // ✅ 속도 설정 (초당 1.2블록)
+    $speed = 0.24; // 0.24m/tick * 20tick/s = 4.8m/s
+    $directionX = ($direction->x / $horizontalDistance) * $speed;
+    $directionZ = ($direction->z / $horizontalDistance) * $speed;
 
-    // ✅ 몬스터가 서서히 회전하도록 개선
-    $mob->lookAt($nextPosition);
-    usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
-
-    $direction = $nextPosition->subtractVector($currentPosition);
-    if ($direction->lengthSquared() < 0.04) {
-        return;
-    }
-
-    $speed = 0.24; // ✅ 속도 조정
+    // ✅ 관성 적용 (시간 기반 감쇠)
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.5; // ✅ 관성 보정
+    $inertiaFactor = 0.8; // 관성 강도 (높을수록 미끄러짐)
+    $newMotionX = $currentMotion->x * $inertiaFactor + $directionX * (1 - $inertiaFactor);
+    $newMotionZ = $currentMotion->z * $inertiaFactor + $directionZ * (1 - $inertiaFactor);
 
-    // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
-    }
+    // ✅ Y축 모션은 중력 영향만 받도록 유지
+    $mob->setMotion(new Vector3($newMotionX, $currentMotion->y, $newMotionZ));
+}
+    private function smoothLookAt(Living $mob, Vector3 $target, int $durationTicks): void {
+    $currentYaw = $mob->getLocation()->yaw;
+    $targetYaw = atan2($target->z - $mob->z, $target->x - $mob->x) * 180 / M_PI - 90;
+    $yawPerTick = ($targetYaw - $currentYaw) / $durationTicks;
 
-    // ✅ 이동 모션 계산 및 적용
-    $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
-    );
+    // ✅ Pitch는 0으로 고정 (수평을 바라보도록)
+    $targetPitch = 0;
 
-    $mob->setMotion($blendedMotion);
+    // ✅ ScheduleTask를 통해 점진적 회전 적용
+    $this->plugin->getScheduler()->scheduleRepeatingTask(new class($mob, $yawPerTick, $targetPitch, $durationTicks) extends Task {
+        private $mob;
+        private $yawPerTick;
+        private $targetPitch;
+        private $remainingTicks;
+
+        public function __construct(Living $mob, float $yawPerTick, float $targetPitch, int $durationTicks) {
+            $this->mob = $mob;
+            $this->yawPerTick = $yawPerTick;
+            $this->targetPitch = $targetPitch;
+            $this->remainingTicks = $durationTicks;
+        }
+
+        public function onRun(): void {
+            if ($this->remainingTicks-- <= 0 || $this->mob->isClosed()) {
+                $this->getHandler()->cancel();
+                return;
+            }
+            $this->mob->setRotation(
+                $this->mob->getLocation()->yaw + $this->yawPerTick,
+                $this->targetPitch // Pitch는 항상 0으로 고정
+            );
+        }
+    }, 1);
 }
 }
