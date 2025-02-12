@@ -63,6 +63,7 @@ private function handleMobAI(Living $mob): void {
             $navigator->moveRandomly($mob);
         }
         $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
+        $this->basicObstacle($mob);
         return;
     }
 
@@ -111,6 +112,73 @@ private function handleMobAI(Living $mob): void {
                     }
                 }
             );
+        }
+    }
+}
+
+    private function basicObstacle(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+
+    if ($yaw === null) {
+        return;
+    }
+
+    // 1. 앞쪽 2칸 블록 확인
+    $x = (int)$position->x;
+    $y = (int)$position->y + (int)$mob->getEyeHeight(); // 눈높이
+    $z = (int)$position->z;
+
+    $frontBlock1 = $world->getBlockAt($x + (int)cos(deg2rad($yaw)), $y, $z + (int)sin(deg2rad($yaw)));
+    $frontBlock2 = $world->getBlockAt($x + 2 * (int)cos(deg2rad($yaw)), $y, $z + 2 * (int)sin(deg2rad($yaw)));
+
+    // 2. 장애물 여부 확인
+    if ($this->isSolidBlock($frontBlock1) && $this->isSolidBlock($frontBlock2)) {
+        Server::getInstance()->broadcastMessage(" [AI] 눈앞에 2칸 이상 장애물 감지: " . $frontBlock1->getName());
+        $this->moveAroundObstacle($mob); // 장애물 우회
+        return;
+    }
+
+    // ... (다른 탐색 방식)
+}
+
+private function moveAroundObstacle(Living $mob): void {
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+    $x = (int)$mob->getX();
+    $z = (int)$mob->getZ();
+
+    // 1. 우회 방향 결정 (오른쪽 또는 왼쪽)
+    $side = mt_rand(0, 1) ? 1 : -1; // 1: 오른쪽, -1: 왼쪽
+
+    // 2. 우회 거리 및 방향 설정
+    $distance = 3; // 우회 거리 (블록 단위)
+    $newX = $x + $side * $distance * (int)sin(deg2rad($yaw));
+    $newZ = $z - $side * $distance * (int)cos(deg2rad($yaw));
+
+    // 3. 이동 가능한 위치인지 확인
+    $newBlock = $world->getBlockAt((int)$newX, (int)$mob->getY(), (int)$newZ);
+    $newBlockAbove = $world->getBlockAt((int)$newX, (int)$mob->getY() + 1, (int)$newZ);
+
+    if ($this->isPassableBlock($newBlock) && $this->isPassableBlock($newBlockAbove)) {
+        // 4. 이동
+        $mob->teleport(new Vector3($newX, $mob->getY(), $newZ));
+    } else {
+        // 이동 불가능한 경우, 반대 방향으로 재시도
+        $side = -$side;
+        $newX = $x + $side * $distance * (int)sin(deg2rad($yaw));
+        $newZ = $z - $side * $distance * (int)cos(deg2rad($yaw));
+
+        $newBlock = $world->getBlockAt((int)$newX, (int)$mob->getY(), (int)$newZ);
+        $newBlockAbove = $world->getBlockAt((int)$newX, (int)$mob->getY() + 1, (int)$newZ);
+
+        if ($this->isPassableBlock($newBlock) && $this->isPassableBlock($newBlockAbove)) {
+            $mob->teleport(new Vector3($newX, $mob->getY(), $newZ));
+        } else {
+            // 여전히 이동 불가능한 경우, 제자리에서 잠시 멈추거나 다른 행동을 취하도록 설정
+            $mob->setMotion(new Vector3(0, 0, 0)); // 정지
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 우회 경로를 찾지 못했습니다!");
         }
     }
 }
