@@ -200,8 +200,9 @@ class EntityAI {
         }
     }
 
+    $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
     // ✅ 장애물 감지 실패 시 어떤 블록을 감지했는지 출력
-    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
+    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...블록: " . $hitBlock->getName() . ");
     $find = new Pathfinder();
     $neighbors = $find->getNeighbors($world, $position);
 
