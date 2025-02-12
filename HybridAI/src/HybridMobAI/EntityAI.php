@@ -510,84 +510,49 @@ public function removePath(Living $mob): void {
         }
     }
 }
-    public function moveAlongPath(Living $mob): void {
-    $path = $this->getPath($mob);
-    if (empty($path)) return;
-
-    $currentIndex = $this->getCurrentPathIndex($mob);
-    if ($currentIndex >= count($path)) return;
-
-    $currentPos = $mob->getPosition();
-    $nextPos = $path[$currentIndex];
-
-    // ✅ 목표 지점 도달 체크 (0.3블록 이내)
-    if ($currentPos->distanceSquared($nextPos) < 0.3) {
-        $this->setCurrentPathIndex($mob, $currentIndex + 1); // 다음 포인터로 이동
-        return;
-    }
-
-    // ✅ 부드러운 회전 (Yaw만 적용, Pitch는 0으로 고정)
-    $this->smoothLookAt($mob, $nextPos, 20);
-
-    // ✅ 방향 벡터 계산 (Y축 무시)
-    $direction = $nextPos->subtract($currentPos->x, $currentPos->y, $currentPos->z);
-    $horizontalDistance = sqrt($direction->x ** 2 + $direction->z ** 2);
-    if ($horizontalDistance < 0.001) return;
-
-    // ✅ 속도 설정 (초당 1.2블록)
-    $speed = 0.24; // 0.24m/tick * 20tick/s = 4.8m/s
-    $directionX = ($direction->x / $horizontalDistance) * $speed;
-    $directionZ = ($direction->z / $horizontalDistance) * $speed;
-
-    // ✅ 관성 적용 (시간 기반 감쇠)
-    $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.8; // 관성 강도 (높을수록 미끄러짐)
-    $newMotionX = $currentMotion->x * $inertiaFactor + $directionX * (1 - $inertiaFactor);
-    $newMotionZ = $currentMotion->z * $inertiaFactor + $directionZ * (1 - $inertiaFactor);
-
-    // ✅ Y축 모션은 중력 영향만 받도록 유지
-    $mob->setMotion(new Vector3($newMotionX, $currentMotion->y, $newMotionZ));
-}
-    private function getCurrentPathIndex(Living $mob): int {
-    $mobId = $mob->getId();
-    return $this->currentPathIndices[$mobId] ?? 0; // 기본값은 0
-}
-    private function setCurrentPathIndex(Living $mob, int $index): void {
-    $mobId = $mob->getId();
-    $this->currentPathIndices[$mobId] = $index;
-}
-    private function smoothLookAt(Living $mob, Vector3 $target, int $durationTicks): void {
+    public function smoothLookAt(Living $mob, Vector3 $target, float $rotationSpeed = 0.15): void {
     $currentYaw = $mob->getLocation()->yaw;
-    $targetYaw = atan2($target->z - $mob->z, $target->x - $mob->x) * 180 / M_PI - 90;
-    $yawPerTick = ($targetYaw - $currentYaw) / $durationTicks;
+    $currentPitch = $mob->getLocation()->pitch;
 
-    // ✅ Pitch는 0으로 고정 (수평을 바라보도록)
-    $targetPitch = 0;
+    $dx = $target->x - $mob->getPosition()->x;
+    $dy = $target->y - ($mob->getPosition()->y + $mob->getEyeHeight()); // 몬스터 눈높이 보정
+    $dz = $target->z - $mob->getPosition()->z;
 
-    // ✅ ScheduleTask를 통해 점진적 회전 적용
-    $this->plugin->getScheduler()->scheduleRepeatingTask(new class($mob, $yawPerTick, $targetPitch, $durationTicks) extends Task {
-        private $mob;
-        private $yawPerTick;
-        private $targetPitch;
-        private $remainingTicks;
+    $targetYaw = rad2deg(atan2(-$dx, $dz)); // Yaw 계산 (좌우 회전)
+    $targetPitch = rad2deg(atan2(-$dy, sqrt($dx * $dx + $dz * $dz))); // Pitch 계산 (상하 회전)
 
-        public function __construct(Living $mob, float $yawPerTick, float $targetPitch, int $durationTicks) {
-            $this->mob = $mob;
-            $this->yawPerTick = $yawPerTick;
-            $this->targetPitch = $targetPitch;
-            $this->remainingTicks = $durationTicks;
-        }
+    // 🔹 부드러운 회전 적용 (LERP 방식)
+    $newYaw = $this->lerpAngle($currentYaw, $targetYaw, $rotationSpeed);
+    $newPitch = $this->lerpAngle($currentPitch, $targetPitch, $rotationSpeed);
 
-        public function onRun(): void {
-            if ($this->remainingTicks-- <= 0 || $this->mob->isClosed()) {
-                $this->getHandler()->cancel();
-                return;
-            }
-            $this->mob->setRotation(
-                $this->mob->getLocation()->yaw + $this->yawPerTick,
-                $this->targetPitch // Pitch는 항상 0으로 고정
-            );
-        }
-    }, 1);
+    // ✅ 새로운 회전 적용
+    $mob->setRotation($newYaw, $newPitch);
+}
+
+public function smoothLookAt(Living $mob, Vector3 $target, float $rotationSpeed = 0.15): void {
+    $currentYaw = $mob->getLocation()->yaw;
+    $currentPitch = $mob->getLocation()->pitch;
+
+    $dx = $target->x - $mob->getPosition()->x;
+    $dy = $target->y - ($mob->getPosition()->y + $mob->getEyeHeight()); // 몬스터 눈높이 보정
+    $dz = $target->z - $mob->getPosition()->z;
+
+    $targetYaw = rad2deg(atan2(-$dx, $dz)); // Yaw 계산 (좌우 회전)
+    $targetPitch = rad2deg(atan2(-$dy, sqrt($dx * $dx + $dz * $dz))); // Pitch 계산 (상하 회전)
+
+    // 🔹 부드러운 회전 적용 (LERP 방식)
+    $newYaw = $this->lerpAngle($currentYaw, $targetYaw, $rotationSpeed);
+    $newPitch = $this->lerpAngle($currentPitch, $targetPitch, $rotationSpeed);
+
+    // ✅ 새로운 회전 적용
+    $mob->setRotation($newYaw, $newPitch);
+}
+
+/**
+ * 🔄 각도를 부드럽게 변화시키는 보간 함수 (LERP)
+ */
+private function lerpAngle(float $current, float $target, float $alpha): float {
+    $diff = fmod($target - $current + 540, 360) - 180;
+    return $current + ($diff * $alpha);
 }
 }
