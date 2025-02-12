@@ -254,7 +254,7 @@ private function moveAroundObstacle(Living $mob): void {
         $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
         $blockAbove2 = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 2, (int)$hitPos->z);
 
-        // ✅ 두 칸 이상 블록이 막혀 있으면 장애물로 인식
+        // ✅ 장애물 감지 로직 개선: 2칸 이상 막혀 있으면 장애물로 인식
         if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $hitBlock->getName());
             $this->findAlternativePath($mob, $position, $world);
@@ -265,7 +265,7 @@ private function moveAroundObstacle(Living $mob): void {
     // ✅ 광선 추적 실패 → 직접 탐색 실행
     $this->directObstacleSearch($mob, $world, $position);
 }
-
+    
 private function directObstacleSearch(Living $mob, World $world, Vector3 $position): void {
     $front = $position->add(1, 0, 0);
     $frontAbove = $position->add(1, 1, 0);
@@ -280,7 +280,7 @@ private function directObstacleSearch(Living $mob, World $world, Vector3 $positi
         return;
     }
 
-    // ✅ 두 칸 이상 막혀 있으면 장애물로 인식
+    // ✅ 앞에 두 개 블록이 막혀 있으면 장애물로 인식
     if ($this->isSolidBlock($blockFront) && $this->isSolidBlock($blockAbove) && $this->isSolidBlock($blockAbove2)) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지됨: " . $blockFront->getName());
         $this->findAlternativePath($mob, $position, $world);
@@ -511,7 +511,7 @@ public function removePath(Living $mob): void {
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
     if ($player !== null) {
-        // ✅ 몸을 먼저 회전한 후 이동
+        // ✅ 먼저 회전 후 이동 (더 자연스럽게)
         $targetPosition = new Vector3($player->getPosition()->x, $mob->getPosition()->y, $player->getPosition()->z);
         $mob->lookAt($targetPosition);
     } else {
