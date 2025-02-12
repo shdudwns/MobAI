@@ -327,62 +327,7 @@ private function isNonSolidBlock(Block $block): bool {
 
     return in_array(strtolower($block->getName()), $nonSolidBlocks);
 }
-    
-private function raycast(World $world, Vector3 $start, Vector3 $end, callable $filter): ?Vector3 {
-    $dx = $end->x - $start->x;
-    $dy = $end->y - $start->y;
-    $dz = $end->z - $start->z;
-
-    $length = sqrt($dx * $dx + $dy * $dy + $dz * $dz);
-    if ($length === 0) {
-        return null;
-    }
-
-    $dx /= $length;
-    $dy /= $length;
-    $dz /= $length;
-
-    $x = $start->x;
-    $y = $start->y;
-    $z = $start->z;
-
-    for ($i = 0; $i <= $length; $i += 0.5) {
-        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
-        $blockAbove = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z);
-
-        // ✅ 두 칸 블록을 함께 감지 (벽 등 장애물 체크)
-        if ($filter($block) && $filter($blockAbove)) {
-            return new Vector3((int)$x, (int)$y, (int)$z);
-        }
-
-        $x += $dx * 0.5;
-        $y += $dy * 0.5;
-        $z += $dz * 0.5;
-    }
-
-    return null;
-}
-    private function initiatePathfind(Living $mob, Vector3 $position, Block $block, World $world){ // Add World $world parameter
-    // ✅ 5번까지 랜덤 방향으로 우회 시도
-    for ($i = 0; $i < 5; $i++) {
-        $offsetX = mt_rand(-3, 3);
-        $offsetZ = mt_rand(-3, 3);
-        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-        $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z); // Use $world
-
-        // ✅ 이동 가능한 블록인지 확인 (Air 또는 투명 블록 허용)
-        if ($alternativeBlock instanceof Air || $alternativeBlock instanceof TallGrass || $alternativeBlock->isTransparent() || $this->isNonSolidBlock($alternativeBlock)) {
-            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob, $world) { // Use $world in closure as well!
-                if ($path !== null) {
-                    $this->setPath($mob, $path);
-                }
-            });
-            return;
-        }
-    }
-}
-// Helper function to check if a block is solid for collision
-private function isSolidBlock(Block $block): bool {
+    private function isSolidBlock(Block $block): bool {
     return $block->isSolid() && !$this->isPassableBlock($block); // isSolid() && isPassableBlock()을 같이 사용해서 좀더 정확하게 판별
 }
 
@@ -516,34 +461,37 @@ public function removePath(Living $mob): void {
         return;
     }
 
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
+    if ($player !== null) {
+        $this->smoothLookAt($mob, $player->getPosition()); // 🎯 부드러운 회전 적용
+    } else {
+        $this->smoothLookAt($mob, $nextPosition);
+    }
+
+    // ✅ 너무 가까운 노드는 건너뜀
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
-
-    if ($nextPosition === null) return;
-
-    // ✅ 몬스터가 서서히 회전하도록 개선
-    $this->smoothLookAt($mob, $nextPosition, 20);
-    //usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.24; // ✅ 속도 조정
+    $speed = 0.26; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.5; // ✅ 관성 보정
+    $inertiaFactor = 0.4; // ✅ 관성 보정
 
     // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
         $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
     }
 
-    // ✅ 이동 모션 계산 및 적용
+    // ✅ 이동 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
@@ -568,38 +516,35 @@ public function removePath(Living $mob): void {
 
     $this->setRotation($smoothYaw, $smoothPitch);
 }
-    private function smoothLookAt(Living $mob, Vector3 $target, int $durationTicks): void {
-    $currentYaw = $mob->getLocation()->yaw;
-    $targetYaw = atan2($target->z - $mob->z, $target->x - $mob->x) * 180 / M_PI - 90;
-    $yawPerTick = ($targetYaw - $currentYaw) / $durationTicks;
+    public function smoothLookAt(Living $mob, Vector3 $target, float $rotationSpeed = 0.1): void {
+    $location = $mob->getLocation();
+    $currentYaw = $location->yaw;
+    $currentPitch = $location->pitch;
 
-    // ✅ Pitch는 0으로 고정 (수평을 바라보도록)
-    $targetPitch = 0;
+    $dx = $target->x - $mob->getPosition()->x;
+    $dy = ($target->y + 1.5) - ($mob->getPosition()->y + $mob->getEyeHeight()); // 머리 높이 보정
+    $dz = $target->z - $mob->getPosition()->z;
 
-    // ✅ ScheduleTask를 통해 점진적 회전 적용
-    $this->plugin->getScheduler()->scheduleRepeatingTask(new class($mob, $yawPerTick, $targetPitch, $durationTicks) extends Task {
-        private $mob;
-        private $yawPerTick;
-        private $targetPitch;
-        private $remainingTicks;
+    $targetYaw = rad2deg(atan2(-$dx, $dz)); // Yaw 계산 (좌우 회전)
+    $targetPitch = rad2deg(atan2(-$dy, sqrt($dx * $dx + $dz * $dz))); // Pitch 계산 (상하 회전)
 
-        public function __construct(Living $mob, float $yawPerTick, float $targetPitch, int $durationTicks) {
-            $this->mob = $mob;
-            $this->yawPerTick = $yawPerTick;
-            $this->targetPitch = $targetPitch;
-            $this->remainingTicks = $durationTicks;
-        }
+    // 🔹 고개가 너무 내려가는 현상 방지 (Pitch 제한)
+    $targetPitch = max(-30, min(30, $targetPitch));
 
-        public function onRun(): void {
-            if ($this->remainingTicks-- <= 0 || $this->mob->isClosed()) {
-                $this->getHandler()->cancel();
-                return;
-            }
-            $this->mob->setRotation(
-                $this->mob->getLocation()->yaw + $this->yawPerTick,
-                $this->targetPitch // Pitch는 항상 0으로 고정
-            );
-        }
-    }, 1);
+    // 🔹 부드러운 회전 적용 (LERP 방식)
+    $newYaw = $this->lerpAngle($currentYaw, $targetYaw, $rotationSpeed);
+    $newPitch = $this->lerpAngle($currentPitch, $targetPitch, $rotationSpeed);
+
+    // ✅ 새로운 회전 적용
+    $mob->setRotation($newYaw, $newPitch);
+}
+
+/**
+ * 🔄 각도를 부드럽게 변화시키는 보간 함수 (LERP)
+ */
+private function lerpAngle(float $current, float $target, float $alpha): float {
+    $diff = fmod($target - $current + 540, 360) - 180;
+    return $current + ($diff * $alpha);
+}
 }
 }
