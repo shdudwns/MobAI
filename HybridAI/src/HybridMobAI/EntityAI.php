@@ -169,36 +169,22 @@ class EntityAI {
     public function avoidObstacle(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $yaw = (float) $mob->getLocation()->yaw;
-    $find = new Pathfinder();
-        
+    $yaw = (float)$mob->getLocation()->yaw;
 
     if ($yaw === null) {
         return;
     }
 
-    // ✅ 장애물 감지 (광선 추적)
+    // ✅ 몬스터의 정면을 검사 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $end = $start->addVector($directionVector->multiply(2));
+    $end = $start->addVector($directionVector->multiply(1.5));
 
     $hitPos = $this->raycast($world, $start, $end, fn(Block $block) => $this->isSolidBlock($block));
 
     if ($hitPos instanceof Vector3) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지! 우회 경로 탐색 중...");
-
-        // ✅ 장애물 감지 시 즉시 우회 경로 탐색
         $this->findAlternativePath($mob, $position, $world);
-        return;
-    }
-
-    // ✅ 광선 추적 실패 시 직접 탐색 수행
-    foreach ($find->getNeighbors($world, $position) as $neighbor) {
-        if ($this->isSolidBlock($world->getBlockAt((int)$neighbor->x, (int)$neighbor->y, (int)$neighbor->z))) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색으로 장애물 감지됨! 우회 경로 탐색 중...");
-            $this->findAlternativePath($mob, $position, $world);
-            return;
-        }
     }
 }
     
