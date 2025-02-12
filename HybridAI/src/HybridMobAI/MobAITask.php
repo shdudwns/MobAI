@@ -70,8 +70,6 @@ private function handleMobAI(Living $mob): void {
     $currentTick = Server::getInstance()->getTick();
 
     // ✅ 장애물 감지 및 점프를 가장 먼저 실행 (우선순위 상향)
-    $ai->avoidObstacle($mob);
-    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 
     $player = $tracker->findNearestPlayer($mob);
     if ($mob->isClosed() || !$mob->isAlive()) {
@@ -113,6 +111,7 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
+    $ai->avoidObstacle($mob);
     $detector = new ObstacleDetector($this->plugin);
 }
 
