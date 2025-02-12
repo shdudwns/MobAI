@@ -518,34 +518,37 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 너무 가까운 노드는 건너뜀
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
     if ($nextPosition === null) return;
 
-    // ✅ 몬스터가 바라볼 방향 설정
+    // ✅ 몬스터가 서서히 회전하도록 개선
     $mob->lookAt($nextPosition);
+    usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
 
-    // ✅ 이동 방향 계산
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    // ✅ 속도 및 관성 조정
-    $speed = 0.26;
+    $speed = 0.24; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.4;
+    $inertiaFactor = 0.5; // ✅ 관성 보정
 
+    // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
+    }
+
+    // ✅ 이동 모션 계산 및 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
-    // ✅ 이동 모션 적용
     $mob->setMotion($blendedMotion);
 }
 }
