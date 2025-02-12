@@ -186,6 +186,12 @@ class EntityAI {
         $hitBlock = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y, (int)$hitPos->z);
         $blockAbove = $world->getBlockAt((int)$hitPos->x, (int)$hitPos->y + 1, (int)$hitPos->z);
 
+        // ✅ 공기(Air)나 밟고 있는 땅이면 장애물로 인식하지 않음
+        if ($hitBlock instanceof Air || $hitBlock->getId() === $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z)->getId()) {
+            Server::getInstance()->broadcastMessage("🚫 [AI] 장애물 아님: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
+            return;
+        }
+
         // ✅ 두 칸 높이 장애물 감지
         if ($this->isSolidBlock($hitBlock) && $this->isSolidBlock($blockAbove)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨! 블록: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
@@ -194,10 +200,8 @@ class EntityAI {
         }
     }
 
-    // ✅ 장애물 감지 실패 시 디버깅 로그 추가
+    // ✅ 장애물 감지 실패 시 어떤 블록을 감지했는지 출력
     Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
-
-    // ✅ 직접 탐색 (raycast 실패 시)
     $find = new Pathfinder();
     $neighbors = $find->getNeighbors($world, $position);
 
@@ -206,24 +210,6 @@ class EntityAI {
         if ($this->isSolidBlock($neighborBlock)) {
             Server::getInstance()->broadcastMessage("⚠️ [AI] 직접 탐색 장애물 감지: 블록: " . $neighborBlock->getName() . " (위치: {$neighbor->x}, {$neighbor->y}, {$neighbor->z})");
             $this->findAlternativePath($mob, $position, $world);
-            return;
-        }
-    }
-}
-    
-private function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
-    for ($i = 0; $i < 3; $i++) {
-        $offsetX = mt_rand(-2, 2);
-        $offsetZ = mt_rand(-2, 2);
-        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
-
-        if ($this->isPassableBlock($world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z))) {
-            $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
-                if ($path !== null) {
-                    $this->setPath($mob, $path);
-                    $this->moveAlongPath($mob);
-                }
-            });
             return;
         }
     }
@@ -474,52 +460,20 @@ public function removePath(Living $mob): void {
     $currentMotion = $mob->getMotion();
     $inertiaFactor = 0.35; // ✅ 관성 보정
 
-    // ✅ 대각선 이동 보정 (X, Z 축 이동 조정)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.8, $direction->y, $direction->z * 0.8);
-    }
+    // ✅ 이동 방향 보정 (플레이어가 이동할 때 몬스터가 지나치게 따라오지 않도록 조정)
+    $adjustedDirection = new Vector3(
+        $direction->x * 0.9,
+        ($direction->y > 0.5 ? 0.42 : ($direction->y < -0.5 ? -0.2 : $direction->y)), // 점프 및 내려가기 보정
+        $direction->z * 0.9
+    );
 
-    // ✅ Y축 보정 (점프 및 내려가기 처리)
-    if ($direction->y > 0.5) {
-        $direction = new Vector3($direction->x, 0.42, $direction->z); // 점프 적용
-    } elseif ($direction->y < -0.5) {
-        $direction = new Vector3($direction->x, -0.2, $direction->z); // 내려가기 적용
-    }
-
-    // ✅ 자연스러운 이동 보정
+    // ✅ 부드러운 이동 적용
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $direction->y > 0 ? $direction->y : $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+        ($currentMotion->x * $inertiaFactor) + ($adjustedDirection->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $adjustedDirection->y > 0 ? $adjustedDirection->y : $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($adjustedDirection->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
-}
-    public function lookAt(Living $mob, Vector3 $target): void {
-    $dx = $target->x - $mob->getPosition()->x;
-    $dz = $target->z - $mob->getPosition()->z;
-    $dy = $target->y - $mob->getPosition()->y;
-
-    $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
-    if ($horizontalDistance < 0.01) {
-        $horizontalDistance = 0.01;
-    }
-
-    $yaw = rad2deg(atan2(-$dx, $dz));
-    $pitch = rad2deg(atan2($dy, $horizontalDistance));
-
-    // ✅ 최대 30도까지만 회전하도록 제한
-    $currentYaw = $mob->getLocation()->yaw;
-    $deltaYaw = $yaw - $currentYaw;
-    if ($deltaYaw > 180) $deltaYaw -= 360;
-    if ($deltaYaw < -180) $deltaYaw += 360;
-    $yaw = $currentYaw + max(-30, min(30, $deltaYaw)); // -30 ~ +30도 범위로 제한
-
-    $maxPitch = 45;
-    $minPitch = -45;
-    $pitch = max($minPitch, min($maxPitch, $pitch));
-
-    $mob->setRotation($yaw, $pitch);
-    Server::getInstance()->broadcastMessage("🔄 몬스터 {$mob->getId()} 시선 조정 → Yaw: {$yaw}, Pitch: {$pitch}");
 }
 }
