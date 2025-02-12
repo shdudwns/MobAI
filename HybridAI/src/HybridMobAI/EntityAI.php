@@ -265,11 +265,15 @@ private function raycast(World $world, Vector3 $start, Vector3 $end, callable $f
     $z = $start->z;
 
     for ($i = 0; $i <= $length; $i += 0.5) {
-        $block = $world->getBlockAt((int)$x, (int)$y, (int)$z);
-        $blockAbove = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z);
+        $block1 = $world->getBlockAt((int)$x, (int)$y, (int)$z); // 1칸 높이
+        $block2 = $world->getBlockAt((int)$x, (int)$y + 1, (int)$z); // 2칸 높이
 
-        // ✅ 두 칸 블록을 함께 감지 (벽 등 장애물 체크)
-        if ($filter($block) && $filter($blockAbove)) {
+        // ✅ 2칸 모두 장애물인지 확인
+        if ($filter($block1) && $filter($block2)) {
+            Server::getInstance()->broadcastMessage(
+                "🛑 [AI] 2칸 장애물 감지: " . $block1->getVanillaName() . 
+                " (위치: {$x}, {$y}, {$z})"
+            );
             return new Vector3((int)$x, (int)$y, (int)$z);
         }
 
