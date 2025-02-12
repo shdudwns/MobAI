@@ -526,7 +526,7 @@ public function removePath(Living $mob): void {
     if ($nextPosition === null) return;
 
     // ✅ 몬스터가 서서히 회전하도록 개선
-    $mob->smoothLookAt($nextPosition);
+    $this->smoothLookAt($nextPosition);
     //usleep(50000); // ✅ 회전 후 약간의 딜레이 추가 (50ms)
 
     $direction = $nextPosition->subtractVector($currentPosition);
