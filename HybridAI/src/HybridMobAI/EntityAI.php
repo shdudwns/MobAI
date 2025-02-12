@@ -451,7 +451,11 @@ public function removePath(Living $mob): void {
 
 
 
-    $blendedMotion = $currentMotion->multiply($inertiaFactor)->addVector($direction->normalize()->multiply($speed * (1 - $inertiaFactor)));
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+    );
     $this->avoidObstacle($mob);
     $mob->setMotion($blendedMotion);
 }
