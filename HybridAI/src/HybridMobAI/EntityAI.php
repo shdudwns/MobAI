@@ -483,25 +483,4 @@ public function removePath(Living $mob): void {
 
     $mob->setMotion($blendedMotion);
 }
-
-    $speed = 0.26; // ✅ 속도 조정
-    $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35; // ✅ 관성 보정
-
-    // ✅ 이동 방향 보정 (플레이어가 이동할 때 몬스터가 지나치게 따라오지 않도록 조정)
-    $adjustedDirection = new Vector3(
-        $direction->x * 0.9,
-        ($direction->y > 0.5 ? 0.42 : ($direction->y < -0.5 ? -0.2 : $direction->y)), // 점프 및 내려가기 보정
-        $direction->z * 0.9
-    );
-
-    // ✅ 부드러운 이동 적용
-    $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($adjustedDirection->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $adjustedDirection->y > 0 ? $adjustedDirection->y : $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($adjustedDirection->normalize()->z * $speed * (1 - $inertiaFactor))
-    );
-
-    $mob->setMotion($blendedMotion);
-}
 }
