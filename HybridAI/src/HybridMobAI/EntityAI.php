@@ -272,7 +272,7 @@ private function moveAroundObstacle(Living $mob): void {
     }
 
     // ✅ 장애물 감지 실패 시 감지된 블록 정보 출력
-    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
+    //Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
     $find = new Pathfinder();
     $neighbors = $find->getNeighbors($world, $position);
 
