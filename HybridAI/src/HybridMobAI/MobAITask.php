@@ -75,7 +75,8 @@ private function handleMobAI(Living $mob): void {
     if ($mob->isClosed() || !$mob->isAlive()) {
         return; // 💀 몬스터가 죽었으면 AI 처리 중단
     }
-    
+    $ai->avoidObstacle($mob);
+    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
 
@@ -111,8 +112,6 @@ private function handleMobAI(Living $mob): void {
             );
         }
     }
-    $ai->avoidObstacle($mob);
-    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
 }
 
     private function selectBestAlgorithm(Living $mob, Player $player): string {
