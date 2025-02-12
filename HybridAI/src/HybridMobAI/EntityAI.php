@@ -265,7 +265,7 @@ private function moveAroundObstacle(Living $mob): void {
     }
 
     // ✅ raycast() 실패 시 직접 탐색 실행
-    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
+    //Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
     $this->directObstacleSearch($mob, $world, $position);
 }
 
