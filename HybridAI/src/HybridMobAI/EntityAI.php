@@ -175,6 +175,8 @@ class EntityAI {
         return;
     }
 
+    Server::getInstance()->broadcastMessage("호출");
+
     // ✅ 몬스터 정면 장애물 감지 (광선 추적)
     $start = $position->add(0, $mob->getEyeHeight(), 0);
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
