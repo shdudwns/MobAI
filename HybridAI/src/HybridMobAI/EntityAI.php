@@ -195,7 +195,7 @@ class EntityAI {
     }
 
     // ✅ 장애물 감지 실패 시 디버깅 로그 추가
-    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...블록: " . $hitBlock->getName() . " (위치: {$hitPos->x}, {$hitPos->y}, {$hitPos->z})");
+    Server::getInstance()->broadcastMessage("🔍 [AI] 장애물 감지 실패! 직접 탐색 시작...");
 
     // ✅ 직접 탐색 (raycast 실패 시)
     $find = new Pathfinder();
