@@ -424,39 +424,33 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $tracker = new EntityTracker();
-    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
+    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 현재 위치에서 너무 가까운 노드 제거
-    do {
+    // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    } while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5);
+    }
 
     $direction = $nextPosition->subtractVector($currentPosition);
     if ($direction->lengthSquared() < 0.04) {
         return;
     }
 
-    $speed = 0.26; // ✅ 속도 약간 증가 (0.22 → 0.26)
+    $speed = 0.22; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.4; // ✅ 관성 감소 (0.6 → 0.4)
+    $inertiaFactor = 0.6; // ✅ 관성 적용
 
-    // ✅ 대각선 이동 보정 추가 (이동 방향이 자연스럽게 유지되도록)
+    // ✅ 부드러운 이동 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y * 0.8, // 공중 부유 방지
+        $currentMotion->y,
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
-
-    // ✅ 플레이어가 가까우면 직접 바라보게 설정
-    if ($player !== null && $currentPosition->distanceSquared($player->getPosition()) < 9) {
-        $mob->lookAt($player->getPosition());
-    } else {
-        $mob->lookAt($nextPosition);
-    }
+    $mob->lookAt($nextPosition); // ✅ 부드러운 회전 
+    $this->avoidObstacle($mob);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
