@@ -205,7 +205,7 @@ class Pathfinder {
 /**
  * 이웃 노드 가져오기 (최적화 버전)
  */
-private function getNeighbors(World $world, Vector3 $pos): array {
+public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $logData = "Neighbors for: (" . (int)$pos->x . ", " . (int)$pos->y . ", " . (int)$pos->z . ")\n";
 
