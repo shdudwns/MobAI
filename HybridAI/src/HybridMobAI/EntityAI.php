@@ -424,11 +424,19 @@ public function removePath(Living $mob): void {
         return;
     }
 
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // 🔍 너무 가까운 노드는 무시하고 다음 노드를 선택
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition());
+    } else {
+        $mob->lookAt($nextPosition);
+    }
+
+    // ✅ 너무 가까운 노드는 건너뜀
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
@@ -437,20 +445,18 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.22; // ✅ 속도 조정
+    $speed = 0.28; // ✅ 속도 조정 (0.26 → 0.28)
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.6; // ✅ 관성 적용
+    $inertiaFactor = 0.35; // ✅ 관성 감소 (0.4 → 0.35)
 
-    // ✅ 부드러운 이동 적용
-    $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
-    );
+    // ✅ 대각선 이동 보정 (45도 움직임 보정)
+    $diagonalFactor = 0.7071; // cos(45°) = sin(45°)
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * $diagonalFactor, $direction->y, $direction->z * $diagonalFactor);
+    }
 
+    $blendedMotion = $currentMotion->multiply($inertiaFactor)->addVector($direction->normalize()->multiply($speed * (1 - $inertiaFactor)));
     $mob->setMotion($blendedMotion);
-    $mob->lookAt($nextPosition); // ✅ 부드러운 회전 
-    $this->avoidObstacle($mob);
 }
     public function lookAt(Living $mob, Vector3 $target): void {
     $dx = $target->x - $mob->getPosition()->x;
