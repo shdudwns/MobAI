@@ -263,11 +263,14 @@ public function findAlternativePath(Living $mob, Vector3 $position, World $world
     for ($i = 0; $i < $maxAttempts; $i++) {
         $offsetX = mt_rand(-3, 3);
         $offsetZ = mt_rand(-3, 3);
-        $alternativeGoal = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
+        $alternativeGoalVector = $position->addVector(new Vector3($offsetX, 0, $offsetZ));
 
-        $alternativeBlock = $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y, (int)$alternativeGoal->z);
+        $alternativeBlock = $world->getBlockAt((int)$alternativeGoalVector->x, (int)$alternativeGoalVector->y, (int)$alternativeGoalVector->z);
 
-        if (!$this->isObstacle($alternativeBlock, $world->getBlockAt((int)$alternativeGoal->x, (int)$alternativeGoal->y + 1, (int)$alternativeGoal->z))) {
+        if (!$this->isObstacle($alternativeBlock, $world->getBlockAt((int)$alternativeGoalVector->x, (int)$alternativeGoalVector->y + 1, (int)$alternativeGoalVector->z))) {
+            // Create a Position object from the Vector3 and the world
+            $alternativeGoal = new Position((int)$alternativeGoalVector->x, (int)$alternativeGoalVector->y, (int)$alternativeGoalVector->z, $world);
+
             Server::getInstance()->broadcastMessage("🔄 [AI] 장애물 우회: {$alternativeGoal->x}, {$alternativeGoal->y}, {$alternativeGoal->z}");
 
             $this->findPathAsync($world, $position, $alternativeGoal, "A*", function (?array $path) use ($mob) {
@@ -283,7 +286,11 @@ public function findAlternativePath(Living $mob, Vector3 $position, World $world
     // ✅ 모든 시도가 실패하면 랜덤으로 강제 이동 (강제 탈출)
     $randomOffsetX = mt_rand(-5, 5);
     $randomOffsetZ = mt_rand(-5, 5);
-    $fallbackPosition = $position->addVector(new Vector3($randomOffsetX, 0, $randomOffsetZ));
+    $fallbackVector = $position->addVector(new Vector3($randomOffsetX, 0, $randomOffsetZ));
+
+    // Create a Position object for the fallback
+    $fallbackPosition = new Position((int)$fallbackVector->x, (int)$fallbackVector->y, (int)$fallbackVector->z, $world);
+
     Server::getInstance()->broadcastMessage("⚠️ [AI] 모든 우회 실패 → 강제 이동 시도!");
 
     $this->findPathAsync($world, $position, $fallbackPosition, "A*", function (?array $path) use ($mob) {
@@ -296,6 +303,7 @@ public function findAlternativePath(Living $mob, Vector3 $position, World $world
         }
     });
 }
+
 
 private function moveRandomly(Living $mob): void {
     $randomDir = new Vector3(mt_rand(-3, 3), 0, mt_rand(-3, 3)); // ✅ 랜덤 이동 범위 조정
