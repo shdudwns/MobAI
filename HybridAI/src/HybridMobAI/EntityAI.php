@@ -541,7 +541,6 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
-    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
     if ($nextPosition === null) {
         Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
         return;
@@ -549,17 +548,13 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
 
     $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
 
-    // ✅ 이동 가능 여부 확인
-    if (!$terrainAnalyzer->isWalkable($nextPosition)) {
+    if (!$terrainAnalyzer->isWalkable($nextPosition, $currentPosition)) {
         Server::getInstance()->broadcastMessage("⛔ [moveAlongPath] 다음 위치로 이동 불가!");
         return;
     }
 
-    // ✅ 이동 방향 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
     $distanceSquared = $direction->lengthSquared();
-
-    // ✅ 너무 가까운 경우 건너뜀
     if ($distanceSquared < 0.01) {
         return;
     }
@@ -571,13 +566,11 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
 
     // ✅ 점프 및 내려오기 로직 개선
     $jumpHeight = 0.42;
-    $fallSpeed = -0.2;
+    $fallSpeed = -0.1;
     if ($direction->y > 0.5 && $direction->y <= 1.2) {
-        $mob->setMotion(new Vector3($direction->x, $jumpHeight, $direction->z));
-        Server::getInstance()->broadcastMessage("🔼 [AI] 점프!");
+        $mob->setMotion(new Vector3($direction->x * 0.6, $jumpHeight, $direction->z * 0.6));
     } elseif ($direction->y < -0.5) {
-        $mob->setMotion(new Vector3($direction->x, $fallSpeed, $direction->z));
-        Server::getInstance()->broadcastMessage("🔽 [AI] 내려가기!");
+        $mob->setMotion(new Vector3($direction->x * 0.8, $fallSpeed, $direction->z * 0.8));
     } else {
         $mob->setMotion($direction->normalize()->multiply(0.23));
     }
