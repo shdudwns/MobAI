@@ -261,6 +261,15 @@ private function moveAroundObstacle(Living $mob): void {
         }
     }
 }
+    private function rotateY(Vector3 $vector, float $angle): Vector3 {
+    $cos = cos($angle);
+    $sin = sin($angle);
+
+    $x = $vector->x * $cos - $vector->z * $sin;
+    $z = $vector->x * $sin + $vector->z * $cos;
+
+    return new Vector3($x, $vector->y, $z);
+}
     
     private function isObstacle(Living $mob, Vector3 $nextPosition): bool {
     $currentPosition = $mob->getPosition();
@@ -298,15 +307,15 @@ public function avoidObstacle(Living $mob): void {
     $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $nextPosition = $position->addVector($directionVector);
 
-    // 🔥 isObstacle() 연동
+    // 🔥 장애물 감지 및 우회 시도
     if ($this->isObstacle($mob, $nextPosition)) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: 우회 시도...");
 
-        // 🔥 우회 방향 탐색 (왼쪽, 오른쪽, 뒤쪽)
+        // 🔥 rotateY() 적용 및 우회 방향 탐색
         $attempts = [
-            $directionVector->rotateY(deg2rad(90)),  // 🔥 오른쪽 회전
-            $directionVector->rotateY(deg2rad(-90)), // 🔥 왼쪽 회전
-            $directionVector->rotateY(deg2rad(180)), // 🔥 뒤쪽 회전
+            $this->rotateY($directionVector, deg2rad(90)),  // 🔥 오른쪽 회전
+            $this->rotateY($directionVector, deg2rad(-90)), // 🔥 왼쪽 회전
+            $this->rotateY($directionVector, deg2rad(180)), // 🔥 뒤쪽 회전
         ];
 
         foreach ($attempts as $attempt) {
@@ -315,7 +324,6 @@ public function avoidObstacle(Living $mob): void {
             $block = $world->getBlockAt((int)$newPos->x, (int)$newPos->y, (int)$newPos->z);
             $blockAbove = $world->getBlockAt((int)$newPos->x, (int)$newPos->y + 1, (int)$newPos->z);
 
-            // 🔥 이동 가능한지 확인
             if (!$this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
                 $mob->setMotion($attempt->normalize()->multiply(0.2));
                 return;
@@ -327,17 +335,7 @@ public function avoidObstacle(Living $mob): void {
         $randomOffsetZ = mt_rand(-3, 3);
         $fallbackPosition = $position->addVector(new Vector3($randomOffsetX, 0, $randomOffsetZ));
 
-        // 🔥 이동 가능한지 확인 후 랜덤 이동
-        $fallbackBlock = $world->getBlockAt((int)$fallbackPosition->x, (int)$fallbackPosition->y, (int)$fallbackPosition->z);
-        $fallbackBlockAbove = $world->getBlockAt((int)$fallbackPosition->x, (int)$fallbackPosition->y + 1, (int)$fallbackPosition->z);
-
-        if (!$this->isSolidBlock($fallbackBlock) && !$this->isSolidBlock($fallbackBlockAbove)) {
-            $mob->setMotion($fallbackPosition->subtractVector($position)->normalize()->multiply(0.2));
-            return;
-        }
-
-        // 🔥 랜덤 이동 실패 시 최후의 방법으로 제자리 회전
-        $mob->setRotation($yaw + 180, 0);
+        $mob->setMotion($fallbackPosition->subtractVector($position)->normalize()->multiply(0.2));
     }
 }
     
