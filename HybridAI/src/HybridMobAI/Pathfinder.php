@@ -235,6 +235,29 @@ class Pathfinder {
  * 이웃 노드 가져오기 (최적화 버전)
  */
 public function getNeighbors(World $world, Vector3 $pos): array {
+    $neighbors = [];
+
+    $directions = [
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1],
+        [1, 0, 1], [-1, 0, -1], [1, 0, -1], [-1, 0, 1]
+    ];
+
+    foreach ($directions as $dir) {
+        $x = (int)$pos->x + $dir[0];
+        $y = (int)$pos->y + $dir[1];
+        $z = (int)$pos->z + $dir[2];
+
+        $neighbor = new Vector3($x, $y, $z);
+
+        if ($this->isWalkable($neighbor)) {
+            $neighbors[] = $neighbor;
+        }
+    }
+    return $neighbors;
+}
+/*public function getNeighbors(World $world, Vector3 $pos): array {
         $key = self::vectorToStr($pos);
 
         // ✅ 캐싱 적용
@@ -274,7 +297,7 @@ public function getNeighbors(World $world, Vector3 $pos): array {
         // ✅ 캐싱 저장
         $this->cachedNeighbors[$key] = $neighbors;
         return $neighbors;
-}
+}*/
     
     private function isPassableBlock(Block $block): bool {
     $passableBlocks = [
