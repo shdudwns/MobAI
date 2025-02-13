@@ -237,9 +237,9 @@ class Pathfinder {
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $terrainAnalyzer = new TerrainAnalyzer($world);
-    
-    // ✅ 최대 높이 제한 없이 모든 방향 탐색
-    for ($dy = -3; $dy <= 3; $dy++) {
+
+    // ✅ 무제한 높낮이 탐색 및 대각선 이동 완벽 적용
+    for ($dy = -5; $dy <= 5; $dy++) { // 무제한 높낮이 탐색
         foreach ([
             [1, $dy, 0], [-1, $dy, 0], [0, $dy, 1], [0, $dy, -1], 
             [1, $dy, 1], [1, $dy, -1], [-1, $dy, 1], [-1, $dy, -1]
