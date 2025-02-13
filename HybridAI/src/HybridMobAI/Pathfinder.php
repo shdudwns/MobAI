@@ -49,11 +49,22 @@ class Pathfinder {
         }
 
         if ($visitedNodes++ >= $this->maxPathLength) {
+            Server::getInstance()->broadcastMessage("❌ [AI] 최대 탐색 노드 초과");
             return null;
         }
-        
-        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+
+        $neighbors = $this->getNeighbors($world, $current);
+        if (empty($neighbors)) {
+            Server::getInstance()->broadcastMessage("⚠️ [AI] 이웃 노드 없음");
+        }
+
+        foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
+            if (!$terrainAnalyzer->isWalkable($neighbor)) {
+                Server::getInstance()->broadcastMessage("⛔ [AI] 이동 불가 위치: {$neighborKey}");
+                continue;
+            }
+
             $movementCost = $this->getMovementCost($current, $neighbor, $terrainAnalyzer);
             $tentativeGScore = $gScore[$currentKey] + $movementCost;
 
@@ -65,6 +76,7 @@ class Pathfinder {
             }
         }
     }
+    Server::getInstance()->broadcastMessage("❌ [AI] 경로 탐색 실패");
     return null;
 }
 
