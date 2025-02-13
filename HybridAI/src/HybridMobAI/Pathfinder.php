@@ -237,22 +237,21 @@ class Pathfinder {
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $terrainAnalyzer = new TerrainAnalyzer($world);
-    $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 1블록 점프 가능
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 1블록 내려가기 가능
-        [1, 2, 0], [-1, 2, 0], [0, 2, 1], [0, 2, -1], // 2블록 점프 가능
-        [1, -2, 0], [-1, -2, 0], [0, -2, 1], [0, -2, -1] // 2블록 내려가기 가능
-    ];
+    
+    // ✅ 최대 높이 제한 없이 모든 방향 탐색
+    for ($dy = -3; $dy <= 3; $dy++) {
+        foreach ([
+            [1, $dy, 0], [-1, $dy, 0], [0, $dy, 1], [0, $dy, -1], 
+            [1, $dy, 1], [1, $dy, -1], [-1, $dy, 1], [-1, $dy, -1]
+        ] as $dir) {
+            $x = (int)$pos->x + $dir[0];
+            $y = (int)$pos->y + $dir[1];
+            $z = (int)$pos->z + $dir[2];
+            $neighborPos = new Vector3($x, $y, $z);
 
-    foreach ($directions as $dir) {
-        $x = (int)$pos->x + $dir[0];
-        $y = (int)$pos->y + $dir[1];
-        $z = (int)$pos->z + $dir[2];
-
-        $neighborPos = new Vector3($x, $y, $z);
-        if ($terrainAnalyzer->isWalkable($neighborPos, $pos)) {
-            $neighbors[] = $neighborPos;
+            if ($terrainAnalyzer->isWalkable($neighborPos, $pos)) {
+                $neighbors[] = $neighborPos;
+            }
         }
     }
 
