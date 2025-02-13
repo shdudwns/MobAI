@@ -51,11 +51,9 @@ class Pathfinder {
         if ($visitedNodes++ >= $this->maxPathLength) {
             return null;
         }
-
+        
         foreach ($this->getNeighbors($world, $current) as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
-
-            // 🔥 가중치 부여된 이동 비용
             $movementCost = $this->getMovementCost($current, $neighbor, $terrainAnalyzer);
             $tentativeGScore = $gScore[$currentKey] + $movementCost;
 
