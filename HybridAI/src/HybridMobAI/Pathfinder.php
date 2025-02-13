@@ -47,15 +47,15 @@ class Pathfinder {
 
         // 🔥 이미 방문한 노드는 무시
         if (isset($closedSet[$currentKey])) {
-            Server::getInstance()->broadcastMessage("♻️ [A*] 이미 방문한 노드: {$currentKey}");
+            //Server::getInstance()->broadcastMessage("♻️ [A*] 이미 방문한 노드: {$currentKey}");
             continue;
         }
 
-        Server::getInstance()->broadcastMessage("🔍 [A*] Current Node: {$currentKey}");
+        //Server::getInstance()->broadcastMessage("🔍 [A*] Current Node: {$currentKey}");
 
         // 🔥 현재 노드가 목적지에 가까우면 경로 반환
         if ($current->distanceSquared($goal) <= 2) {
-            Server::getInstance()->broadcastMessage("✅ [A*] 경로 탐색 성공!");
+            //Server::getInstance()->broadcastMessage("✅ [A*] 경로 탐색 성공!");
             return $this->reconstructPath($cameFrom, $current);
         }
 
@@ -63,13 +63,13 @@ class Pathfinder {
         $closedSet[$currentKey] = true;
 
         if ($visitedNodes++ >= $this->maxPathLength) {
-            Server::getInstance()->broadcastMessage("❌ [A*] 최대 탐색 노드 초과");
+            //Server::getInstance()->broadcastMessage("❌ [A*] 최대 탐색 노드 초과");
             return null;
         }
 
         $neighbors = $this->getNeighbors($world, $current);
         if (empty($neighbors)) {
-            Server::getInstance()->broadcastMessage("⚠️ [A*] 이웃 노드 없음");
+            //Server::getInstance()->broadcastMessage("⚠️ [A*] 이웃 노드 없음");
         }
 
         foreach ($neighbors as $neighbor) {
@@ -81,7 +81,7 @@ class Pathfinder {
             }
 
             if (!$terrainAnalyzer->isWalkable($neighbor)) {
-                Server::getInstance()->broadcastMessage("⛔ [A*] 이동 불가 위치: {$neighborKey}");
+                //Server::getInstance()->broadcastMessage("⛔ [A*] 이동 불가 위치: {$neighborKey}");
                 continue;
             }
 
@@ -99,7 +99,7 @@ class Pathfinder {
             $openSet->insert($neighbor, -$fScore[$neighborKey]);
         }
     }
-    Server::getInstance()->broadcastMessage("❌ [A*] 경로 탐색 실패");
+    //Server::getInstance()->broadcastMessage("❌ [A*] 경로 탐색 실패");
     return null;
 }
 
