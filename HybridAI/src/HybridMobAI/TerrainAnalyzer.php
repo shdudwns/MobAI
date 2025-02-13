@@ -47,14 +47,9 @@ class TerrainAnalyzer {
     $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-    // ✅ 높낮이 극복: 최대 2블록 차이까지 이동 가능
+    // ✅ 무제한 높낮이 극복 (최대 3블록 차이)
     $heightDiff = $position->y - $currentPosition->y;
-    if ($heightDiff > 2 || $heightDiff < -2) {
-        return false;
-    }
-
-    // ✅ 대각선 이동 및 높낮이 극복 개선
-    if (!$block->isTransparent() || !$blockAbove->isTransparent()) {
+    if ($heightDiff > 3 || $heightDiff < -3) {
         return false;
     }
 
@@ -63,6 +58,7 @@ class TerrainAnalyzer {
         return false;
     }
 
-    return true;
+    // ✅ 자연스러운 이동 및 대각선 이동 지원
+    return $block->isTransparent() && $blockAbove->isTransparent();
 }
 }
