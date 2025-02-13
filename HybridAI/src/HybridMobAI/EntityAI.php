@@ -565,20 +565,18 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     }
 
     // ✅ 고개 자연스럽게 회전
-    $dx = $nextPosition->x - $currentPosition->x;
-    $dz = $nextPosition->z - $currentPosition->z;
-    $dy = $nextPosition->y - $currentPosition->y;
-    $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
-    $yaw = rad2deg(atan2(-$dx, $dz));
-    $pitch = rad2deg(atan2($dy, $horizontalDistance));
+    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
+    $pitch = rad2deg(atan2($direction->y, sqrt($direction->x ** 2 + $direction->z ** 2)));
     $mob->setRotation($yaw, $pitch);
 
-    // ✅ 높이 차에 따른 점프 및 내려가기 적용
-    if ($dy > 0.5 && $dy <= 1.2) {
-        $mob->setMotion(new Vector3($direction->x, 0.42, $direction->z));
+    // ✅ 점프 및 내려오기 로직 개선
+    $jumpHeight = 0.42;
+    $fallSpeed = -0.2;
+    if ($direction->y > 0.5 && $direction->y <= 1.2) {
+        $mob->setMotion(new Vector3($direction->x, $jumpHeight, $direction->z));
         Server::getInstance()->broadcastMessage("🔼 [AI] 점프!");
-    } elseif ($dy < -0.5) {
-        $mob->setMotion(new Vector3($direction->x, -0.2, $direction->z));
+    } elseif ($direction->y < -0.5) {
+        $mob->setMotion(new Vector3($direction->x, $fallSpeed, $direction->z));
         Server::getInstance()->broadcastMessage("🔽 [AI] 내려가기!");
     } else {
         $mob->setMotion($direction->normalize()->multiply(0.23));
