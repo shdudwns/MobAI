@@ -546,7 +546,7 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
         return;
     }
 
-    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
+    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld(), $currentPosition);
 
     // 🔥 TerrainAnalyzer 연동
     if (!$terrainAnalyzer->isWalkable($nextPosition)) {
