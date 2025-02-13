@@ -236,6 +236,7 @@ class Pathfinder {
  */
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
+    $terrainAnalyzer = new TerrainAnalyzer($world);
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
         [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 1블록 점프 가능
@@ -250,7 +251,7 @@ public function getNeighbors(World $world, Vector3 $pos): array {
         $z = (int)$pos->z + $dir[2];
 
         $neighborPos = new Vector3($x, $y, $z);
-        if ($this->isWalkable($neighborPos, $pos)) {
+        if ($terrainAnalyzer->isWalkable($neighborPos, $pos)) {
             $neighbors[] = $neighborPos;
         }
     }
