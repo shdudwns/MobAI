@@ -80,7 +80,7 @@ class Pathfinder {
                 continue;
             }
 
-            if (!$terrainAnalyzer->isWalkable($neighbor)) {
+            if (!$terrainAnalyzer->isWalkable($neighbor, $start)) {
                 //Server::getInstance()->broadcastMessage("⛔ [A*] 이동 불가 위치: {$neighborKey}");
                 continue;
             }
