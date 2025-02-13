@@ -258,7 +258,7 @@ public function avoidObstacle(Living $mob): void {
         $this->findAlternativePath($mob, $position, $world);
     }
 }
-
+    
 public function findAlternativePath(Living $mob, Vector3 $position, World $world): void {
     $maxAttempts = 5;
     for ($i = 0; $i < $maxAttempts; $i++) {
@@ -440,34 +440,40 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 몬스터가 플레이어를 바라보도록 함 (몸은 유지한 채 얼굴만 회전)
+    // ✅ 몬스터가 플레이어를 바라보도록 설정
     if ($player !== null) {
         $mob->lookAt($player->getPosition());
     }
 
-    // ✅ 너무 가까운 노드는 건너뜀 (멈춤 방지)
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.3) {
+    // ✅ 너무 가까운 노드는 건너뜀
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.4) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
     // ✅ 이동 방향 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
     $distanceSquared = $direction->lengthSquared();
-
-    // ✅ 너무 작은 거리는 무시 (제자리 멈춤 방지)
+    
+    // ✅ 너무 작은 거리는 무시
     if ($distanceSquared < 0.01) {
         return;
     }
 
-    $speed = 0.24; // ✅ 속도 조정
+    $speed = 0.23; // ✅ 속도 조정
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.5; // ✅ 관성 보정
+    $inertiaFactor = 0.45; // ✅ 관성 보정
 
-    // ✅ 방향 보정 (얼굴은 정면, 이동은 자연스럽게)
+    // ✅ 몬스터가 먼저 몸을 돌린 후 이동
     $yaw = rad2deg(atan2(-$direction->x, $direction->z));
     $mob->setRotation($yaw, 0);
 
-    // ✅ 점프 & 내려가기 반응 추가 (장애물 넘기 & 자연스러운 낙하)
+    // ✅ 장애물 감지 후 우회 경로 탐색
+    if ($this->isObstacleAhead($mob)) {
+        $this->avoidObstacle($mob);
+        return; // 장애물 우회 후 이동을 멈춤
+    }
+
+    // ✅ 점프 & 내려가기 적용 (장애물 넘기 & 자연스러운 낙하)
     if ($direction->y > 0.5) {
         $direction = new Vector3($direction->x, 0.42, $direction->z);
     } elseif ($direction->y < -0.5) {
@@ -476,7 +482,7 @@ public function removePath(Living $mob): void {
 
     // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.9, $direction->y, $direction->z * 0.9);
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
     }
 
     // ✅ 이동 모션 적용 (현재 이동과 부드럽게 결합)
@@ -487,8 +493,5 @@ public function removePath(Living $mob): void {
     );
 
     $mob->setMotion($blendedMotion);
-
-    // 🚀 장애물 감지 및 자동 우회
-    $this->avoidObstacle($mob);
 }
 }
