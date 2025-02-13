@@ -252,7 +252,8 @@ public function getNeighbors(World $world, Vector3 $pos): array {
 
         $neighbor = new Vector3($x, $y, $z);
 
-        if ($terrainAnalyzer->isWalkable($neighbor)) {
+        // 🔥 현재 위치와 다른 노드만 가져옴
+        if (!$pos->equals($neighbor) && $terrainAnalyzer->isWalkable($neighbor, $pos)) {
             $neighbors[] = $neighbor;
         }
     }
