@@ -41,7 +41,7 @@ class TerrainAnalyzer {
         return false;
     }
 
-    public function isWalkable(Vector3 $position): bool {
+    public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
     $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
     $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
@@ -50,23 +50,19 @@ class TerrainAnalyzer {
     Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] isWalkable: Checking position: ({$position->x}, {$position->y}, {$position->z})");
     Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] Block: {$block->getName()}, BlockAbove: {$blockAbove->getName()}, BlockBelow: {$blockBelow->getName()}");
 
-    // ✅ 1. 현재 밟고 있는 블록은 이동 가능
+    // ✅ 1. 현재 위치와 다음 위치가 같은 경우 이동 불가 처리
+    if ($position->equals($currentPosition)) {
+        Server::getInstance()->broadcastMessage("⛔ [TerrainAnalyzer] 현재 위치와 다음 위치가 동일합니다. 이동 불가!");
+        return false;
+    }
+
+    // ✅ 2. 현재 밟고 있는 블록은 이동 가능
     if ($block instanceof Air || $block instanceof Transparent) {
         return true;
     }
 
-    // ✅ 2. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
+    // ✅ 3. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
     if (($blockAbove instanceof Air || $blockAbove instanceof Transparent) && $blockBelow->isSolid()) {
-        return true;
-    }
-
-    // ✅ 3. 점프 가능 여부 검사 (최대 1.2 블록까지 점프)
-    if ($blockBelow->getPosition()->y + 1.2 >= $position->y) {
-        return true;
-    }
-
-    // ✅ 4. 내려오기 가능 여부 검사 (최대 3 블록까지 내려오기)
-    if ($blockBelow->getPosition()->y - 3 <= $position->y) {
         return true;
     }
 
