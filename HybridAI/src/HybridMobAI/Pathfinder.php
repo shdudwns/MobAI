@@ -29,41 +29,59 @@ class Pathfinder {
     }
 
     public function findPathAStar(World $world, Vector3 $start, Vector3 $goal): ?array {
-        $openSet = new \SplPriorityQueue();
-        $openSet->setExtractFlags(\SplPriorityQueue::EXTR_DATA);
-        $openSet->insert($start, 0);
-        
-        $cameFrom = [];
-        $gScore = [self::vectorToStr($start) => 0];
-        $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
-        $visitedNodes = 0;
+    $openSet = new \SplPriorityQueue();
+    $openSet->setExtractFlags(\SplPriorityQueue::EXTR_DATA);
+    $openSet->insert($start, 0);
+    
+    $cameFrom = [];
+    $gScore = [self::vectorToStr($start) => 0];
+    $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
+    $visitedNodes = 0;
 
-        while (!$openSet->isEmpty()) {
-            $current = $openSet->extract();
-            $currentKey = self::vectorToStr($current);
+    while (!$openSet->isEmpty()) {
+        $current = $openSet->extract();
+        $currentKey = self::vectorToStr($current);
 
-            if ($current->distanceSquared($goal) <= 2) {
-                return $this->reconstructPath($cameFrom, $current);
-            }
+        if ($current->distanceSquared($goal) <= 2) {
+            return $this->reconstructPath($cameFrom, $current);
+        }
 
-            if ($visitedNodes++ >= $this->maxPathLength) {
-                return null;
-            }
+        if ($visitedNodes++ >= $this->maxPathLength) {
+            return null;
+        }
 
-            foreach ($this->getNeighbors($world, $current) as $neighbor) {
-                $neighborKey = self::vectorToStr($neighbor);
-                $tentativeGScore = $gScore[$currentKey] + 1;
+        foreach ($this->getNeighbors($world, $current) as $neighbor) {
+            $neighborKey = self::vectorToStr($neighbor);
 
-                if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
-                    $cameFrom[$neighborKey] = $current;
-                    $gScore[$neighborKey] = $tentativeGScore;
-                    $fScore[$neighborKey] = $tentativeGScore + $this->heuristic($neighbor, $goal);
-                    $openSet->insert($neighbor, -$fScore[$neighborKey]);
-                }
+            // 🔥 가중치 부여된 이동 비용
+            $movementCost = $this->getMovementCost($current, $neighbor);
+            $tentativeGScore = $gScore[$currentKey] + $movementCost;
+
+            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
+                $cameFrom[$neighborKey] = $current;
+                $gScore[$neighborKey] = $tentativeGScore;
+                $fScore[$neighborKey] = $tentativeGScore + $this->heuristic($neighbor, $goal);
+                $openSet->insert($neighbor, -$fScore[$neighborKey]);
             }
         }
-        return null;
     }
+    return null;
+}
+
+    private function getMovementCost(Vector3 $current, Vector3 $neighbor): float {
+    $yDiff = $neighbor->y - $current->y;
+    $isDiagonal = ($current->x !== $neighbor->x) && ($current->z !== $neighbor->z);
+
+    // 🔥 높이 차이 및 대각선 이동에 따른 가중치 부여
+    if ($yDiff > 1) {
+        return 10.0; // 🔥 점프는 높은 비용
+    } elseif ($yDiff < -1) {
+        return 0.5; // 🔥 내려가기는 낮은 비용
+    } elseif ($isDiagonal) {
+        return 1.4; // 🔥 대각선 이동은 약간 높은 비용
+    }
+    return 1.0; // 🔥 평지 이동은 가장 낮은 비용
+}
     
     public function findPathDijkstra(World $world, Vector3 $start, Vector3 $goal): ?array {
     $openSet = new \SplPriorityQueue();
