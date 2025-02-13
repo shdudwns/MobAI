@@ -535,29 +535,60 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
 
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    $direction = $nextPosition->subtractVector($currentPosition);
 
-    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
+    // 🔥 디버깅 메시지 추가: 다음 위치가 정상적으로 계산되는지 확인
+    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Current Position: ({$currentPosition->x}, {$currentPosition->y}, {$currentPosition->z})");
+    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Next Position: " . ($nextPosition ? "({$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z})" : "NULL"));
 
-    // ✅ 점프 또는 내려가기 판단
-    if ($terrainAnalyzer->isJumpable($currentPosition, $nextPosition)) {
-        Server::getInstance()->broadcastMessage("⬆️ [AI] 점프 시도");
-        $this->jump($mob, $nextPosition);
-        return;
-    } elseif ($terrainAnalyzer->isDownhill($currentPosition, $nextPosition)) {
-        Server::getInstance()->broadcastMessage("⬇️ [AI] 내려가기 시도");
-        $this->fallDown($mob, $nextPosition);
+    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
+    if ($nextPosition === null) {
+        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
         return;
     }
 
-    $speed = 0.23;
+    // 🔥 너무 가까운 노드는 건너뜀 (while문 개선)
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.4) {
+        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+        Server::getInstance()->broadcastMessage("🔄 [moveAlongPath] 너무 가까운 노드 건너뜀 → 다음 위치: ({$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z})");
+    }
+
+    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
+    if ($nextPosition === null) {
+        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
+        return;
+    }
+
+    // ✅ 이동 방향 벡터 계산
+    $direction = $nextPosition->subtractVector($currentPosition);
+    $distanceSquared = $direction->lengthSquared();
+    
+    // 🔥 디버깅 메시지 추가: 방향 벡터와 거리 확인
+    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Direction Vector: ({$direction->x}, {$direction->y}, {$direction->z}), DistanceSquared: {$distanceSquared}");
+
+    // ✅ 너무 작은 거리는 무시
+    if ($distanceSquared < 0.01) {
+        Server::getInstance()->broadcastMessage("⚠️ [moveAlongPath] 너무 가까워서 이동 생략");
+        return;
+    }
+
+    $speed = 0.23; // ✅ 속도 조정
+    $currentMotion = $mob->getMotion();
+    $inertiaFactor = 0.45; // ✅ 관성 보정
+
+    // ✅ 몬스터가 먼저 몸을 돌린 후 이동
+    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
+    $mob->setRotation($yaw, 0);
+
+    // ✅ 이동 모션 적용 (벡터 정규화 후 이동)
     $blendedMotion = new Vector3(
-        $direction->normalize()->x * $speed,
-        $mob->getMotion()->y,
-        $direction->normalize()->z * $speed
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
+    // 🔥 디버깅 메시지 추가: 블렌딩된 모션 확인
+    Server::getInstance()->broadcastMessage("🚀 [moveAlongPath] Blended Motion: ({$blendedMotion->x}, {$blendedMotion->y}, {$blendedMotion->z})");
+
     $mob->setMotion($blendedMotion);
-    $mob->lookAt($nextPosition);
 }
 }
