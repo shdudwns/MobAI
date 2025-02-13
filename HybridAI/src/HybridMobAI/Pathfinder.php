@@ -171,8 +171,12 @@ class Pathfinder {
     }
 
     private function heuristic(Vector3 $a, Vector3 $b): float {
-        return abs($a->x - $b->x) + abs($a->y - $b->y) + abs($a->z - $b->z);
-    }
+        $dx = abs($a->x - $b->x);
+        $dy = abs($a->y - $b->y);
+        $dz = abs($a->z - $b->z);
+        $dmax = max($dx, $dz);
+        $dmin = min($dx, $dz);
+        return $dmax + 0.414 * $dmin + $dy;
 
 /**
  * 이웃 노드 가져오기 (최적화 버전)
@@ -190,7 +194,8 @@ public function getNeighbors(World $world, Vector3 $pos): array {
             [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
             [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
             [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1],
-            [1, 0, 1], [-1, 0, -1], [1, 0, -1], [-1, 0, 1]
+            [1, 0, 1], [-1, 0, -1], [1, 0, -1], [-1, 0, 1],
+            [0, 1, 0], [0, -1, 0]
         ];
 
         foreach ($directions as $dir) {
