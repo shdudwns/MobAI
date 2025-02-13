@@ -177,7 +177,7 @@ class Pathfinder {
         $dmax = max($dx, $dz);
         $dmin = min($dx, $dz);
         return $dmax + 0.414 * $dmin + $dy;
-
+    }
 /**
  * 이웃 노드 가져오기 (최적화 버전)
  */
