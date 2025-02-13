@@ -54,7 +54,8 @@ private function handleMobAI(Living $mob): void {
     $navigator = new EntityNavigator();
     $detector = new ObstacleDetector($this->plugin);
     $ai = new EntityAI($this->plugin, $this->aiEnabled);
-    
+
+    // ✅ AI 비활성화 시 랜덤 이동 또는 플레이어 추적
     if (!$this->aiEnabled) {
         $nearestPlayer = $tracker->findNearestPlayer($mob);
         if ($nearestPlayer !== null) {
@@ -62,42 +63,44 @@ private function handleMobAI(Living $mob): void {
         } else {
             $navigator->moveRandomly($mob);
         }
-        $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
-        $ai->basicObstacle($mob);
+        $detector->checkForObstaclesAndJump($mob, $mob->getWorld()); // ✅ 점프만 체크
         return;
     }
 
     $mobId = $mob->getId();
-    $ai->avoidObstacle($mob);
     $currentTick = Server::getInstance()->getTick();
-
-    // ✅ 장애물 감지 및 점프를 가장 먼저 실행 (우선순위 상향)
-
     $player = $tracker->findNearestPlayer($mob);
+
+    // 💀 몬스터가 죽었거나 삭제된 경우 AI 중단
     if ($mob->isClosed() || !$mob->isAlive()) {
-        return; // 💀 몬스터가 죽었으면 AI 처리 중단
+        return;
     }
-    $ai->avoidObstacle($mob);
-    $detector->checkForObstaclesAndJump($mob, $mob->getWorld());
+
+    // ✅ 타겟 플레이어가 있을 경우 이동
     if ($player !== null) {
         $previousTarget = $ai->getTarget($mob);
 
+        // ✅ 기존 타겟 위치 근처에 있다면, 현재 경로를 따라 이동
         if ($previousTarget !== null && $previousTarget->distanceSquared($player->getPosition()) < 4) {
             $ai->moveAlongPath($mob);
             return;
         }
 
+        // ✅ 새 타겟 설정
         $ai->setTarget($mob, $player->getPosition());
 
+        // ✅ 현재 경로가 있으면 경로 따라 이동
         if ($ai->hasPath($mob)) {
             $navigator->moveAlongPath($mob);
         } else {
             $navigator->moveToPlayer($mob, $player, $this->aiEnabled);
         }
 
+        // ✅ 경로 갱신 주기 체크 (40틱마다)
         if (!isset($this->lastPathUpdate[$mobId]) || ($currentTick - $this->lastPathUpdate[$mobId] > 40)) {
             $this->lastPathUpdate[$mobId] = $currentTick;
             $algorithm = $this->selectBestAlgorithm($mob, $player);
+
             $ai->findPathAsync(
                 $mob->getWorld(),
                 $mob->getPosition(),
@@ -106,7 +109,7 @@ private function handleMobAI(Living $mob): void {
                 function (?array $path) use ($mob, $ai, $navigator) {
                     if ($path !== null) {
                         $ai->setPath($mob, $path);
-                        $ai->moveAlongPath($mob);
+                        $ai->moveAlongPath($mob); // ✅ moveAlongPath()에서 장애물 감지 및 이동 처리
                     } else {
                         Server::getInstance()->broadcastMessage("⚠️ [AI] 경로 없음");
                     }
