@@ -38,45 +38,68 @@ class Pathfinder {
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
     $visitedNodes = 0;
 
-    $terrainAnalyzer = new TerrainAnalyzer($world); // ✅ 지형 분석기 추가
+    $closedSet = []; // 🔥 Closed Set 추가
+    $terrainAnalyzer = new TerrainAnalyzer($world);
 
     while (!$openSet->isEmpty()) {
         $current = $openSet->extract();
         $currentKey = self::vectorToStr($current);
 
+        // 🔥 이미 방문한 노드는 무시
+        if (isset($closedSet[$currentKey])) {
+            Server::getInstance()->broadcastMessage("♻️ [A*] 이미 방문한 노드: {$currentKey}");
+            continue;
+        }
+
+        Server::getInstance()->broadcastMessage("🔍 [A*] Current Node: {$currentKey}");
+
+        // 🔥 현재 노드가 목적지에 가까우면 경로 반환
         if ($current->distanceSquared($goal) <= 2) {
+            Server::getInstance()->broadcastMessage("✅ [A*] 경로 탐색 성공!");
             return $this->reconstructPath($cameFrom, $current);
         }
 
+        // 🔥 Closed Set에 추가
+        $closedSet[$currentKey] = true;
+
         if ($visitedNodes++ >= $this->maxPathLength) {
-            Server::getInstance()->broadcastMessage("❌ [AI] 최대 탐색 노드 초과");
+            Server::getInstance()->broadcastMessage("❌ [A*] 최대 탐색 노드 초과");
             return null;
         }
 
         $neighbors = $this->getNeighbors($world, $current);
         if (empty($neighbors)) {
-            Server::getInstance()->broadcastMessage("⚠️ [AI] 이웃 노드 없음");
+            Server::getInstance()->broadcastMessage("⚠️ [A*] 이웃 노드 없음");
         }
 
         foreach ($neighbors as $neighbor) {
             $neighborKey = self::vectorToStr($neighbor);
+
+            // 🔥 Closed Set에 있는 노드는 무시
+            if (isset($closedSet[$neighborKey])) {
+                continue;
+            }
+
             if (!$terrainAnalyzer->isWalkable($neighbor)) {
-                Server::getInstance()->broadcastMessage("⛔ [AI] 이동 불가 위치: {$neighborKey}");
+                Server::getInstance()->broadcastMessage("⛔ [A*] 이동 불가 위치: {$neighborKey}");
                 continue;
             }
 
             $movementCost = $this->getMovementCost($current, $neighbor, $terrainAnalyzer);
             $tentativeGScore = $gScore[$currentKey] + $movementCost;
 
-            if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
-                $cameFrom[$neighborKey] = $current;
-                $gScore[$neighborKey] = $tentativeGScore;
-                $fScore[$neighborKey] = $tentativeGScore + $this->heuristic($neighbor, $goal);
-                $openSet->insert($neighbor, -$fScore[$neighborKey]);
+            // 🔥 gScore가 더 크면 무시 (불필요한 노드 제거)
+            if (isset($gScore[$neighborKey]) && $tentativeGScore >= $gScore[$neighborKey]) {
+                continue;
             }
+
+            $cameFrom[$neighborKey] = $current;
+            $gScore[$neighborKey] = $tentativeGScore;
+            $fScore[$neighborKey] = $tentativeGScore + $this->heuristic($neighbor, $goal);
+            $openSet->insert($neighbor, -$fScore[$neighborKey]);
         }
     }
-    Server::getInstance()->broadcastMessage("❌ [AI] 경로 탐색 실패");
+    Server::getInstance()->broadcastMessage("❌ [A*] 경로 탐색 실패");
     return null;
 }
 
