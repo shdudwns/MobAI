@@ -6,6 +6,7 @@ use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use pocketmine\block\Block;
 use pocketmine\block\Air;
+use pocketmine\block\Transparent;
 
 class TerrainAnalyzer {
 
@@ -42,8 +43,18 @@ class TerrainAnalyzer {
     public function isWalkable(Vector3 $position): bool {
         $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
         $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+        $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-        // 🔥 이동 가능한지 확인 (공기 + 머리 위 공간 확보)
-        return ($block instanceof Air) && ($blockAbove instanceof Air);
+        // 🔥 1. 현재 밟고 있는 블록은 이동 가능
+        if ($block instanceof Air || $block instanceof Transparent) {
+            return true;
+        }
+
+        // 🔥 2. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
+        if (($blockAbove instanceof Air || $blockAbove instanceof Transparent) && $blockBelow->isSolid()) {
+            return true;
+        }
+
+        return false;
     }
 }
