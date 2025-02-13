@@ -7,6 +7,7 @@ use pocketmine\world\World;
 use pocketmine\block\Block;
 use pocketmine\block\Air;
 use pocketmine\block\Transparent;
+use pocketmine\Server;
 
 class TerrainAnalyzer {
 
