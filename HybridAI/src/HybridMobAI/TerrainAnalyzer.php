@@ -41,26 +41,28 @@ class TerrainAnalyzer {
         return false;
     }
 
-    public function isWalkable(Vector3 $position): bool {
-    $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
-    $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
-    $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
+    $world = Server::getInstance()->getWorldManager()->getDefaultWorld();
+    $block = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+    $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-    // 🔥 디버깅 메시지 추가
-    Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] isWalkable: Checking position: ({$position->x}, {$position->y}, {$position->z})");
-    Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] Block: {$block->getName()}, BlockAbove: {$blockAbove->getName()}, BlockBelow: {$blockBelow->getName()}");
-
-    // ✅ 1. 현재 밟고 있는 블록은 이동 가능
-    if ($block instanceof Air || $block instanceof Transparent) {
-        return true;
+    // ✅ 높낮이 극복: 최대 2블록 차이까지 이동 가능
+    $heightDiff = $position->y - $currentPosition->y;
+    if ($heightDiff > 2 || $heightDiff < -2) {
+        return false;
     }
 
-    // ✅ 2. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
-    if (($blockAbove instanceof Air || $blockAbove instanceof Transparent) && $blockBelow->isSolid()) {
-        return true;
+    // ✅ 대각선 이동 및 높낮이 극복 개선
+    if (!$block->isTransparent() || !$blockAbove->isTransparent()) {
+        return false;
     }
 
-    Server::getInstance()->broadcastMessage("⛔ [TerrainAnalyzer] 이동 불가 위치!");
-    return false;
+    // ✅ 내려올 때 아래 블록이 단단해야 함
+    if ($heightDiff < 0 && !$blockBelow->isSolid()) {
+        return false;
+    }
+
+    return true;
 }
 }
