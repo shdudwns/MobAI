@@ -236,13 +236,12 @@ class Pathfinder {
  */
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
-    $terrainAnalyzer = new TerrainAnalyzer($world);
-
     $directions = [
-        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
-        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1],
-        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1],
-        [1, 0, 1], [-1, 0, -1], [1, 0, -1], [-1, 0, 1]
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 1블록 점프 가능
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 1블록 내려가기 가능
+        [1, 2, 0], [-1, 2, 0], [0, 2, 1], [0, 2, -1], // 2블록 점프 가능
+        [1, -2, 0], [-1, -2, 0], [0, -2, 1], [0, -2, -1] // 2블록 내려가기 가능
     ];
 
     foreach ($directions as $dir) {
@@ -250,13 +249,12 @@ public function getNeighbors(World $world, Vector3 $pos): array {
         $y = (int)$pos->y + $dir[1];
         $z = (int)$pos->z + $dir[2];
 
-        $neighbor = new Vector3($x, $y, $z);
-
-        // 🔥 현재 위치와 다른 노드만 가져옴
-        if (!$pos->equals($neighbor) && $terrainAnalyzer->isWalkable($neighbor)) {
-            $neighbors[] = $neighbor;
+        $neighborPos = new Vector3($x, $y, $z);
+        if ($this->isWalkable($neighborPos, $pos)) {
+            $neighbors[] = $neighborPos;
         }
     }
+
     return $neighbors;
 }
 /*public function getNeighbors(World $world, Vector3 $pos): array {
