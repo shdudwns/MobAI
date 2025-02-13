@@ -510,20 +510,20 @@ public function removePath(Living $mob): void {
         return isset($this->entityPaths[$mob->getId()]);
     }
 
-    private function jump(Living $mob, Vector3 $nextPosition): void {
-    $mob->setMotion(new Vector3(
-        $mob->getMotion()->x,
-        0.42,
-        $mob->getMotion()->z
-    ));
-}
+    public function lookAt(Living $mob, Vector3 $target): void {
+    $dx = $target->x - $mob->getPosition()->x;
+    $dz = $target->z - $mob->getPosition()->z;
+    $dy = $target->y - $mob->getPosition()->y;
 
-private function fallDown(Living $mob, Vector3 $nextPosition): void {
-    $mob->setMotion(new Vector3(
-        $mob->getMotion()->x,
-        -0.2,
-        $mob->getMotion()->z
-    ));
+    $horizontalDistance = sqrt($dx * $dx + $dz * $dz);
+    if ($horizontalDistance < 0.01) {
+        $horizontalDistance = 0.01;
+    }
+
+    $yaw = rad2deg(atan2(-$dx, $dz));
+    $pitch = rad2deg(atan2($dy, $horizontalDistance));
+
+    $mob->setRotation($yaw, $pitch);
 }
 
     public function moveAlongPath(Living $mob): void {
@@ -541,12 +541,8 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $distanceSquared = $direction->lengthSquared();
     if ($distanceSquared < 0.01) return;
 
-    // ✅ 플레이어 바라보기 개선
-    $tracker = new EntityTracker();
-    $player = $tracker->findNearestPlayer($mob);
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition());
-    }
+    // ✅ 자연스러운 바라보기
+    $this->lookAt($mob, $nextPosition);
 
     // ✅ 점프 및 내려오기 로직
     $heightDiff = $nextPosition->y - $currentPosition->y;
