@@ -41,20 +41,35 @@ class TerrainAnalyzer {
     }
 
     public function isWalkable(Vector3 $position): bool {
-        $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
-        $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
-        $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+    $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+    $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-        // 🔥 1. 현재 밟고 있는 블록은 이동 가능
-        if ($block instanceof Air || $block instanceof Transparent) {
-            return true;
-        }
+    // 🔥 디버깅 메시지 추가
+    Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] isWalkable: Checking position: ({$position->x}, {$position->y}, {$position->z})");
+    Server::getInstance()->broadcastMessage("🔍 [TerrainAnalyzer] Block: {$block->getName()}, BlockAbove: {$blockAbove->getName()}, BlockBelow: {$blockBelow->getName()}");
 
-        // 🔥 2. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
-        if (($blockAbove instanceof Air || $blockAbove instanceof Transparent) && $blockBelow->isSolid()) {
-            return true;
-        }
-
-        return false;
+    // ✅ 1. 현재 밟고 있는 블록은 이동 가능
+    if ($block instanceof Air || $block instanceof Transparent) {
+        return true;
     }
+
+    // ✅ 2. 머리 위 공간이 비어있고 발 밑 블록이 단단해야 이동 가능
+    if (($blockAbove instanceof Air || $blockAbove instanceof Transparent) && $blockBelow->isSolid()) {
+        return true;
+    }
+
+    // ✅ 3. 점프 가능 여부 검사 (최대 1.2 블록까지 점프)
+    if ($blockBelow->getPosition()->y + 1.2 >= $position->y) {
+        return true;
+    }
+
+    // ✅ 4. 내려오기 가능 여부 검사 (최대 3 블록까지 내려오기)
+    if ($blockBelow->getPosition()->y - 3 <= $position->y) {
+        return true;
+    }
+
+    Server::getInstance()->broadcastMessage("⛔ [TerrainAnalyzer] 이동 불가 위치!");
+    return false;
+}
 }
