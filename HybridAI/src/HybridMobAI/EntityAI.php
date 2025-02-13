@@ -536,17 +536,17 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // 🔥 디버깅 메시지 추가: 다음 위치가 정상적으로 계산되는지 확인
+    // 🔥 디버깅 메시지 추가
     Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Current Position: ({$currentPosition->x}, {$currentPosition->y}, {$currentPosition->z})");
     Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Next Position: " . ($nextPosition ? "({$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z})" : "NULL"));
 
-    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
-    if ($nextPosition === null) {
-        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
-        return;
+    // ✅ 현재 위치와 다음 위치가 같은 경우 다음 노드로 넘어감
+    if ($currentPosition->equals($nextPosition)) {
+        Server::getInstance()->broadcastMessage("⚠️ [moveAlongPath] 현재 위치와 다음 위치가 동일합니다. 다음 노드로 넘어갑니다.");
+        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
-    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld(), $currentPosition);
+    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
 
     // 🔥 TerrainAnalyzer 연동
     if (!$terrainAnalyzer->isWalkable($nextPosition)) {
@@ -558,7 +558,7 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $direction = $nextPosition->subtractVector($currentPosition);
     $distanceSquared = $direction->lengthSquared();
     
-    // 🔥 디버깅 메시지 추가: 방향 벡터와 거리 확인
+    // 🔥 디버깅 메시지 추가
     Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Direction Vector: ({$direction->x}, {$direction->y}, {$direction->z}), DistanceSquared: {$distanceSquared}");
 
     // ✅ 너무 가까운 노드는 건너뜀
@@ -567,33 +567,7 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
         return;
     }
 
-    $speed = 0.23; // ✅ 속도 조정
-    $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.45; // ✅ 관성 보정
-
-    // ✅ 몬스터가 먼저 몸을 돌린 후 이동
-    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
-    $mob->setRotation($yaw, 0);
-
-    // ✅ 점프 및 내려오는 로직 통합
-    $heightDiff = $nextPosition->y - $currentPosition->y;
-    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // ✅ 점프할 높이
-        Server::getInstance()->broadcastMessage("🚀 [moveAlongPath] 점프 실행!");
-        $mob->setMotion(new Vector3($direction->x, 0.42, $direction->z));
-        return;
-    } elseif ($heightDiff < -0.5 && $heightDiff >= -3) { // ✅ 내려올 높이
-        Server::getInstance()->broadcastMessage("⬇️ [moveAlongPath] 내려오기 실행!");
-        $mob->setMotion(new Vector3($direction->x, -0.2, $direction->z));
-        return;
-    }
-
-    // ✅ 이동 모션 적용
-    $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
-    );
-
-    $mob->setMotion($blendedMotion);
+    $speed = 0.23;
+    $mob->setMotion($direction->normalize()->multiply($speed));
 }
 }
