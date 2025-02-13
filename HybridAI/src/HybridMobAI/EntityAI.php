@@ -546,15 +546,11 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
         return;
     }
 
-    // 🔥 너무 가까운 노드는 건너뜀 (while문 개선)
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.4) {
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-        Server::getInstance()->broadcastMessage("🔄 [moveAlongPath] 너무 가까운 노드 건너뜀 → 다음 위치: ({$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z})");
-    }
+    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
 
-    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
-    if ($nextPosition === null) {
-        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
+    // 🔥 TerrainAnalyzer 연동
+    if (!$terrainAnalyzer->isWalkable($nextPosition)) {
+        Server::getInstance()->broadcastMessage("⛔ [moveAlongPath] 다음 위치로 이동 불가!");
         return;
     }
 
@@ -565,7 +561,7 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     // 🔥 디버깅 메시지 추가: 방향 벡터와 거리 확인
     Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Direction Vector: ({$direction->x}, {$direction->y}, {$direction->z}), DistanceSquared: {$distanceSquared}");
 
-    // ✅ 너무 작은 거리는 무시
+    // ✅ 너무 가까운 노드는 건너뜀
     if ($distanceSquared < 0.01) {
         Server::getInstance()->broadcastMessage("⚠️ [moveAlongPath] 너무 가까워서 이동 생략");
         return;
@@ -579,15 +575,24 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $yaw = rad2deg(atan2(-$direction->x, $direction->z));
     $mob->setRotation($yaw, 0);
 
-    // ✅ 이동 모션 적용 (벡터 정규화 후 이동)
+    // ✅ 점프 및 내려오는 로직 통합
+    $heightDiff = $nextPosition->y - $currentPosition->y;
+    if ($heightDiff > 0.5 && $heightDiff <= 1.2) { // ✅ 점프할 높이
+        Server::getInstance()->broadcastMessage("🚀 [moveAlongPath] 점프 실행!");
+        $mob->setMotion(new Vector3($direction->x, 0.42, $direction->z));
+        return;
+    } elseif ($heightDiff < -0.5 && $heightDiff >= -3) { // ✅ 내려올 높이
+        Server::getInstance()->broadcastMessage("⬇️ [moveAlongPath] 내려오기 실행!");
+        $mob->setMotion(new Vector3($direction->x, -0.2, $direction->z));
+        return;
+    }
+
+    // ✅ 이동 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
         ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
-
-    // 🔥 디버깅 메시지 추가: 블렌딩된 모션 확인
-    Server::getInstance()->broadcastMessage("🚀 [moveAlongPath] Blended Motion: ({$blendedMotion->x}, {$blendedMotion->y}, {$blendedMotion->z})");
 
     $mob->setMotion($blendedMotion);
 }
