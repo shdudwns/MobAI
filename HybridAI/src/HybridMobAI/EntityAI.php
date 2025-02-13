@@ -463,53 +463,68 @@ public function removePath(Living $mob): void {
     }
 
     public function moveAlongPath(Living $mob): void {
-        $path = $this->getPath($mob);
-        if (empty($path)) return;
+    $path = $this->getPath($mob);
+    if (empty($path)) {
+        return;
+    }
 
-        $currentPosition = $mob->getPosition();
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
+    $currentPosition = $mob->getPosition();
+    $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+
+    // ✅ 플레이어 바라보기
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition());
+    }
+
+    // ✅ 너무 가까운 노드는 건너뜀
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.4) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-
-        // ✅ 너무 가까운 노드는 건너뜀
-        while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.5) {
-            $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-        }
-
-        $direction = $nextPosition->subtractVector($currentPosition);
-
-        // ✅ 장애물 감지 및 우회
-        if ($this->isObstacleAhead($mob)) {
-            $this->avoidObstacle($mob);
-            return;
-        }
-
-        // ✅ Y축 높이 차이 감지
-        if (abs($direction->y) > self::MAX_Y_DIFFERENCE) {
-            $this->adjustVerticalLook($mob, $nextPosition);
-        }
-
-        // ✅ 부드러운 회전 적용
-        $this->smoothLookAt($mob, $nextPosition);
-
-        // ✅ 이동 속도 및 모션 설정
-        $speed = 0.23;
-        $mob->setMotion($direction->normalize()->multiply($speed));
     }
 
-    private function smoothLookAt(Living $mob, Vector3 $target): void {
-        $dx = $target->x - $mob->getPosition()->x;
-        $dz = $target->z - $mob->getPosition()->z;
-        $dy = $target->y - $mob->getPosition()->y;
-
-        $horizontalDistance = max(0.01, sqrt($dx * $dx + $dz * $dz));
-        $desiredYaw = rad2deg(atan2(-$dx, $dz));
-        $desiredPitch = rad2deg(atan2($dy, $horizontalDistance));
-
-        // ✅ 부드러운 회전 적용 (ROTATION_SPEED 사용)
-        $currentYaw = $mob->getLocation()->yaw;
-        $deltaYaw = $desiredYaw - $currentYaw;
-        $deltaYaw = ($deltaYaw + 180) % 360 - 180;
-        $yaw = $currentYaw + max(-self::ROTATION_SPEED, min(self::ROTATION_SPEED, $deltaYaw));
-
-        $mob->setRotation($yaw, $desiredPitch);
+    // ✅ 이동 방향 벡터 계산
+    $direction = $nextPosition->subtractVector($currentPosition);
+    $distanceSquared = $direction->lengthSquared();
+    
+    // ✅ 너무 작은 거리는 무시
+    if ($distanceSquared < 0.01) {
+        return;
     }
+
+    $speed = 0.23; // ✅ 속도 조정
+    $currentMotion = $mob->getMotion();
+    $inertiaFactor = 0.45; // ✅ 관성 보정
+
+    // ✅ 몬스터가 먼저 몸을 돌린 후 이동
+    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
+    $mob->setRotation($yaw, 0);
+
+    // ✅ 장애물 감지 후 우회
+    if ($this->isObstacleAhead($mob)) {
+        $this->avoidObstacle($mob);
+        return; // 장애물 우회 후 이동을 멈춤
+    }
+
+    // ✅ 점프 & 내려가기 적용
+    if ($direction->y > 0.5) {
+        $direction = new Vector3($direction->x, 0.42, $direction->z);
+    } elseif ($direction->y < -0.5) {
+        $direction = new Vector3($direction->x, -0.2, $direction->z);
+    }
+
+    // ✅ 대각선 이동 보정
+    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
+        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
+    }
+
+    // ✅ 이동 모션 적용
+    $blendedMotion = new Vector3(
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        $currentMotion->y,
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+    );
+
+    $mob->setMotion($blendedMotion);
+}
 }
