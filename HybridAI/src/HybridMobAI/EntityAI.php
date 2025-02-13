@@ -529,6 +529,7 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
     if (empty($path)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 이동할 경로가 없습니다!");
         return;
     }
 
@@ -540,28 +541,23 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
 
     // ✅ 점프 또는 내려가기 판단
     if ($terrainAnalyzer->isJumpable($currentPosition, $nextPosition)) {
+        Server::getInstance()->broadcastMessage("⬆️ [AI] 점프 시도");
         $this->jump($mob, $nextPosition);
         return;
     } elseif ($terrainAnalyzer->isDownhill($currentPosition, $nextPosition)) {
+        Server::getInstance()->broadcastMessage("⬇️ [AI] 내려가기 시도");
         $this->fallDown($mob, $nextPosition);
         return;
     }
 
-    $distanceSquared = $direction->lengthSquared();
-    if ($distanceSquared < 0.01) {
-        return;
-    }
-
     $speed = 0.23;
-    $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.45;
-
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
-        $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+        $direction->normalize()->x * $speed,
+        $mob->getMotion()->y,
+        $direction->normalize()->z * $speed
     );
 
     $mob->setMotion($blendedMotion);
+    $mob->lookAt($nextPosition);
 }
 }
