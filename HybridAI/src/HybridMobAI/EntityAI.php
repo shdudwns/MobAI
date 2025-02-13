@@ -262,13 +262,31 @@ private function moveAroundObstacle(Living $mob): void {
     }
 }
     
-    private function isObstacle(Block $block, Block $blockAbove): bool {
-    if ($block instanceof Air) return false; // ✅ 공기는 장애물이 아님
-    if ($this->isPassableBlock($block)) return false; // ✅ 지나갈 수 있는 블록은 장애물 X
-    if (!$this->isSolidBlock($block)) return false; // ✅ 단단하지 않은 블록은 장애물 X
+    private function isObstacle(Living $mob, Vector3 $nextPosition): bool {
+    $currentPosition = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yDiff = $nextPosition->y - $currentPosition->y;
 
-    // ✅ 위에도 블록이 있어서 이동 불가능한 경우 장애물로 판단
-    return $this->isSolidBlock($blockAbove);
+    // 🔥 높이 차이에 따른 장애물 판단
+    if ($yDiff > 2.0 || $yDiff < -2.0) {
+        return true; // 🔥 3블록 이상 차이는 장애물로 인식
+    }
+
+    // ✅ 정면의 블록 감지 (머리 위 포함)
+    $frontBlock = $world->getBlockAt((int)$nextPosition->x, (int)$nextPosition->y, (int)$nextPosition->z);
+    $frontBlockAbove = $world->getBlockAt((int)$nextPosition->x, (int)$nextPosition->y + 1, (int)$nextPosition->z);
+
+    // 🔥 공기는 장애물 아님
+    if ($frontBlock instanceof Air) return false;
+
+    // 🔥 통과 가능한 블록은 장애물 아님
+    if ($this->isPassableBlock($frontBlock)) return false;
+
+    // 🔥 단단하지 않은 블록은 장애물 아님
+    if (!$this->isSolidBlock($frontBlock)) return false;
+
+    // 🔥 위 블록이 막혀있으면 장애물
+    return $this->isSolidBlock($frontBlockAbove);
 }
 
 public function avoidObstacle(Living $mob): void {
@@ -276,14 +294,50 @@ public function avoidObstacle(Living $mob): void {
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
 
-    // ✅ 몬스터 앞의 장애물 감지
-    $frontBlockPos = $position->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
-    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
-    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+    // ✅ 이동 방향 벡터 계산
+    $directionVector = new Vector3(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
+    $nextPosition = $position->addVector($directionVector);
 
-    if ($this->isObstacle($frontBlock, $frontBlockAbove)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: {$frontBlock->getName()} at {$frontBlockPos->x}, {$frontBlockPos->y}, {$frontBlockPos->z}");
-        $this->findAlternativePath($mob, $position, $world);
+    // 🔥 isObstacle() 연동
+    if ($this->isObstacle($mob, $nextPosition)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: 우회 시도...");
+
+        // 🔥 우회 방향 탐색 (왼쪽, 오른쪽, 뒤쪽)
+        $attempts = [
+            $directionVector->rotateY(deg2rad(90)),  // 🔥 오른쪽 회전
+            $directionVector->rotateY(deg2rad(-90)), // 🔥 왼쪽 회전
+            $directionVector->rotateY(deg2rad(180)), // 🔥 뒤쪽 회전
+        ];
+
+        foreach ($attempts as $attempt) {
+            $newPos = $position->addVector($attempt);
+
+            $block = $world->getBlockAt((int)$newPos->x, (int)$newPos->y, (int)$newPos->z);
+            $blockAbove = $world->getBlockAt((int)$newPos->x, (int)$newPos->y + 1, (int)$newPos->z);
+
+            // 🔥 이동 가능한지 확인
+            if (!$this->isSolidBlock($block) && !$this->isSolidBlock($blockAbove)) {
+                $mob->setMotion($attempt->normalize()->multiply(0.2));
+                return;
+            }
+        }
+
+        // 🔥 모든 방향이 막혀있으면 랜덤 이동 시도
+        $randomOffsetX = mt_rand(-3, 3);
+        $randomOffsetZ = mt_rand(-3, 3);
+        $fallbackPosition = $position->addVector(new Vector3($randomOffsetX, 0, $randomOffsetZ));
+
+        // 🔥 이동 가능한지 확인 후 랜덤 이동
+        $fallbackBlock = $world->getBlockAt((int)$fallbackPosition->x, (int)$fallbackPosition->y, (int)$fallbackPosition->z);
+        $fallbackBlockAbove = $world->getBlockAt((int)$fallbackPosition->x, (int)$fallbackPosition->y + 1, (int)$fallbackPosition->z);
+
+        if (!$this->isSolidBlock($fallbackBlock) && !$this->isSolidBlock($fallbackBlockAbove)) {
+            $mob->setMotion($fallbackPosition->subtractVector($position)->normalize()->multiply(0.2));
+            return;
+        }
+
+        // 🔥 랜덤 이동 실패 시 최후의 방법으로 제자리 회전
+        $mob->setRotation($yaw + 180, 0);
     }
 }
     
@@ -501,16 +555,23 @@ public function removePath(Living $mob): void {
     $mob->setRotation($yaw, 0);
 
     // ✅ 장애물 감지 후 우회
-    if ($this->isObstacleAhead($mob)) {
+    if ($this->isObstacleAhead($mob, $nextPosition)) {
         $this->avoidObstacle($mob);
         return;
     }
 
-    // 🔥 점프 및 내려가기 로직 개선 (2블록 이하)
+    // 🔥 내려가기 로직 개선 (높이 차이에 따른 속도 조정)
     if ($direction->y > 0 && $direction->y <= 2.0) {
         $direction = new Vector3($direction->x, 0.6, $direction->z); // ✅ 2블록 이하는 점프
-    } elseif ($direction->y < 0 && $direction->y >= -2.0) {
-        $direction = new Vector3($direction->x, -0.3, $direction->z); // ✅ 2블록 이하는 내려가기
+    } elseif ($direction->y < 0) {
+        if ($direction->y >= -1.0) {
+            $direction = new Vector3($direction->x, -0.3, $direction->z); // ✅ 1블록 내려가기
+        } elseif ($direction->y >= -2.0) {
+            $direction = new Vector3($direction->x, -0.6, $direction->z); // ✅ 2블록 내려가기
+        } else {
+            $this->avoidObstacle($mob); // 🔥 너무 높은 곳은 우회
+            return;
+        }
     }
 
     // ✅ 대각선 이동 보정 (Normalize 적용)
