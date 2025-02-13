@@ -194,6 +194,31 @@ class EntityAI {
     // ... (다른 탐색 방식)
 }
 
+    private function isObstacleAhead(Living $mob): bool {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $yaw = (float)$mob->getLocation()->yaw;
+
+    // ✅ 몬스터 정면의 2칸 블록 확인
+    $frontBlockPos1 = $position->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
+    $frontBlockPos2 = $frontBlockPos1->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
+
+    $frontBlock1 = $world->getBlockAt((int)$frontBlockPos1->x, (int)$frontBlockPos1->y, (int)$frontBlockPos1->z);
+    $frontBlock2 = $world->getBlockAt((int)$frontBlockPos2->x, (int)$frontBlockPos2->y, (int)$frontBlockPos2->z);
+    
+    // ✅ 위 블록도 확인 (두 칸 높이 장애물 체크)
+    $frontBlockAbove1 = $world->getBlockAt((int)$frontBlockPos1->x, (int)$frontBlockPos1->y + 1, (int)$frontBlockPos1->z);
+    $frontBlockAbove2 = $world->getBlockAt((int)$frontBlockPos2->x, (int)$frontBlockPos2->y + 1, (int)$frontBlockPos2->z);
+
+    // ✅ 장애물 감지: 두 개의 블록이 모두 solid(단단한 블록)이면 이동 불가
+    if ($this->isSolidBlock($frontBlock1) && $this->isSolidBlock($frontBlock2) && $this->isSolidBlock($frontBlockAbove1) && $this->isSolidBlock($frontBlockAbove2)) {
+        Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: " . $frontBlock1->getName() . " & " . $frontBlock2->getName());
+        return true;
+    }
+
+    return false;
+}
+    
 private function moveAroundObstacle(Living $mob): void {
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
@@ -248,7 +273,7 @@ public function avoidObstacle(Living $mob): void {
     $world = $mob->getWorld();
     $yaw = (float)$mob->getLocation()->yaw;
 
-    // ✅ 몬스터 정면의 블록 감지
+    // ✅ 몬스터 앞의 장애물 감지
     $frontBlockPos = $position->add(cos(deg2rad($yaw)), 0, sin(deg2rad($yaw)));
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
     $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
@@ -440,7 +465,7 @@ public function removePath(Living $mob): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 몬스터가 플레이어를 바라보도록 설정
+    // ✅ 플레이어 바라보기
     if ($player !== null) {
         $mob->lookAt($player->getPosition());
     }
@@ -467,25 +492,25 @@ public function removePath(Living $mob): void {
     $yaw = rad2deg(atan2(-$direction->x, $direction->z));
     $mob->setRotation($yaw, 0);
 
-    // ✅ 장애물 감지 후 우회 경로 탐색
+    // ✅ 장애물 감지 후 우회
     if ($this->isObstacleAhead($mob)) {
         $this->avoidObstacle($mob);
         return; // 장애물 우회 후 이동을 멈춤
     }
 
-    // ✅ 점프 & 내려가기 적용 (장애물 넘기 & 자연스러운 낙하)
+    // ✅ 점프 & 내려가기 적용
     if ($direction->y > 0.5) {
         $direction = new Vector3($direction->x, 0.42, $direction->z);
     } elseif ($direction->y < -0.5) {
         $direction = new Vector3($direction->x, -0.2, $direction->z);
     }
 
-    // ✅ 대각선 이동 보정 (X/Z축 이동 균형 조정)
+    // ✅ 대각선 이동 보정
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
         $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
     }
 
-    // ✅ 이동 모션 적용 (현재 이동과 부드럽게 결합)
+    // ✅ 이동 모션 적용
     $blendedMotion = new Vector3(
         ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
