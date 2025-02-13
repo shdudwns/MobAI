@@ -536,19 +536,20 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // 🔥 디버깅 메시지 추가
-    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Current Position: ({$currentPosition->x}, {$currentPosition->y}, {$currentPosition->z})");
-    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Next Position: " . ($nextPosition ? "({$nextPosition->x}, {$nextPosition->y}, {$nextPosition->z})" : "NULL"));
-
-    // ✅ 현재 위치와 다음 위치가 같은 경우 다음 노드로 넘어감
-    if ($currentPosition->equals($nextPosition)) {
-        Server::getInstance()->broadcastMessage("⚠️ [moveAlongPath] 현재 위치와 다음 위치가 동일합니다. 다음 노드로 넘어갑니다.");
+    // ✅ 너무 가까운 노드는 건너뜀
+    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
+    }
+
+    // 🔥 예외 처리: 다음 위치가 NULL일 때 이동 중단
+    if ($nextPosition === null) {
+        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
+        return;
     }
 
     $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
 
-    // 🔥 TerrainAnalyzer 연동
+    // ✅ 이동 가능 여부 확인
     if (!$terrainAnalyzer->isWalkable($nextPosition)) {
         Server::getInstance()->broadcastMessage("⛔ [moveAlongPath] 다음 위치로 이동 불가!");
         return;
@@ -557,16 +558,24 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     // ✅ 이동 방향 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
     $distanceSquared = $direction->lengthSquared();
-    
-    // 🔥 디버깅 메시지 추가
-    Server::getInstance()->broadcastMessage("🔍 [moveAlongPath] Direction Vector: ({$direction->x}, {$direction->y}, {$direction->z}), DistanceSquared: {$distanceSquared}");
 
-    // ✅ 너무 가까운 노드는 건너뜀
+    // ✅ 너무 가까운 경우 건너뜀
     if ($distanceSquared < 0.01) {
-        Server::getInstance()->broadcastMessage("⚠️ [moveAlongPath] 너무 가까워서 이동 생략");
         return;
     }
 
+    // ✅ 플레이어 바라보기 및 몸 회전
+    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
+    $currentYaw = $mob->getLocation()->yaw;
+    $yawDiff = $yaw - $currentYaw;
+    $maxYawChange = 10; // ✅ 회전 속도 조정
+    if (abs($yawDiff) > $maxYawChange) {
+        $yaw = $currentYaw + max(-$maxYawChange, min($maxYawChange, $yawDiff));
+    }
+    $mob->setRotation($yaw, 0);
+    $mob->lookAt($nextPosition);
+
+    // ✅ 이동 모션 적용
     $speed = 0.23;
     $mob->setMotion($direction->normalize()->multiply($speed));
 }
