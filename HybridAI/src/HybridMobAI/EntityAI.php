@@ -492,37 +492,37 @@ public function removePath(Living $mob): void {
         return;
     }
 
-    $speed = 0.23; // ✅ 속도 조정
+    $speed = 0.23;
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.45; // ✅ 관성 보정
+    $inertiaFactor = 0.35; // ✅ 관성 보정
 
     // ✅ 몬스터가 먼저 몸을 돌린 후 이동
     $yaw = rad2deg(atan2(-$direction->x, $direction->z));
     $mob->setRotation($yaw, 0);
 
     // ✅ 장애물 감지 후 우회
-    if ($this->isObstacleAhead($mob)) {
+    if ($this->isObstacleAhead($mob, $nextPosition)) {
         $this->avoidObstacle($mob);
-        return; // 장애물 우회 후 이동을 멈춤
+        return;
     }
 
-    // ✅ 점프 & 내려가기 적용
-    if ($direction->y > 0.5) {
-        $direction = new Vector3($direction->x, 0.42, $direction->z);
-    } elseif ($direction->y < -0.5) {
-        $direction = new Vector3($direction->x, -0.2, $direction->z);
+    // 🔥 점프 및 내려가기 로직 개선 (2블록 이하)
+    if ($direction->y > 0 && $direction->y <= 2.0) {
+        $direction = new Vector3($direction->x, 0.6, $direction->z); // ✅ 2블록 이하는 점프
+    } elseif ($direction->y < 0 && $direction->y >= -2.0) {
+        $direction = new Vector3($direction->x, -0.3, $direction->z); // ✅ 2블록 이하는 내려가기
     }
 
-    // ✅ 대각선 이동 보정
+    // ✅ 대각선 이동 보정 (Normalize 적용)
     if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
+        $direction = $direction->normalize()->multiply($speed);
     }
 
-    // ✅ 이동 모션 적용
+    // ✅ 이동 모션 적용 (관성 보정 및 블렌딩)
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
+        ($currentMotion->x * $inertiaFactor) + ($direction->x * (1 - $inertiaFactor)),
         $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
+        ($currentMotion->z * $inertiaFactor) + ($direction->z * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
