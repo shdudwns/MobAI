@@ -456,7 +456,7 @@ public function removePath(Living $mob): void {
 
     public function setPath(Living $mob, array $path): void {
         $this->entityPaths[$mob->getId()] = $path;
-    
+    }
 
     public function hasPath(Living $mob): bool {
         return isset($this->entityPaths[$mob->getId()]);
