@@ -311,14 +311,10 @@ public function avoidObstacle(Living $mob): void {
     if ($this->isObstacle($mob, $nextPosition)) {
         Server::getInstance()->broadcastMessage("⚠️ [AI] 장애물 감지됨: 우회 시도...");
 
-        // 🔥 rotateY() 적용 및 우회 방향 탐색
-        $attempts = [
-            $this->rotateY($directionVector, deg2rad(90)),  // 🔥 오른쪽 회전
-            $this->rotateY($directionVector, deg2rad(-90)), // 🔥 왼쪽 회전
-            $this->rotateY($directionVector, deg2rad(180)), // 🔥 뒤쪽 회전
-        ];
-
-        foreach ($attempts as $attempt) {
+        // 🔥 대각선 방향 포함한 우회 방향 탐색
+        $angles = [45, -45, 90, -90, 135, -135, 180]; // 🔥 대각선 방향 포함
+        foreach ($angles as $angle) {
+            $attempt = $this->rotateY($directionVector, deg2rad($angle));
             $newPos = $position->addVector($attempt);
 
             $block = $world->getBlockAt((int)$newPos->x, (int)$newPos->y, (int)$newPos->z);
