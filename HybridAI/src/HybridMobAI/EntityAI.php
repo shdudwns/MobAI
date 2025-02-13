@@ -528,77 +528,36 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
 
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
-    if (empty($path)) {
-        Server::getInstance()->broadcastMessage("⚠️ [AI] 이동할 경로가 없습니다!");
-        return;
-    }
+    if (empty($path)) return;
 
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
 
-    // ✅ 너무 가까운 노드는 건너뜀
     while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.25) {
         $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
     }
 
-    if ($nextPosition === null) {
-        Server::getInstance()->broadcastMessage("❌ [moveAlongPath] 다음 위치가 NULL입니다. 이동 중단!");
-        return;
-    }
-
     $direction = $nextPosition->subtractVector($currentPosition);
     $distanceSquared = $direction->lengthSquared();
-    if ($distanceSquared < 0.01) {
-        return;
-    }
+    if ($distanceSquared < 0.01) return;
 
-    // ✅ 고개 자연스럽게 회전
-    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
-    $mob->setRotation($yaw, 0);
-
-    // ✅ 점프 및 내려오기 로직 통합 및 개선
-    $jumpHeight = 0.42;
-    $fallSpeed = -0.2;
-    $maxStepHeight = 1.2; // ✅ 최대 올라갈 수 있는 높이
-    $maxFallHeight = 2.0; // ✅ 최대 내려올 수 있는 높이
-
+    // ✅ 점프 및 내려오기 로직
     $heightDiff = $nextPosition->y - $currentPosition->y;
-
-    // ✅ 높낮이 차이에 따른 점프 및 내려오기 처리
-    if ($heightDiff > 0.1 && $heightDiff <= $maxStepHeight) {
-        // ✅ 올라가야 하는 경우 (점프)
-        $mob->setMotion(new Vector3($direction->x, $jumpHeight, $direction->z));
-        Server::getInstance()->broadcastMessage("🔼 [moveAlongPath] 점프: 높이 차이 $heightDiff");
-    } elseif ($heightDiff < -0.1 && abs($heightDiff) <= $maxFallHeight) {
-        // ✅ 내려가야 하는 경우 (중력 적용)
-        $mob->setMotion(new Vector3($direction->x, $fallSpeed, $direction->z));
-        Server::getInstance()->broadcastMessage("🔽 [moveAlongPath] 내려가기: 높이 차이 $heightDiff");
+    if ($heightDiff > 0.5) {
+        $mob->setMotion(new Vector3($direction->x, 0.42 + (0.1 * $heightDiff), $direction->z));
+    } elseif ($heightDiff < -0.5) {
+        $mob->setMotion(new Vector3($direction->x, -0.2, $direction->z));
     } else {
-        // ✅ 평지 이동
         $mob->setMotion($direction->normalize()->multiply(0.23));
     }
 
-    // ✅ 점프 타이밍 및 높이 동적 조정
-    if ($heightDiff > 0.5 && $heightDiff <= $maxStepHeight) {
-        $jumpBoost = min(0.1 * $heightDiff, 0.3);
-        $mob->setMotion(new Vector3($mob->getMotion()->x, $jumpHeight + $jumpBoost, $mob->getMotion()->z));
-        Server::getInstance()->broadcastMessage("🟢 [moveAlongPath] 동적 점프: 높이 차이 $heightDiff, 점프 높이 $jumpBoost");
-    }
-
-    // ✅ 내려오는 모션에서 X, Z 속도 유지 및 관성 효과 적용
-    if ($heightDiff < -0.5 && abs($heightDiff) <= $maxFallHeight) {
-        $inertiaFactor = 0.7;
-        $mob->setMotion(new Vector3(
-            $direction->x * $inertiaFactor,
-            $mob->getMotion()->y,
-            $direction->z * $inertiaFactor
-        ));
-        Server::getInstance()->broadcastMessage("⚙️ [moveAlongPath] 관성 적용하여 내려오기");
-    }
-
-    // ✅ 대각선 이동 및 높낮이 인식 개선
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = new Vector3($direction->x * 0.85, $direction->y, $direction->z * 0.85);
-    }
+    // ✅ 관성 효과 및 부드러운 가속도 적용
+    $inertiaFactor = 0.7;
+    $blendedMotion = new Vector3(
+        ($mob->getMotion()->x * $inertiaFactor) + ($direction->normalize()->x * (1 - $inertiaFactor)),
+        $mob->getMotion()->y,
+        ($mob->getMotion()->z * $inertiaFactor) + ($direction->normalize()->z * (1 - $inertiaFactor))
+    );
+    $mob->setMotion($blendedMotion);
 }
 }
