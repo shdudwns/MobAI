@@ -541,23 +541,19 @@ private function fallDown(Living $mob, Vector3 $nextPosition): void {
     $distanceSquared = $direction->lengthSquared();
     if ($distanceSquared < 0.01) return;
 
+    // ✅ 플레이어 바라보기 개선
+    $tracker = new EntityTracker();
+    $player = $tracker->findNearestPlayer($mob);
+    if ($player !== null) {
+        $mob->lookAt($player->getPosition());
+    }
+
     // ✅ 점프 및 내려오기 로직
     $heightDiff = $nextPosition->y - $currentPosition->y;
     if ($heightDiff > 0.5) {
         $mob->setMotion(new Vector3($direction->x, 0.42 + (0.1 * $heightDiff), $direction->z));
-    } elseif ($heightDiff < -0.5) {
-        $mob->setMotion(new Vector3($direction->x, -0.2, $direction->z));
     } else {
         $mob->setMotion($direction->normalize()->multiply(0.23));
     }
-
-    // ✅ 관성 효과 및 부드러운 가속도 적용
-    $inertiaFactor = 0.7;
-    $blendedMotion = new Vector3(
-        ($mob->getMotion()->x * $inertiaFactor) + ($direction->normalize()->x * (1 - $inertiaFactor)),
-        $mob->getMotion()->y,
-        ($mob->getMotion()->z * $inertiaFactor) + ($direction->normalize()->z * (1 - $inertiaFactor))
-    );
-    $mob->setMotion($blendedMotion);
 }
 }
