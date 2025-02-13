@@ -12,9 +12,6 @@ class Pathfinder {
     private int $maxPathLength = 200;
     private array $vectorPool = [];
     private array $cachedNeighbors = []; // ✅ 이웃 노드 캐싱
-    private static function vectorToStr(Vector3 $vector): string {
-        return "{$vector->x}:{$vector->y}:{$vector->z}";
-    }
 
     private function getVector(float $x, float $y, float $z): Vector3 {
         $key = "{$x}:{$y}:{$z}";
