@@ -510,74 +510,56 @@ public function removePath(Living $mob): void {
         return isset($this->entityPaths[$mob->getId()]);
     }
 
+    private function jump(Living $mob, Vector3 $nextPosition): void {
+    $mob->setMotion(new Vector3(
+        $mob->getMotion()->x,
+        0.42,
+        $mob->getMotion()->z
+    ));
+}
+
+private function fallDown(Living $mob, Vector3 $nextPosition): void {
+    $mob->setMotion(new Vector3(
+        $mob->getMotion()->x,
+        -0.2,
+        $mob->getMotion()->z
+    ));
+}
+
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
     if (empty($path)) {
         return;
     }
 
-    $tracker = new EntityTracker();
-    $player = $tracker->findNearestPlayer($mob);
     $currentPosition = $mob->getPosition();
     $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-
-    // ✅ 플레이어 바라보기
-    if ($player !== null) {
-        $mob->lookAt($player->getPosition());
-    }
-
-    // ✅ 너무 가까운 노드는 건너뜀
-    while (!empty($this->entityPaths[$mob->getId()]) && $currentPosition->distanceSquared($nextPosition) < 0.4) {
-        $nextPosition = array_shift($this->entityPaths[$mob->getId()]);
-    }
-
-    // ✅ 이동 방향 벡터 계산
     $direction = $nextPosition->subtractVector($currentPosition);
+
+    $terrainAnalyzer = new TerrainAnalyzer($mob->getWorld());
+
+    // ✅ 점프 또는 내려가기 판단
+    if ($terrainAnalyzer->isJumpable($currentPosition, $nextPosition)) {
+        $this->jump($mob, $nextPosition);
+        return;
+    } elseif ($terrainAnalyzer->isDownhill($currentPosition, $nextPosition)) {
+        $this->fallDown($mob, $nextPosition);
+        return;
+    }
+
     $distanceSquared = $direction->lengthSquared();
-    
-    // ✅ 너무 작은 거리는 무시
     if ($distanceSquared < 0.01) {
         return;
     }
 
     $speed = 0.23;
     $currentMotion = $mob->getMotion();
-    $inertiaFactor = 0.35; // ✅ 관성 보정
+    $inertiaFactor = 0.45;
 
-    // ✅ 몬스터가 먼저 몸을 돌린 후 이동
-    $yaw = rad2deg(atan2(-$direction->x, $direction->z));
-    $mob->setRotation($yaw, 0);
-
-    // ✅ 장애물 감지 후 우회
-    if ($this->isObstacleAhead($mob, $nextPosition)) {
-        $this->avoidObstacle($mob);
-        return;
-    }
-
-    // 🔥 내려가기 로직 개선 (높이 차이에 따른 속도 조정)
-    if ($direction->y > 0 && $direction->y <= 2.0) {
-        $direction = new Vector3($direction->x, 0.6, $direction->z); // ✅ 2블록 이하는 점프
-    } elseif ($direction->y < 0) {
-        if ($direction->y >= -1.0) {
-            $direction = new Vector3($direction->x, -0.3, $direction->z); // ✅ 1블록 내려가기
-        } elseif ($direction->y >= -2.0) {
-            $direction = new Vector3($direction->x, -0.6, $direction->z); // ✅ 2블록 내려가기
-        } else {
-            $this->avoidObstacle($mob); // 🔥 너무 높은 곳은 우회
-            return;
-        }
-    }
-
-    // ✅ 대각선 이동 보정 (Normalize 적용)
-    if (abs($direction->x) > 0 && abs($direction->z) > 0) {
-        $direction = $direction->normalize()->multiply($speed);
-    }
-
-    // ✅ 이동 모션 적용 (관성 보정 및 블렌딩)
     $blendedMotion = new Vector3(
-        ($currentMotion->x * $inertiaFactor) + ($direction->x * (1 - $inertiaFactor)),
+        ($currentMotion->x * $inertiaFactor) + ($direction->normalize()->x * $speed * (1 - $inertiaFactor)),
         $currentMotion->y,
-        ($currentMotion->z * $inertiaFactor) + ($direction->z * (1 - $inertiaFactor))
+        ($currentMotion->z * $inertiaFactor) + ($direction->normalize()->z * $speed * (1 - $inertiaFactor))
     );
 
     $mob->setMotion($blendedMotion);
