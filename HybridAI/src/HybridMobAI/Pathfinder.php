@@ -38,6 +38,8 @@ class Pathfinder {
     $fScore = [self::vectorToStr($start) => $this->heuristic($start, $goal)];
     $visitedNodes = 0;
 
+    $terrainAnalyzer = new TerrainAnalyzer($world); // ✅ 지형 분석기 추가
+
     while (!$openSet->isEmpty()) {
         $current = $openSet->extract();
         $currentKey = self::vectorToStr($current);
@@ -54,7 +56,7 @@ class Pathfinder {
             $neighborKey = self::vectorToStr($neighbor);
 
             // 🔥 가중치 부여된 이동 비용
-            $movementCost = $this->getMovementCost($current, $neighbor);
+            $movementCost = $this->getMovementCost($current, $neighbor, $terrainAnalyzer);
             $tentativeGScore = $gScore[$currentKey] + $movementCost;
 
             if (!isset($gScore[$neighborKey]) || $tentativeGScore < $gScore[$neighborKey]) {
@@ -68,14 +70,14 @@ class Pathfinder {
     return null;
 }
 
-    private function getMovementCost(Vector3 $current, Vector3 $neighbor): float {
+    private function getMovementCost(Vector3 $current, Vector3 $neighbor, TerrainAnalyzer $terrainAnalyzer): float {
     $yDiff = $neighbor->y - $current->y;
     $isDiagonal = ($current->x !== $neighbor->x) && ($current->z !== $neighbor->z);
 
     // 🔥 높이 차이 및 대각선 이동에 따른 가중치 부여
-    if ($yDiff > 1) {
+    if ($terrainAnalyzer->isJumpable($current, $neighbor)) {
         return 10.0; // 🔥 점프는 높은 비용
-    } elseif ($yDiff < -1) {
+    } elseif ($terrainAnalyzer->isDownhill($current, $neighbor)) {
         return 0.5; // 🔥 내려가기는 낮은 비용
     } elseif ($isDiagonal) {
         return 1.4; // 🔥 대각선 이동은 약간 높은 비용
