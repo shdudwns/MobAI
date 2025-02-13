@@ -501,7 +501,7 @@ public function removePath(Living $mob): void {
     $mob->setRotation($yaw, 0);
 
     // ✅ 장애물 감지 후 우회
-    if ($this->isObstacleAhead($mob, $nextPosition)) {
+    if ($this->isObstacleAhead($mob)) {
         $this->avoidObstacle($mob);
         return;
     }
