@@ -236,6 +236,7 @@ class Pathfinder {
  */
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
+    $terrainAnalyzer = new TerrainAnalyzer($world);
 
     $directions = [
         [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1],
@@ -251,7 +252,7 @@ public function getNeighbors(World $world, Vector3 $pos): array {
 
         $neighbor = new Vector3($x, $y, $z);
 
-        if ($this->isWalkable($neighbor)) {
+        if ($terrainAnalyzer->isWalkable($neighbor)) {
             $neighbors[] = $neighbor;
         }
     }
