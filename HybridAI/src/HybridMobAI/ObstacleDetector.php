@@ -79,12 +79,12 @@ class ObstacleDetector {
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
     $motion = $mob->getMotion();
 
-    // ✅ 평지에서는 점프하지 않음
+    // ✅ 평지에서는 절대 점프하지 않음
     if ($heightDiff <= 0) {
         return;
     }
 
-    // ✅ 블록 앞에서만 점프 (1블록 높이)
+    // ✅ 블록 바로 앞에서만 점프 (1블록 높이)
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
         $jumpForce = 0.42;
         $mob->setMotion(new Vector3(
@@ -95,7 +95,7 @@ class ObstacleDetector {
         return;
     }
 
-    // ✅ 블록 앞에서만 점프 (2블록 높이)
+    // ✅ 블록 바로 앞에서만 점프 (2블록 높이)
     if ($heightDiff > 1.2 && $heightDiff <= 2.2 && $mob->isOnGround()) {
         $jumpForce = 0.55;
         $mob->setMotion(new Vector3(
@@ -106,7 +106,7 @@ class ObstacleDetector {
         return;
     }
 
-    // ✅ 점프 중 수평 속도 유지
+    // ✅ 점프 중 수평 이동 관성 유지
     if (!$mob->isOnGround()) {
         $horizontalSpeed = 0.23;
         $mob->setMotion(new Vector3(
@@ -116,7 +116,7 @@ class ObstacleDetector {
         ));
     }
 
-    // ✅ 자연스러운 내려오기 (중력 적용)
+    // ✅ 자연스럽게 내려오기 (중력 적용)
     if ($heightDiff < 0 && !$mob->isOnGround()) {
         $fallSpeed = max($motion->y - 0.08, -0.5);
         $mob->setMotion(new Vector3(
