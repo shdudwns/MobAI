@@ -528,7 +528,6 @@ public function removePath(Living $mob): void {
 
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
-    $world = $mob->getWorld();
     if (empty($path)) return;
 
     $currentPosition = $mob->getPosition();
@@ -542,9 +541,11 @@ public function removePath(Living $mob): void {
     $distanceSquared = $direction->lengthSquared();
     if ($distanceSquared < 0.01) return;
 
-    // ✅ 자연스러운 바라보기
     $this->lookAt($mob, $nextPosition);
-    (new ObstacleDetector($this->plugin))->handleJumpAndFall($mob, $world);
+
+    // ✅ handleJumpAndFall() 완벽 통합
+    (new ObstacleDetector($this->plugin))->handleJumpAndFall($mob);
+
     $mob->setMotion($direction->normalize()->multiply(0.23));
 }
 }
