@@ -72,6 +72,8 @@ public function handleJumpAndFall(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $direction = $mob->getDirectionVector()->normalize();
+    
+    // ✅ addVector() 사용
     $frontBlockPos = $position->addVector($direction);
 
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
@@ -81,36 +83,40 @@ public function handleJumpAndFall(Living $mob): void {
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
     $motion = $mob->getMotion();
 
-    // ✅ 공기와 투명 블록 무시 (getId() -> getTypeId())
-    $airAndTransparentBlocks = [
-        BlockTypeIds::AIR,
-        BlockTypeIds::TALL_GRASS,
-        BlockTypeIds::SNOW_LAYER
-    ];
-
-    if (in_array($frontBlock->getTypeId(), $airAndTransparentBlocks)) {
+    // ✅ 평지에서는 점프하지 않음
+    if ($heightDiff <= 0) {
         return;
     }
 
-    // ✅ 블록 바로 앞에서만 점프 (1블록 높이)
+    // ✅ 점프 타이밍 및 높이 동적 조정
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
-        $jumpForce = 0.42; // 🟢 1블록 점프에 적합한 높이
-        $mob->setMotion(new Vector3(
-            $direction->x * 0.2,
-            $jumpForce,
-            $direction->z * 0.2
-        ));
+        $jumpForce = 0.42;
+        $approachDistance = 0.3; // ✅ 블록에 가까워지면 점프
+        $distanceToBlock = $position->distance($frontBlockPos);
+
+        if ($distanceToBlock <= $approachDistance) {
+            $mob->setMotion(new Vector3(
+                $direction->x * 0.2,
+                $jumpForce,
+                $direction->z * 0.2
+            ));
+        }
         return;
     }
 
-    // ✅ 블록 바로 앞에서만 점프 (2블록 높이)
+    // ✅ 2블록 점프: 조금씩 점프하면서 올라오기
     if ($heightDiff > 1.2 && $heightDiff <= 2.2 && $mob->isOnGround()) {
-        $jumpForce = 0.62; // 🟢 2블록 점프에 적합한 높이
-        $mob->setMotion(new Vector3(
-            $direction->x * 0.2,
-            $jumpForce,
-            $direction->z * 0.2
-        ));
+        $jumpForce = 0.62;
+        $approachDistance = 0.5; // ✅ 좀 더 멀리서 점프
+        $distanceToBlock = $position->distance($frontBlockPos);
+
+        if ($distanceToBlock <= $approachDistance) {
+            $mob->setMotion(new Vector3(
+                $direction->x * 0.2,
+                $jumpForce,
+                $direction->z * 0.2
+            ));
+        }
         return;
     }
 
