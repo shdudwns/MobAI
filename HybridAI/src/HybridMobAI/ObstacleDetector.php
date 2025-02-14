@@ -78,7 +78,7 @@ class ObstacleDetector {
 
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
 
-    // ✅ 점프 타이밍 및 높이 동적 조정
+    // ✅ 한 번에 점프하여 자연스럽게 넘어오기
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
         $jumpForce = 0.42 + ($heightDiff * 0.1);
         $mob->setMotion(new Vector3(
@@ -88,8 +88,8 @@ class ObstacleDetector {
         ));
     }
 
-    // ✅ 중력 및 자연스러운 내려오기
-    if ($blockBelow->isSolid() && $heightDiff < 0) {
+    // ✅ 자연스러운 내려오기
+    if ($heightDiff < 0 && $mob->isOnGround()) {
         $mob->setMotion(new Vector3(
             $mob->getMotion()->x,
             -0.08,
