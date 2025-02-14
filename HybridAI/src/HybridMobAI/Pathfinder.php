@@ -237,21 +237,24 @@ class Pathfinder {
 public function getNeighbors(World $world, Vector3 $pos): array {
     $neighbors = [];
     $terrainAnalyzer = new TerrainAnalyzer($world);
+    $directions = [
+        [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], 
+        [1, 1, 0], [-1, 1, 0], [0, 1, 1], [0, 1, -1], // 1블록 점프
+        [1, -1, 0], [-1, -1, 0], [0, -1, 1], [0, -1, -1], // 1블록 내려가기
+        [1, 2, 0], [-1, 2, 0], [0, 2, 1], [0, 2, -1], // 2블록 점프
+        [1, -2, 0], [-1, -2, 0], [0, -2, 1], [0, -2, -1], // 2블록 내려가기
+        [1, 3, 0], [-1, 3, 0], [0, 3, 1], [0, 3, -1], // ✅ 3블록 점프 추가
+        [1, -3, 0], [-1, -3, 0], [0, -3, 1], [0, -3, -1] // ✅ 3블록 내려가기 추가
+    ];
 
-    // ✅ 무제한 높낮이 탐색 및 대각선 이동 완벽 적용
-    for ($dy = -5; $dy <= 5; $dy++) { // 무제한 높낮이 탐색
-        foreach ([
-            [1, $dy, 0], [-1, $dy, 0], [0, $dy, 1], [0, $dy, -1], 
-            [1, $dy, 1], [1, $dy, -1], [-1, $dy, 1], [-1, $dy, -1]
-        ] as $dir) {
-            $x = (int)$pos->x + $dir[0];
-            $y = (int)$pos->y + $dir[1];
-            $z = (int)$pos->z + $dir[2];
-            $neighborPos = new Vector3($x, $y, $z);
+    foreach ($directions as $dir) {
+        $x = (int)$pos->x + $dir[0];
+        $y = (int)$pos->y + $dir[1];
+        $z = (int)$pos->z + $dir[2];
 
-            if ($terrainAnalyzer->isWalkable($neighborPos, $pos)) {
-                $neighbors[] = $neighborPos;
-            }
+        $neighborPos = new Vector3($x, $y, $z);
+        if ($terrainAnalyzer->isWalkable($neighborPos, $pos)) {
+            $neighbors[] = $neighborPos;
         }
     }
 
