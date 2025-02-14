@@ -47,13 +47,14 @@ class TerrainAnalyzer {
     $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-    // ✅ 무제한 높낮이 극복 및 자연스러운 이동
-    if (abs($position->y - $currentPosition->y) > 5) {
+    // ✅ 높낮이 인식 강화
+    $heightDiff = $position->y - $currentPosition->y;
+    if ($heightDiff > 1.2 || $heightDiff < -3) {
         return false;
     }
 
-    // ✅ 내려오기 로직 개선
-    if ($position->y < $currentPosition->y && !$blockBelow->isSolid()) {
+    // ✅ 자연스러운 내려오기
+    if ($heightDiff < 0 && !$blockBelow->isSolid()) {
         return false;
     }
 
