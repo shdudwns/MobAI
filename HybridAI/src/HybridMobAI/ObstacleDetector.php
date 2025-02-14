@@ -13,6 +13,7 @@ use pocketmine\block\Wall;
 use pocketmine\block\Trapdoor;
 use pocketmine\world\World;
 use pocketmine\scheduler\ClosureTask;
+use pocketmine\block\BlockTypeIds;
 
 class ObstacleDetector {
 
@@ -67,7 +68,7 @@ class ObstacleDetector {
         }
     }
 
-    public function handleJumpAndFall(Living $mob): void {
+public function handleJumpAndFall(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $direction = $mob->getDirectionVector()->normalize();
@@ -80,8 +81,16 @@ class ObstacleDetector {
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
     $motion = $mob->getMotion();
 
-    // ✅ 공기와 투명 블록은 무시 (평지에서 점프하지 않음)
-    if ($frontBlock->getId() === Block::AIR || $frontBlock->isTransparent()) {
+    // ✅ 공기와 투명 블록 무시 (getId() -> getTypeId())
+    $airAndTransparentBlocks = [
+        BlockTypeIds::AIR,
+        BlockTypeIds::CAVE_AIR,
+        BlockTypeIds::VOID_AIR,
+        BlockTypeIds::TALL_GRASS,
+        BlockTypeIds::SNOW_LAYER
+    ];
+
+    if (in_array($frontBlock->getTypeId(), $airAndTransparentBlocks)) {
         return;
     }
 
@@ -126,45 +135,7 @@ class ObstacleDetector {
             $motion->z
         ));
     }
-}    
-    private function stepUp(Living $mob, float $heightDiff): void {
-        $direction = $mob->getDirectionVector()->normalize()->multiply(0.12); // ✅ 수평 이동 속도 일정하게 유지
-
-        $mob->setMotion(new Vector3(
-            $direction->x,
-            0.3 + ($heightDiff * 0.1),
-            $direction->z
-        ));
-
-        // ✅ 착지 후 바로 다음 장애물 검사
-        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
-            if ($mob->isOnGround()) {
-                $this->checkForObstaclesAndJump($mob, $mob->getWorld());
-            }
-        }), 2); // 2틱(0.1초) 후 착지 확인
-    }
-
-    private function jump(Living $mob, float $heightDiff): void {
-        $baseJumpForce = 0.42;
-        $extraJumpBoost = min(0.1 * $heightDiff, 0.2); // ✅ 너무 높게 점프하는 문제 방지
-        $jumpForce = $baseJumpForce + $extraJumpBoost;
-
-        // ✅ 점프 조건: 땅에 닿았을 때만 점프
-        if ($mob->isOnGround()) {
-            $mob->setMotion(new Vector3(
-                $mob->getMotion()->x,
-                $jumpForce,
-                $mob->getMotion()->z
-            ));
-
-            // ✅ 착지 후 바로 다음 장애물 검사
-            $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($mob): void {
-                if ($mob->isOnGround()) {
-                    $this->checkForObstaclesAndJump($mob, $mob->getWorld());
-                }
-            }), 2); // 2틱(0.1초) 후 착지 확인
-        }
-    }
+}
 
     private function isStairOrSlab(Block $block): bool {
         return $block instanceof Stair || $block instanceof Slab;
