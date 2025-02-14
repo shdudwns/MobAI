@@ -77,23 +77,37 @@ class ObstacleDetector {
     $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
+    $motion = $mob->getMotion();
 
-    // ✅ 한 번에 점프하여 자연스럽게 넘어오기
+    // ✅ 한 번에 점프하여 자연스럽게 넘어오기 (한 블록 높이)
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
-        $jumpForce = 0.42 + ($heightDiff * 0.1);
+        $jumpForce = 0.42 + ($heightDiff * 0.1); // ✅ 한 번에 점프
         $mob->setMotion(new Vector3(
-            $mob->getMotion()->x,
+            $motion->x,
             $jumpForce,
-            $mob->getMotion()->z
+            $motion->z
         ));
+        return;
+    }
+
+    // ✅ 두 블록 점프
+    if ($heightDiff > 1.2 && $heightDiff <= 2.2 && $mob->isOnGround()) {
+        $jumpForce = 0.55; // ✅ 두 블록 점프
+        $mob->setMotion(new Vector3(
+            $motion->x,
+            $jumpForce,
+            $motion->z
+        ));
+        return;
     }
 
     // ✅ 자연스러운 내려오기
-    if ($heightDiff < 0 && $mob->isOnGround()) {
+    if ($heightDiff < 0 && !$mob->isOnGround()) {
+        $fallSpeed = max($motion->y - 0.08, -0.5); // ✅ 중력 적용 및 내려오기 속도 보정
         $mob->setMotion(new Vector3(
-            $mob->getMotion()->x,
-            -0.08,
-            $mob->getMotion()->z
+            $motion->x,
+            $fallSpeed,
+            $motion->z
         ));
     }
 }
