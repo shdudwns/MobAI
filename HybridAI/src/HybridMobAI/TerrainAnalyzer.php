@@ -44,35 +44,31 @@ class TerrainAnalyzer {
 
 public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
     $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
-    $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
 
-    // ✅ 공기 및 투명 블록 무시 (getId() -> getTypeId())
-    $airAndTransparentBlocks = [
-        BlockTypeIds::AIR,
-        BlockTypeIds::TALL_GRASS,
-        BlockTypeIds::SNOW_LAYER
-    ];
-
-    if (in_array($block->getTypeId(), $airAndTransparentBlocks)) {
+    // ✅ 블록 및 투명 블록 확인
+    if ($block->isTransparent() || $block instanceof Air) {
         return false;
     }
 
-    // ✅ 자신이 밟고 있는 땅은 절대 점프하지 않음
-    if ($position->equals($currentPosition)) {
-        return true;
+    // ✅ 머리 위 공간 확인 (2칸 확보)
+    $headSpace = $this->world->getBlockAt((int)$position->x, (int)$position->y + 2, (int)$position->z);
+    if (!$headSpace->isTransparent()) {
+        return false;
     }
 
-    // ✅ 평지에서는 점프하지 않음
-    if ($blockBelow->isSolid() && $block->isTransparent() && $blockAbove->isTransparent()) {
-        return true;
+    // ✅ 아래 블록이 단단한 블록인지 확인
+    if (!$blockBelow->isSolid()) {
+        return false;
     }
 
-    // ✅ 블록 바로 앞에서만 점프 (1블록 높이)
-    if ($block->isSolid() && $blockAbove->isTransparent() && $blockBelow->isSolid()) {
-        return true;
+    // ✅ 높낮이 차이 극복
+    $heightDiff = abs($position->y - $currentPosition->y);
+    if ($heightDiff > 3) { // 최대 3칸까지 이동 가능
+        return false;
     }
 
-    return false;
+    return true;
 }
 }
