@@ -523,6 +523,9 @@ public function removePath(Living $mob): void {
     $yaw = rad2deg(atan2(-$dx, $dz));
     $pitch = rad2deg(atan2($dy, $horizontalDistance));
 
+    // ✅ 고개가 위로 향하지 않도록 보정
+    $pitch = max(-30, min(30, $pitch));
+
     $mob->setRotation($yaw, $pitch);
 }
 
@@ -546,6 +549,13 @@ public function removePath(Living $mob): void {
     // ✅ handleJumpAndFall() 완벽 통합
     (new ObstacleDetector($this->plugin))->handleJumpAndFall($mob);
 
-    $mob->setMotion($direction->normalize()->multiply(0.23));
+    // ✅ 이동 모션 적용 (점프 중일 때는 수평 속도 유지)
+    $motion = $mob->getMotion();
+    $horizontalSpeed = 0.23;
+    $mob->setMotion(new Vector3(
+        $direction->normalize()->x * $horizontalSpeed,
+        $motion->y,
+        $direction->normalize()->z * $horizontalSpeed
+    ));
 }
 }
