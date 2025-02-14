@@ -8,6 +8,7 @@ use pocketmine\block\Block;
 use pocketmine\block\Air;
 use pocketmine\block\Transparent;
 use pocketmine\Server;
+use pocketmine\block\BlockTypeIds;
 
 class TerrainAnalyzer {
 
@@ -41,13 +42,21 @@ class TerrainAnalyzer {
         return false;
     }
 
-    public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
+public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
     $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
     $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-    // ✅ 공기 및 투명 블록 무시
-    if ($block->getId() === Block::AIR || $block->isTransparent()) {
+    // ✅ 공기 및 투명 블록 무시 (getId() -> getTypeId())
+    $airAndTransparentBlocks = [
+        BlockTypeIds::AIR,
+        BlockTypeIds::CAVE_AIR,
+        BlockTypeIds::VOID_AIR,
+        BlockTypeIds::TALL_GRASS,
+        BlockTypeIds::SNOW_LAYER
+    ];
+
+    if (in_array($block->getTypeId(), $airAndTransparentBlocks)) {
         return false;
     }
 
