@@ -72,7 +72,7 @@ public function handleJumpAndFall(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $direction = $mob->getDirectionVector()->normalize();
-    $frontBlockPos = $position->add($direction);
+    $frontBlockPos = $position->addVector($direction);
 
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
     $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
