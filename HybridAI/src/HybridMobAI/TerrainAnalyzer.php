@@ -46,6 +46,11 @@ class TerrainAnalyzer {
     $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
     $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
+    // ✅ 공기 및 투명 블록 무시
+    if ($block->getId() === Block::AIR || $block->isTransparent()) {
+        return false;
+    }
+
     // ✅ 자신이 밟고 있는 땅은 절대 점프하지 않음
     if ($position->equals($currentPosition)) {
         return true;
@@ -56,7 +61,7 @@ class TerrainAnalyzer {
         return true;
     }
 
-    // ✅ 블록 앞에서만 점프 (1블록 높이)
+    // ✅ 블록 바로 앞에서만 점프 (1블록 높이)
     if ($block->isSolid() && $blockAbove->isTransparent() && $blockBelow->isSolid()) {
         return true;
     }
