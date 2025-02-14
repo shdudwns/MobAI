@@ -67,6 +67,37 @@ class ObstacleDetector {
         }
     }
 
+    public function handleJumpAndFall(Living $mob): void {
+    $position = $mob->getPosition();
+    $world = $mob->getWorld();
+    $frontBlockPos = $position->addVector($mob->getDirectionVector());
+
+    $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
+    $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
+    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+
+    $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
+
+    // ✅ 점프 타이밍 및 높이 동적 조정
+    if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
+        $jumpForce = 0.42 + ($heightDiff * 0.1);
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x,
+            $jumpForce,
+            $mob->getMotion()->z
+        ));
+    }
+
+    // ✅ 중력 및 자연스러운 내려오기
+    if ($blockBelow->isSolid() && $heightDiff < 0) {
+        $mob->setMotion(new Vector3(
+            $mob->getMotion()->x,
+            -0.08,
+            $mob->getMotion()->z
+        ));
+    }
+}
+    
     private function stepUp(Living $mob, float $heightDiff): void {
         $direction = $mob->getDirectionVector()->normalize()->multiply(0.12); // ✅ 수평 이동 속도 일정하게 유지
 
