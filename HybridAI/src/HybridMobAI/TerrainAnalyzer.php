@@ -42,22 +42,25 @@ class TerrainAnalyzer {
     }
 
     public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
-    $world = Server::getInstance()->getWorldManager()->getDefaultWorld();
-    $block = $world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
-    $blockAbove = $world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
-    $blockBelow = $world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
+    $block = $this->world->getBlockAt((int)$position->x, (int)$position->y, (int)$position->z);
+    $blockAbove = $this->world->getBlockAt((int)$position->x, (int)$position->y + 1, (int)$position->z);
+    $blockBelow = $this->world->getBlockAt((int)$position->x, (int)$position->y - 1, (int)$position->z);
 
-    // ✅ 높낮이 인식 강화
-    $heightDiff = $position->y - $currentPosition->y;
-    if ($heightDiff > 1.2 || $heightDiff < -3) {
-        return false;
+    // ✅ 자신이 밟고 있는 땅은 절대 점프하지 않음
+    if ($position->equals($currentPosition)) {
+        return true;
     }
 
-    // ✅ 자연스러운 내려오기
-    if ($heightDiff < 0 && !$blockBelow->isSolid()) {
-        return false;
+    // ✅ 평지에서는 점프하지 않음
+    if ($blockBelow->isSolid() && $block->isTransparent() && $blockAbove->isTransparent()) {
+        return true;
     }
 
-    return $block->isTransparent() && $blockAbove->isTransparent();
+    // ✅ 블록 앞에서만 점프 (1블록 높이)
+    if ($block->isSolid() && $blockAbove->isTransparent() && $blockBelow->isSolid()) {
+        return true;
+    }
+
+    return false;
 }
 }
