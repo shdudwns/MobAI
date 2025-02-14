@@ -528,6 +528,7 @@ public function removePath(Living $mob): void {
 
     public function moveAlongPath(Living $mob): void {
     $path = $this->getPath($mob);
+    $world = $mob->getWorld();
     if (empty($path)) return;
 
     $currentPosition = $mob->getPosition();
@@ -543,13 +544,7 @@ public function removePath(Living $mob): void {
 
     // ✅ 자연스러운 바라보기
     $this->lookAt($mob, $nextPosition);
-
-    // ✅ 점프 및 내려오기 로직
-    $heightDiff = $nextPosition->y - $currentPosition->y;
-    if ($heightDiff > 0.5) {
-        $mob->setMotion(new Vector3($direction->x, 0.42 + (0.1 * $heightDiff), $direction->z));
-    } else {
-        $mob->setMotion($direction->normalize()->multiply(0.23));
-    }
+    (new ObstacleDetector($this->plugin))->checkForObstaclesAndJump($mob, $world);
+    $mob->setMotion($direction->normalize()->multiply(0.23));
 }
 }
