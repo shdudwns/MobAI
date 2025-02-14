@@ -79,9 +79,14 @@ class ObstacleDetector {
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
     $motion = $mob->getMotion();
 
-    // ✅ 한 번에 점프하여 자연스럽게 넘어오기 (한 블록 높이)
+    // ✅ 평지에서는 점프하지 않음
+    if ($heightDiff <= 0) {
+        return;
+    }
+
+    // ✅ 블록 앞에서만 점프 (1블록 높이)
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
-        $jumpForce = 0.42 + ($heightDiff * 0.1); // ✅ 한 번에 점프
+        $jumpForce = 0.42;
         $mob->setMotion(new Vector3(
             $motion->x,
             $jumpForce,
@@ -90,9 +95,9 @@ class ObstacleDetector {
         return;
     }
 
-    // ✅ 두 블록 점프
+    // ✅ 블록 앞에서만 점프 (2블록 높이)
     if ($heightDiff > 1.2 && $heightDiff <= 2.2 && $mob->isOnGround()) {
-        $jumpForce = 0.55; // ✅ 두 블록 점프
+        $jumpForce = 0.55;
         $mob->setMotion(new Vector3(
             $motion->x,
             $jumpForce,
@@ -101,9 +106,19 @@ class ObstacleDetector {
         return;
     }
 
-    // ✅ 자연스러운 내려오기
+    // ✅ 점프 중 수평 속도 유지
+    if (!$mob->isOnGround()) {
+        $horizontalSpeed = 0.23;
+        $mob->setMotion(new Vector3(
+            $motion->x * 0.95,
+            $motion->y,
+            $motion->z * 0.95
+        ));
+    }
+
+    // ✅ 자연스러운 내려오기 (중력 적용)
     if ($heightDiff < 0 && !$mob->isOnGround()) {
-        $fallSpeed = max($motion->y - 0.08, -0.5); // ✅ 중력 적용 및 내려오기 속도 보정
+        $fallSpeed = max($motion->y - 0.08, -0.5);
         $mob->setMotion(new Vector3(
             $motion->x,
             $fallSpeed,
