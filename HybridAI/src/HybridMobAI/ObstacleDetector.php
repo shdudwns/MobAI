@@ -84,8 +84,6 @@ public function handleJumpAndFall(Living $mob): void {
     // ✅ 공기와 투명 블록 무시 (getId() -> getTypeId())
     $airAndTransparentBlocks = [
         BlockTypeIds::AIR,
-        BlockTypeIds::CAVE_AIR,
-        BlockTypeIds::VOID_AIR,
         BlockTypeIds::TALL_GRASS,
         BlockTypeIds::SNOW_LAYER
     ];
