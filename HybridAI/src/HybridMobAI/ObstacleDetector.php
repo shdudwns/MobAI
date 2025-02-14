@@ -71,7 +71,7 @@ class ObstacleDetector {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
     $direction = $mob->getDirectionVector()->normalize();
-    $frontBlockPos = $position->addVector($direction);
+    $frontBlockPos = $position->add($direction);
 
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
     $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
@@ -80,8 +80,8 @@ class ObstacleDetector {
     $heightDiff = $frontBlock->getPosition()->y + 1 - $position->y;
     $motion = $mob->getMotion();
 
-    // ✅ 평지에서는 절대 점프하지 않음
-    if ($heightDiff <= 0) {
+    // ✅ 공기와 투명 블록은 무시 (평지에서 점프하지 않음)
+    if ($frontBlock->getId() === Block::AIR || $frontBlock->isTransparent()) {
         return;
     }
 
@@ -126,8 +126,7 @@ class ObstacleDetector {
             $motion->z
         ));
     }
-}
-    
+}    
     private function stepUp(Living $mob, float $heightDiff): void {
         $direction = $mob->getDirectionVector()->normalize()->multiply(0.12); // ✅ 수평 이동 속도 일정하게 유지
 
