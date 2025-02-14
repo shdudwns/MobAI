@@ -70,7 +70,8 @@ class ObstacleDetector {
     public function handleJumpAndFall(Living $mob): void {
     $position = $mob->getPosition();
     $world = $mob->getWorld();
-    $frontBlockPos = $position->addVector($mob->getDirectionVector());
+    $direction = $mob->getDirectionVector()->normalize();
+    $frontBlockPos = $position->add($direction);
 
     $frontBlock = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y, (int)$frontBlockPos->z);
     $frontBlockAbove = $world->getBlockAt((int)$frontBlockPos->x, (int)$frontBlockPos->y + 1, (int)$frontBlockPos->z);
@@ -86,22 +87,22 @@ class ObstacleDetector {
 
     // ✅ 블록 바로 앞에서만 점프 (1블록 높이)
     if ($heightDiff > 0 && $heightDiff <= 1.2 && $mob->isOnGround()) {
-        $jumpForce = 0.42;
+        $jumpForce = 0.42; // 🟢 1블록 점프에 적합한 높이
         $mob->setMotion(new Vector3(
-            $motion->x,
+            $direction->x * 0.2,
             $jumpForce,
-            $motion->z
+            $direction->z * 0.2
         ));
         return;
     }
 
     // ✅ 블록 바로 앞에서만 점프 (2블록 높이)
     if ($heightDiff > 1.2 && $heightDiff <= 2.2 && $mob->isOnGround()) {
-        $jumpForce = 0.55;
+        $jumpForce = 0.62; // 🟢 2블록 점프에 적합한 높이
         $mob->setMotion(new Vector3(
-            $motion->x,
+            $direction->x * 0.2,
             $jumpForce,
-            $motion->z
+            $direction->z * 0.2
         ));
         return;
     }
