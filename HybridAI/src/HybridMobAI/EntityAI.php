@@ -544,7 +544,7 @@ public function removePath(Living $mob): void {
 
     // ✅ 자연스러운 바라보기
     $this->lookAt($mob, $nextPosition);
-    (new ObstacleDetector($this->plugin))->checkForObstaclesAndJump($mob, $world);
+    (new ObstacleDetector($this->plugin))->handleJumpAndFall($mob, $world);
     $mob->setMotion($direction->normalize()->multiply(0.23));
 }
 }
