@@ -50,8 +50,6 @@ public function isWalkable(Vector3 $position, Vector3 $currentPosition): bool {
     // ✅ 공기 및 투명 블록 무시 (getId() -> getTypeId())
     $airAndTransparentBlocks = [
         BlockTypeIds::AIR,
-        BlockTypeIds::CAVE_AIR,
-        BlockTypeIds::VOID_AIR,
         BlockTypeIds::TALL_GRASS,
         BlockTypeIds::SNOW_LAYER
     ];
